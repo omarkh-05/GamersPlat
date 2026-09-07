@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="../Bussiness/Bussiness.csproj" />
+  <Project Path="../Data/Data.csproj" />
+  <Project Path="../Domain/Domain.csproj" />
+  <Project Path="GamersPlatAPI.csproj" />
+</Solution>
