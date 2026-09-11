@@ -37,6 +37,37 @@ namespace DataLayer
             }
         }
 
+        public static async Task<TournamentPlayer?> GetByTournamentAndUser(int tournamentId, int userId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.TournamentPlayers.AsNoTracking().FirstOrDefaultAsync(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Get TournamentPlayer By Tournament and User Error", ex);
+                return null;
+            }
+        }
+
+        public static bool DeleteByTournamentAndUser(int tournamentId, int userId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                var existing = db.TournamentPlayers.FirstOrDefault(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
+                if (existing == null) return false;
+                db.TournamentPlayers.Remove(existing);
+                return db.SaveChanges() > 0;
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Delete TournamentPlayer Error", ex);
+                return false;
+            }
+        }
+
         private static void WriteEventLog(string title, Exception ex)
         {
             string error = ex.Message;

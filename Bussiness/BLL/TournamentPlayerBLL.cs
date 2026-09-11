@@ -37,5 +37,9 @@ namespace Bussiness
             enMode.AddMode => Add(),
             _ => false
         };
+
+        public static Task<TournamentPlayer?> GetByTournamentAndUser(int tournamentId, int userId) => TournamentPlayerDLL.GetByTournamentAndUser(tournamentId, userId);
+
+        public static bool DeleteByTournamentAndUser(int tournamentId, int userId) => TournamentPlayerDLL.DeleteByTournamentAndUser(tournamentId, userId);
     }
 }
