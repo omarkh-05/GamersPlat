@@ -1,19 +1,21 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
 using Data.EF;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace DataLayer
 {
     public class RefreshTokenDLL
     {
-        public static int Add(RefreshToken token)
+        public static async Task<int> Add(RefreshToken token)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
                 db.RefreshTokens.Add(token);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return token.TokenId;
             }
             catch (Exception ex)
@@ -23,35 +25,45 @@ namespace DataLayer
             }
         }
 
-        public static bool Delete(int id)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                var existing = db.RefreshTokens.FirstOrDefault(t => t.TokenId == id);
-                if (existing == null) return false;
-                db.RefreshTokens.Remove(existing);
-                return db.SaveChanges() > 0;
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Delete RefreshToken Error", ex);
-                return false;
-            }
-        }
-
         public static async Task<RefreshToken?> GetByToken(string token)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(token)) return null;
+                if (string.IsNullOrWhiteSpace(token))
+                    return null;
+
                 using var db = new GamersPlatDbContext();
-                return await db.RefreshTokens.AsNoTracking().FirstOrDefaultAsync(t => t.TokenHash == token);
+
+                var tokenHash = Convert.ToHexString(
+                    SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
+                return await db.RefreshTokens
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.TokenHash == tokenHash);
             }
             catch (Exception ex)
             {
                 WriteEventLog("Get RefreshToken By Token Error", ex);
                 return null;
+            }
+        }
+
+        public static async Task<bool> Update(RefreshToken token)
+        {
+            try
+            {
+                if (token == null || token.TokenId <= 0)
+                    return false;
+
+                using var db = new GamersPlatDbContext();
+
+                db.RefreshTokens.Update(token);
+                return await db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Update RefreshToken Error", ex);
+                return false;
             }
         }
 

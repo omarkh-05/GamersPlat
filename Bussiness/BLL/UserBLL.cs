@@ -1,52 +1,49 @@
+using Bussiness.Interfaces;
 using Data;
 using DataLayer;
 namespace Bussiness
 {
-    public class UserBLL
+    public class UserBLL : IUser
     {
-        private enum enMode { AddMode = 1, UpdateMode = 2 }
-        private enMode _mode = enMode.AddMode;
-
-        private User _user;
-        public int _userID = -1;
-
-        public UserBLL()
+        public async Task<bool> Add(User user)
         {
-            _user = new User();
-            _mode = enMode.AddMode;
+            var userId = await UserDLL.Add(user);
+            return userId > 0;
         }
 
-        public UserBLL(User user)
+        public async Task<bool> Update(User user)
         {
-            _user = user;
-            _mode = enMode.UpdateMode;
+            return await UserDLL.Update(user);
         }
 
-        public User CurrentUser { get => _user; set => _user = value; }
-
-        public bool Add()
+        public async Task<bool> Delete(int userId)
         {
-            _userID = UserDLL.Add(_user);
-            return _userID > 0;
+            return await UserDLL.Delete(userId);
         }
 
-        public bool Update() => UserDLL.Update(_user);
-
-        public bool Delete(int userId) => UserDLL.Delete(userId);
-
-        public static Task<User?> GetByID(int userId) => UserDLL.GetByID(userId);
-
-        public static Task<List<User>> GetAll() => UserDLL.GetAll();
-
-        public static bool ExistsByEmail(string? email, int excludeId = 0) => UserDLL.ExistsByEmail(email, excludeId);
-
-        public static bool ExistsByPhone(string? phone, int excludeId = 0) => UserDLL.ExistsByPhone(phone, excludeId);
-
-        public bool Save() => _mode switch
+        public async Task<User?> GetByID(int userId)
         {
-            enMode.AddMode => Add(),
-            enMode.UpdateMode => Update(),
-            _ => false
-        };
+            return await UserDLL.GetByID(userId);
+        }
+
+        public async Task<List<User>> GetAll()
+        {
+            return await UserDLL.GetAll();
+        }
+
+        public async Task<User?> GetByPhone(string phone)
+        {
+            return await UserDLL.GetByPhone(phone);
+        }
+
+        public async Task<bool> ExistsByEmail(string? email, int excludeId = 0)
+        {
+            return await UserDLL.ExistsByEmail(email, excludeId);
+        }
+
+        public async Task<bool> ExistsByPhone(string? phone, int excludeId = 0)
+        {
+            return await UserDLL.ExistsByPhone(phone, excludeId);
+        }
     }
 }

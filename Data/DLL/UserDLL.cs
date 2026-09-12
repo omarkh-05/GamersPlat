@@ -8,7 +8,7 @@ namespace DataLayer
     public class UserDLL
     {
         // ================ CRUD ================
-        public static int Add(User user)
+        public static async Task<int> Add(User user)
         {
             try
             {
@@ -24,12 +24,85 @@ namespace DataLayer
             }
         }
 
-        public static bool Update(User user)
+        public static async Task<User?> GetByPhone(string phone)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(phone)) return null;
+                using var db = new GamersPlatDbContext();
+                return await db.Users
+                    .Include(u => u.UserRoles)
+                    .Include(u => u.RefreshTokens)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.PhoneNumber == phone);
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Get User By Phone Error", ex);
+                return null;
+            }
+        }
+
+        public static async Task<bool> ChangePassword(int userId, string newPasswordHash)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Users.FirstOrDefault(u => u.UserId == user.UserId);
+                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+                if (existing == null) return false;
+                existing.PasswordHash = newPasswordHash;
+                existing.UpdatedAt = DateTime.UtcNow;
+                return db.SaveChanges() > 0;
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Update Password Error", ex);
+                return false;
+            }
+        }
+
+        public static async Task<bool> VerifyEmail(int userId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+                if (existing == null) return false;
+                existing.EmailVerified = true;
+                existing.UpdatedAt = DateTime.UtcNow;
+                return db.SaveChanges() > 0;
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Verify Email Error", ex);
+                return false;
+            }
+        }
+
+        public static async Task<bool> VerifyPhone(int userId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+                if (existing == null) return false;
+                existing.PhoneVerified = true;
+                existing.UpdatedAt = DateTime.UtcNow;
+                return db.SaveChanges() > 0;
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Verify Phone Error", ex);
+                return false;
+            }
+        }
+
+        public static async Task<bool> Update(User user)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == user.UserId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(user);
                 return db.SaveChanges() > 0;
@@ -41,12 +114,12 @@ namespace DataLayer
             }
         }
 
-        public static bool Delete(int userId)
+        public static async Task<bool> Delete(int userId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Users.FirstOrDefault(u => u.UserId == userId);
+                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
                 if (existing == null) return false;
                 db.Users.Remove(existing);
                 return db.SaveChanges() > 0;
@@ -93,13 +166,13 @@ namespace DataLayer
         }
 
         // ================ Validation ============
-        public static bool ExistsByEmail(string? email, int excludeId = 0)
+        public static async Task<bool> ExistsByEmail(string? email, int excludeId = 0)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(email)) return false;
                 using var db = new GamersPlatDbContext();
-                return db.Users.Any(u => u.Email == email && (excludeId == 0 || u.UserId != excludeId));
+                return await db.Users.AnyAsync(u => u.Email == email && (excludeId == 0 || u.UserId != excludeId));
             }
             catch (Exception ex)
             {
@@ -108,13 +181,13 @@ namespace DataLayer
             }
         }
 
-        public static bool ExistsByPhone(string? phone, int excludeId = 0)
+        public static async Task<bool> ExistsByPhone(string? phone, int excludeId = 0)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(phone)) return false;
                 using var db = new GamersPlatDbContext();
-                return db.Users.Any(u => u.PhoneNumber == phone && (excludeId == 0 || u.UserId != excludeId));
+                return await db.Users.AnyAsync(u => u.PhoneNumber == phone && (excludeId == 0 || u.UserId != excludeId));
             }
             catch (Exception ex)
             {

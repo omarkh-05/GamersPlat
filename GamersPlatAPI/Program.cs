@@ -1,3 +1,6 @@
+using Bussiness;
+using Bussiness.BLL;
+using Bussiness.Interfaces;
 using GamersPlatAPI.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +17,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+builder.Services.AddScoped<IAuthService, AuthBLL>();
+builder.Services.AddScoped<IUser, UserBLL>();
 
 #region Swagger
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -109,7 +115,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             // The expected issuer value (must match the issuer used when creating the JWT).
             ValidIssuer = "GamersPlat",
             // The expected audience value (must match the audience used when creating the JWT).
-            ValidAudience = "GamersPlatCustomers",
+            ValidAudience = "GamersPlatUsers",
             // The secret key used to validate the JWT signature.
             // This must be the same key used when generating the token.
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
@@ -207,6 +213,7 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
+// Monitor And Logging
 // ✅ Step 6: Global 403 logging middleware (place it HERE)
 //  ممكن احط في كل اندبوينت لوج برضو خاص او زي هيك عادي
 app.Use(async (context, next) =>
