@@ -23,6 +23,20 @@ namespace DataLayer
             }
         }
 
+        public static ResourcesType? GetByID(int id)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return db.ResourcesTypes.AsNoTracking().FirstOrDefault(r => r.ResourcesTypeId == id);
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Get ResourcesType By ID Error", ex);
+                return null;
+            }
+        }
+
         public static bool Update(ResourcesType rt)
         {
             try

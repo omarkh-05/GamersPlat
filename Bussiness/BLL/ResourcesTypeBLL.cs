@@ -35,6 +35,7 @@ namespace Bussiness
         public bool Delete(int id) => ResourcesTypeDLL.Delete(id);
 
         public static Task<List<ResourcesType>> GetAll() => ResourcesTypeDLL.GetAll();
+        public static ResourcesType? GetByID(int id) => ResourcesTypeDLL.GetByID(id);
 
         public bool Save() => _mode switch
         {

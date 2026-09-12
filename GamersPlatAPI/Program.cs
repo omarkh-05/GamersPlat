@@ -176,6 +176,28 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+// Seed roles at startup
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = new Data.EF.GamersPlatDbContext();
+        var roles = new[] { "Admin", "Owner", "Player" };
+        foreach (var rn in roles)
+        {
+            if (!db.Roles.Any(r => r.RoleName == rn))
+            {
+                db.Roles.Add(new Data.Role { RoleName = rn });
+            }
+        }
+        db.SaveChanges();
+    }
+    catch
+    {
+        // Ignore seeding errors at startup to avoid blocking the app; admin can inspect logs
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -210,6 +232,8 @@ app.Use(async (context, next) =>
 #endregion
 
 app.UseAuthentication();
+// Global error response middleware
+app.UseMiddleware<GamersPlatAPI.Middleware.ErrorResponseMiddleware>();
 
 app.UseAuthorization();
 

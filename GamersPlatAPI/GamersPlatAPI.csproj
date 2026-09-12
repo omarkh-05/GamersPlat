@@ -7,6 +7,33 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\AdminController\**" />
+    <Compile Remove="Controllers\AuthController\**" />
+    <Compile Remove="Controllers\PlayerController\**" />
+    <Compile Remove="Controllers\PublicController\**" />
+    <Compile Remove="DTO%27s\**" />
+    <Compile Remove="Helpers\**" />
+    <Content Remove="Controllers\AdminController\**" />
+    <Content Remove="Controllers\AuthController\**" />
+    <Content Remove="Controllers\PlayerController\**" />
+    <Content Remove="Controllers\PublicController\**" />
+    <Content Remove="DTO%27s\**" />
+    <Content Remove="Helpers\**" />
+    <EmbeddedResource Remove="Controllers\AdminController\**" />
+    <EmbeddedResource Remove="Controllers\AuthController\**" />
+    <EmbeddedResource Remove="Controllers\PlayerController\**" />
+    <EmbeddedResource Remove="Controllers\PublicController\**" />
+    <EmbeddedResource Remove="DTO%27s\**" />
+    <EmbeddedResource Remove="Helpers\**" />
+    <None Remove="Controllers\AdminController\**" />
+    <None Remove="Controllers\AuthController\**" />
+    <None Remove="Controllers\PlayerController\**" />
+    <None Remove="Controllers\PublicController\**" />
+    <None Remove="DTO%27s\**" />
+    <None Remove="Helpers\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
@@ -19,15 +46,6 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Controllers\AdminController\" />
-		<Folder Include="Controllers\AuthController\" />
-		<Folder Include="Controllers\PlayerController\" />
-		<Folder Include="Controllers\PublicController\BookingController\" />
-		<Folder Include="Controllers\PublicController\HomeController\" />
-		<Folder Include="Controllers\PublicController\CenterController\" />
-		<Folder Include="Controllers\PublicController\RatingController\" />
-		<Folder Include="DTO%27s\Response DTO%27s\" />
-		<Folder Include="Helpers\" />
 		<Folder Include="wwwRoot\" />
 	</ItemGroup>
 

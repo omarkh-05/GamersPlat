@@ -24,6 +24,22 @@ namespace DataLayer
             }
         }
 
+        public static int GetBookedQuantity(int resourcesTypeId, DateOnly date)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return db.Bookings
+                    .Where(b => b.ResourcesTypeId == resourcesTypeId && b.BookingDate == date && b.Status != "Cancelled")
+                    .Sum(b => (int?)b.Quantity) ?? 0;
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Get Booked Quantity Error", ex);
+                return 0;
+            }
+        }
+
         public static bool Update(Booking booking)
         {
             try
