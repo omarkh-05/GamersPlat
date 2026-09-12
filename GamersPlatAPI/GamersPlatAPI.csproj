@@ -45,8 +45,4 @@
     <ProjectReference Include="..\Bussiness\Bussiness.csproj" />
   </ItemGroup>
 
-	<ItemGroup>
-		<Folder Include="wwwRoot\" />
-	</ItemGroup>
-
 </Project>
