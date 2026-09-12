@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
 using Data.EF;
+using Domain.DTOs.Auth;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace DataLayer
@@ -14,7 +15,7 @@ namespace DataLayer
             {
                 using var db = new GamersPlatDbContext();
                 db.Users.Add(user);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return user.UserId;
             }
             catch (Exception ex)
@@ -52,7 +53,7 @@ namespace DataLayer
                 if (existing == null) return false;
                 existing.PasswordHash = newPasswordHash;
                 existing.UpdatedAt = DateTime.UtcNow;
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -105,7 +106,7 @@ namespace DataLayer
                 var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == user.UserId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(user);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -145,6 +146,23 @@ namespace DataLayer
             catch (Exception ex)
             {
                 WriteEventLog("Get User By ID Error", ex);
+                return null;
+            }
+        }
+
+        public static async Task<User?> GetByPhoneOrEmail(RequestResetRequest reqResetPass)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Users
+                    .Include(u => u.UserId)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == reqResetPass.Email || u.PhoneNumber == reqResetPass.PhoneNumber);
+            }
+            catch (Exception ex)
+            {
+                WriteEventLog("Get User By Phone Or Email ID Error", ex);
                 return null;
             }
         }

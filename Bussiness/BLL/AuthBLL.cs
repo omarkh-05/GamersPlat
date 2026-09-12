@@ -14,14 +14,20 @@ namespace Bussiness.BLL
         private readonly IUser _user;
         private readonly AuthHelpers _authHelpers;
         private readonly RefreshTokenBLL _refreshTokenBLL;
-        public AuthBLL(IUser user,AuthHelpers authHelpers, RefreshTokenBLL refreshTokenBLL)
+        private readonly IRoles _roles;
+        private readonly IUserRole _userRole;
+        private readonly PasswordResetTokenBLL _passwordResetTokenBLL;
+        public AuthBLL(IUser user,AuthHelpers authHelpers, RefreshTokenBLL refreshTokenBLL, IRoles roles, IUserRole userRole, PasswordResetTokenBLL passwordResetTokenBLL)
         {
             _authHelpers = authHelpers;
             _refreshTokenBLL = refreshTokenBLL;
             _user = user;
+            _roles = roles;
+            _userRole = userRole;
+            _passwordResetTokenBLL = passwordResetTokenBLL;
         }
 
-        public async Task RegisterAsync(RegisterRequest request)
+        public async Task RegisterWithRoleAsync(UserRegisterRequest request, string roleName)
         {
             if (string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber) ||
@@ -31,19 +37,32 @@ namespace Bussiness.BLL
             if (await _user.ExistsByPhone(request.PhoneNumber))
                 throw new Exception("Phone number already exists");
 
-            var user = new User
-            {
-                FullName = request.FullName,
-                PhoneNumber = request.PhoneNumber,
-                Email = request.Email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                IsActive = true,
-                CityId = request.CityId,
-                CreatedAt = DateTime.UtcNow
-            };
+            var role = await _roles.GetByName(roleName); // "Player" أو "CenterOwner"
+            if (role == null)
+                throw new Exception("Invalid role");
 
-            if (!await _user.Add(user))
-                throw new Exception("Failed to create user");
+            
+                var user = new User
+                {
+                    FullName = request.FullName,
+                    PhoneNumber = request.PhoneNumber,
+                    Email = request.Email,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                    IsActive = true,
+                    CityId = request.CityId
+                };
+
+                if (!await _user.Add(user))
+                    throw new Exception("Failed to create user");
+
+                var userRole = new UserRole
+                {
+                    UserId = user.UserId,
+                    RoleId = role.RoleId,
+                };
+
+                if(!await _userRole.Add(userRole))
+                throw new Exception("Failed to add user role");
         }
 
         public async Task<TokenResponse> LoginAsync(LoginRequest request)
@@ -151,11 +170,11 @@ namespace Bussiness.BLL
             };
         }
 
-        public async Task<bool> ChangePassword(int userId,string currentPassword, string newPassword)
+        public async Task<bool> ChangePassword(int userId, ChangePasswordRequest request)
         {
             if (userId <= 0 ||
-                string.IsNullOrWhiteSpace(currentPassword) ||
-                string.IsNullOrWhiteSpace(newPassword))
+                string.IsNullOrWhiteSpace(request.OldPassword) ||
+                string.IsNullOrWhiteSpace(request.NewPassword))
                 return false;
 
             var user = await _user.GetByID(userId);
@@ -163,14 +182,58 @@ namespace Bussiness.BLL
             if (user == null || !user.IsActive)
                 return false;
 
-            if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
+            if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
                 return false;
 
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
 
-            return await _user.Update(user);
+            if (await _user.Update(user)) return true;
+            else
+                throw new Exception("Error updating user");
         }
 
+        public async Task<string> RequestResetPassword(RequestResetRequest request)
+        {
+            var user = await _user.GetByPhoneOrEmail(request);
+            if (user == null)
+                throw new Exception("User not found");
+
+            var token = new PasswordResetToken
+            {
+                UserId = user.UserId,
+                TokenHash = Guid.NewGuid().ToString(),
+                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                CreatedAt = DateTime.UtcNow
+            };
+
+           if (!await _passwordResetTokenBLL.Add(token))
+                throw new Exception("Failed to create password reset token");
+
+            return token.TokenHash;
+        }
+
+        public async Task<bool> ResetPassword(ResetPasswordRequest request)
+        {
+            var token = await _passwordResetTokenBLL.GetByToken(request.Token);
+            if (token == null)
+                throw new Exception("Invalid token");
+
+            if (token.ExpiresAt < DateTime.UtcNow)
+                throw new Exception("Token expired");
+
+            var user= await _user.GetByID(token.UserId);
+            if (user == null)
+                throw new Exception("User not found");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            if (!await _user.Update(user))
+                throw new Exception("Failed to update password");
+
+            if (await _passwordResetTokenBLL.Delete(token.TokenId))
+                return true;
+            else
+                throw new Exception("Failed to delete password reset token");
+        }
         /* public async Task<bool> VerifyEmail(int userId)
         {
             return await _user.VerifyEmail(userId);

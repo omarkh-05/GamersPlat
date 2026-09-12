@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Domain.DTOs.Auth
 {
-    public class RegisterRequest
+    public class UserRegisterRequest
     {
         [Required, MaxLength(100)]
         public string FullName { get; set; } = null!;
@@ -20,8 +20,8 @@ namespace Domain.DTOs.Auth
         [Required]
         public short CityId { get; set; }
 
-        [Required]
-        public DateTime DateOfBirth { get; set; }
+        //[Required]
+        //public DateTime DateOfBirth { get; set; }
 
         [Required, MinLength(6)]
         public string Password { get; set; } = null!;

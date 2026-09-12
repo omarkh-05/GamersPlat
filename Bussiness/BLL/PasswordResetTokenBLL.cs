@@ -4,40 +4,12 @@ namespace Bussiness
 {
     public class PasswordResetTokenBLL
     {
-        private enum enMode { AddMode = 1 }
-        private enMode _mode = enMode.AddMode;
-
-        private PasswordResetToken _token;
-        public int _tokenID = -1;
-
-        public PasswordResetTokenBLL()
+        public async Task<bool> Add(PasswordResetToken _token)
         {
-            _token = new PasswordResetToken();
-            _mode = enMode.AddMode;
-        }
-
-        public PasswordResetTokenBLL(PasswordResetToken token)
-        {
-            _token = token;
-            _mode = enMode.AddMode;
-        }
-
-        public PasswordResetToken CurrentToken { get => _token; set => _token = value; }
-
-        public bool Add()
-        {
-            _tokenID = PasswordResetTokenDLL.Add(_token);
+            int _tokenID = await PasswordResetTokenDLL.Add(_token);
             return _tokenID > 0;
         }
-
-        public bool Delete(int id) => PasswordResetTokenDLL.Delete(id);
-
-        public static Task<PasswordResetToken?> GetByToken(string token) => PasswordResetTokenDLL.GetByToken(token);
-
-        public bool Save() => _mode switch
-        {
-            enMode.AddMode => Add(),
-            _ => false
-        };
+        public async Task< bool> Delete(int id) => await PasswordResetTokenDLL.Delete(id);
+        public async Task<PasswordResetToken?> GetByToken(string token) => await PasswordResetTokenDLL.GetByToken(token);
     }
 }

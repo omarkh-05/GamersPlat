@@ -4,9 +4,9 @@ using System.Text;
 
 namespace Domain.DTOs.Auth
 {
-    public class ChangePasswordRequest
+    public class ResetPasswordRequest
     {
+        public string Token { get; set; } = null!;
         public string NewPassword { get; set; } = null!;
-        public string OldPassword { get; set; } = null!;
     }
 }

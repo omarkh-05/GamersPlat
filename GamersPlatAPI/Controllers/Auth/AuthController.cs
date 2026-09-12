@@ -1,14 +1,9 @@
-using Bussiness;
-using Data.EF;
+using Bussiness.Interfaces;
+using Domain.DTOs.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace GamersPlatAPI.Controllers
 {
@@ -16,320 +11,259 @@ namespace GamersPlatAPI.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly IConfiguration _config;
+        private readonly IAuthService _authService;
 
-        public AuthController(IConfiguration config)
+        public AuthController( IAuthService authService)
         {
-            _config = config;
+            _authService = authService;
         }
 
-        [HttpPost("register")]
+        [HttpPost("register/player")]
         [EnableRateLimiting("AuthLimiter")]
-        public IActionResult Register([FromBody] RegisterRequest request)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> PlayerRegister([FromBody] UserRegisterRequest request)
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.PhoneNumber) || string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest("Invalid registration data");
-
-            if (UserBLL.ExistsByPhone(request.PhoneNumber))
-                return Conflict("Phone already in use");
-
-            var user = new Data.User
+            try
             {
-                FullName = request.Name ?? string.Empty,
-                Email = request.Email,
-                PhoneNumber = request.PhoneNumber,
-                PasswordHash = HashPassword(request.Password),
-                CityId = request.CityId,
-                CreatedAt = DateTime.UtcNow,
-                EmailVerified = false,
-                PhoneVerified = false
-            };
+                if (request == null)
+                    return BadRequest("Invalid registration data");
 
-            var bll = new UserBLL(user);
-            if (!bll.Add())
-                return StatusCode(500, "Unable to create user");
+                // فهيك ربطناهم مع بعض DI(builder.Services.AddScoped<IAuthService, AuthBLL>();) عملنا program.cs لما اضغط على الفنكشن راح يوديني على الانتر فيس ولكن الانتر فيس هو راح يعرف اي فنكشن مقصود من كلاس الاوث بزنس لانه في ال program.cs 
+                await _authService.RegisterWithRoleAsync(request, "Player");
 
-            // assign role if provided
-            if (!string.IsNullOrWhiteSpace(request.Role))
-            {
-                using var db = new GamersPlatDbContext();
-                var role = db.Roles.FirstOrDefault(r => r.RoleName == request.Role);
-                if (role != null)
-                {
-                    var ur = new Data.UserRole { UserId = bll._userID, RoleId = role.RoleId };
-                    var urBll = new UserRoleBLL(ur);
-                    urBll.Add();
-                }
+                return Ok(new { message = "Player registered successfully" });
             }
-
-            return Created("", new { UserId = bll._userID });
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
-        [HttpPost("login")]
+        [HttpPost("register/owner")]
         [EnableRateLimiting("AuthLimiter")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> OwnerRegister([FromBody] UserRegisterRequest request)
+        {
+            try
+            {
+                if (request == null)
+                    return BadRequest("Invalid registration data");
+
+                await _authService.RegisterWithRoleAsync(request, "Owner");
+
+                return Ok(new { message = "Owner registered successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("Login")]
+        [EnableRateLimiting("AuthLimiter")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.PhoneNumber) || string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest("Phone number and password are required");
-
-            using var db = new GamersPlatDbContext();
-            var user = db.Users
-                .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                .FirstOrDefault(u => u.PhoneNumber == request.PhoneNumber);
-
-            if (user == null)
-                return NotFound("User not found");
-
-            var hashed = HashPassword(request.Password);
-            if (hashed != user.PasswordHash)
-                return Unauthorized("Invalid credentials");
-
-            // build role claims
-            var roleNames = user.UserRoles?.Select(ur => ur.Role.RoleName).ToList() ?? new List<string>();
-
-            var token = GenerateJwtToken(user.UserId, roleNames);
-
-            // create refresh token record
-            var refresh = new Data.RefreshToken
+            try
             {
-                TokenHash = Guid.NewGuid().ToString(),
-                CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddDays(7),
-                UserId = user.UserId
-            };
-            var rtBll = new RefreshTokenBLL(refresh);
-            rtBll.Add();
+                if (string.IsNullOrEmpty(request.PhoneNumber) || string.IsNullOrEmpty(request.Password))
+                    return BadRequest("Phone number and password are required");
 
-            Response.Cookies.Append("accessToken", token, new CookieOptions
+                var result = await _authService.LoginAsync(request);
+
+
+                Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = false, // in production it must be true
+                    SameSite = SameSiteMode.None, // in production it must be SameSiteMode.Strict - مهم عند cross-origin (127.0.0.1:5500 → localhost:7018)
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    Path = "/"
+                });
+
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
             {
-                HttpOnly = true,
-                Secure = false,
-                SameSite = SameSiteMode.None,
-                Expires = DateTime.UtcNow.AddHours(1),
-                Path = "/"
-            });
-
-            var resp = new LoginResponse
-            {
-                UserId = user.UserId,
-                Roles = roleNames,
-                Token = token,
-                RefreshToken = refresh.TokenHash
-            };
-
-            return Ok(resp);
+                return NotFound("Invalid credentials" + ex.Message);
+            }
         }
 
         [HttpPost("Refresh")]
         [EnableRateLimiting("AuthLimiter")]
-        public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> Refresh()
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
-                return BadRequest();
-
-            var existing = await RefreshTokenBLL.GetByToken(request.RefreshToken);
-            if (existing == null)
-                return Unauthorized();
-
-            var token = GenerateJwtToken(existing.UserId);
-            return Ok(new { Token = token });
-        }
-
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] RefreshRequest request)
-        {
-            if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
-                return BadRequest();
-
-            var existing = await RefreshTokenBLL.GetByToken(request.RefreshToken);
-            if (existing == null) return NotFound();
-
-            var rtBll = new RefreshTokenBLL();
-            var deleted = rtBll.Delete(existing.TokenId);
-            // remove cookie
-            Response.Cookies.Delete("accessToken");
-            if (!deleted) return StatusCode(500, new { message = "Failed to revoke refresh token" });
-            return NoContent();
-        }
-
-        private string GenerateJwtToken(int userId, List<string>? roles = null)
-        {
-            var secret = _config["GamersPlat_JKey"] ?? throw new Exception("JWT secret not configured");
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
-            if (roles != null)
+            try
             {
-                foreach (var r in roles)
+                // اقرأ refresh token من HttpOnly cookie
+                if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+                    throw new UnauthorizedAccessException("Refresh token missing");
+
+                var result = await _authService.RefreshAsync(refreshToken);
+
+                // ضع refresh token الجديد في HttpOnly cookie
+                Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
                 {
-                    claims.Add(new Claim(ClaimTypes.Role, r));
-                }
+                    HttpOnly = true,
+                    Secure = false, // in production it must be true
+                    SameSite = SameSiteMode.None, // in production it must be SameSiteMode.Strict - مهم عند cross-origin (127.0.0.1:5500 → localhost:7018)
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    Path = "/"
+                });
+
+                return Ok(new { AccessToken = result.AccessToken });
             }
-
-            var token = new JwtSecurityToken(
-                issuer: "GamersPlat",
-                audience: "GamersPlatCustomers",
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(1),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        [HttpPost("request-verify-email")]
-        public IActionResult RequestVerifyEmail([FromBody] VerifyEmailRequest request)
-        {
-            if (request == null || (string.IsNullOrWhiteSpace(request.Email) && string.IsNullOrWhiteSpace(request.PhoneNumber)))
-                return BadRequest();
-
-            using var db = new GamersPlatDbContext();
-            var user = !string.IsNullOrWhiteSpace(request.Email)
-                ? db.Users.FirstOrDefault(u => u.Email == request.Email)
-                : db.Users.FirstOrDefault(u => u.PhoneNumber == request.PhoneNumber);
-
-            if (user == null) return NotFound();
-
-            var token = new Data.EmailVerificationToken
+            catch (UnauthorizedAccessException ex)
             {
-                UserId = user.UserId,
-                TokenHash = Guid.NewGuid().ToString(),
-                ExpiresAt = DateTime.UtcNow.AddHours(24),
-                CreatedAt = DateTime.UtcNow
-            };
-
-            var bll = new EmailVerificationTokenBLL(token);
-            bll.Add();
-
-            // In production send email. Return token for testing.
-            return Ok(new { Token = token.TokenHash });
+                return Unauthorized(ex.Message);
+            }
         }
 
-        [HttpPost("verify-email")]
-        public async Task<IActionResult> VerifyEmail([FromBody] TokenRequest request)
+        [HttpPost("Logout")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Logout()
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.Token)) return BadRequest();
-
-            var token = await EmailVerificationTokenBLL.GetByToken(request.Token);
-            if (token == null) return NotFound();
-            if (token.ExpiresAt < DateTime.UtcNow) return BadRequest("Token expired");
-
-            var userTask = UserBLL.GetByID(token.UserId);
-            userTask.Wait();
-            var user = userTask.Result;
-            if (user == null) return NotFound();
-
-            user.EmailVerified = true;
-            var userBll = new UserBLL(user);
-            userBll.Update();
-
-            var evBll = new EmailVerificationTokenBLL();
-            evBll.Delete(token.TokenIdId);
-
-            return Ok(new { message = "Email verified" });
-        }
-
-        [HttpPost("request-reset-password")]
-        public IActionResult RequestResetPassword([FromBody] RequestResetRequest request)
-        {
-            if (request == null || (string.IsNullOrWhiteSpace(request.Email) && string.IsNullOrWhiteSpace(request.PhoneNumber)))
-                return BadRequest();
-
-            using var db = new GamersPlatDbContext();
-            var user = !string.IsNullOrWhiteSpace(request.Email)
-                ? db.Users.FirstOrDefault(u => u.Email == request.Email)
-                : db.Users.FirstOrDefault(u => u.PhoneNumber == request.PhoneNumber);
-
-            if (user == null) return NotFound();
-
-            var token = new Data.PasswordResetToken
+            try
             {
-                UserId = user.UserId,
-                TokenHash = Guid.NewGuid().ToString(),
-                ExpiresAt = DateTime.UtcNow.AddHours(1),
-                CreatedAt = DateTime.UtcNow
-            };
+                if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+                    throw new UnauthorizedAccessException("Refresh token missing");
 
-            var bll = new PasswordResetTokenBLL(token);
-            bll.Add();
-
-            // Return token for testing; in production send via SMS/email
-            return Ok(new { Token = token.TokenHash });
-        }
-
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
-        {
-            if (request == null || string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.NewPassword))
-                return BadRequest();
-
-            var token = await PasswordResetTokenBLL.GetByToken(request.Token);
-            if (token == null) return NotFound();
-            if (token.ExpiresAt < DateTime.UtcNow) return BadRequest("Token expired");
-
-            var userTask = UserBLL.GetByID(token.UserId);
-            userTask.Wait();
-            var user = userTask.Result;
-            if (user == null) return NotFound();
-
-            user.PasswordHash = HashPassword(request.NewPassword);
-            var userBll = new UserBLL(user);
-            userBll.Update();
-
-            var prBll = new PasswordResetTokenBLL();
-            prBll.Delete(token.TokenId);
-
-            return Ok(new { message = "Password reset" });
+                if (await _authService.LogoutAsync(refreshToken))
+                {
+                    Response.Cookies.Delete("refreshToken");
+                }
+                return Ok("Logged out successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Logout Error Try Again" + ex.Message);
+            }
         }
 
         [Authorize]
         [HttpPut("change-password")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.OldPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
-                return BadRequest();
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.OldPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+                    return BadRequest("Invalid Data");
 
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
+                var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
 
-            var user = await UserBLL.GetByID(userId);
-            if (user == null) return NotFound();
+                if (!await _authService.ChangePassword(userId,request))
+                    return StatusCode(500);
 
-            if (HashPassword(request.OldPassword) != user.PasswordHash) return Unauthorized("Invalid old password");
-
-            user.PasswordHash = HashPassword(request.NewPassword);
-            var bll = new UserBLL(user);
-            if (!bll.Update()) return StatusCode(500);
-
-            return NoContent();
+                return Ok("Password changed successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Error changing password: " + ex.Message);
+            }
         }
 
-        private static string HashPassword(string password)
+        [HttpPost("reset-password/request")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> RequestResetPassword([FromBody] RequestResetRequest request)
         {
-            using var sha = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha.ComputeHash(bytes);
-            return Convert.ToHexString(hash);
+            try {
+            if (request == null || (string.IsNullOrWhiteSpace(request.Email) && string.IsNullOrWhiteSpace(request.PhoneNumber)))
+                return BadRequest("Invalid Data");
+
+           string tokenHash = await _authService.RequestResetPassword(request);
+
+                // Return token for testing; in production send via SMS/email
+                return Ok(new { Token = tokenHash });
+            }catch (Exception ex) {
+                return BadRequest("Error in request reset password: " + ex.Message);
+            }
         }
 
-        // DTOs
-        public record RegisterRequest(string? Name, string? Email, string PhoneNumber, string Password, string? Role, short CityId);
-        public record LoginRequest(string PhoneNumber, string Password);
-        public record LoginResponse
+        [HttpPost("reset-password/confirm")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
-            public int UserId { get; init; }
-            public List<string>? Roles { get; init; }
-            public string Token { get; init; } = null!;
-            public string RefreshToken { get; init; } = null!;
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.NewPassword))
+                    return BadRequest("Invalid Data");
+
+                if( await _authService.ResetPassword(request))
+                    return Ok("Password reset successfully");
+                else
+                    return StatusCode(500, "Failed to reset password");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Error in resetting password: " + ex.Message);
+            }
         }
 
-        public record RefreshRequest(string RefreshToken);
-        public record VerifyEmailRequest(string? Email, string? PhoneNumber);
-        public record TokenRequest(string Token);
-        public record RequestResetRequest(string? Email, string? PhoneNumber);
-        public record ResetPasswordRequest(string Token, string NewPassword);
-        public record ChangePasswordRequest(string OldPassword, string NewPassword);
+        
+        //[HttpPost("request-verify-email")]
+        //public IActionResult RequestVerifyEmail([FromBody] VerifyEmailRequest request)
+        //{
+        //    if (request == null || (string.IsNullOrWhiteSpace(request.Email) && string.IsNullOrWhiteSpace(request.PhoneNumber)))
+        //        return BadRequest();
+
+        //    using var db = new GamersPlatDbContext();
+        //    var user = !string.IsNullOrWhiteSpace(request.Email)
+        //        ? db.Users.FirstOrDefault(u => u.Email == request.Email)
+        //        : db.Users.FirstOrDefault(u => u.PhoneNumber == request.PhoneNumber);
+
+        //    if (user == null) return NotFound();
+
+        //    var token = new Data.EmailVerificationToken
+        //    {
+        //        UserId = user.UserId,
+        //        TokenHash = Guid.NewGuid().ToString(),
+        //        ExpiresAt = DateTime.UtcNow.AddHours(24),
+        //        CreatedAt = DateTime.UtcNow
+        //    };
+
+        //    var bll = new EmailVerificationTokenBLL(token);
+        //    bll.Add();
+
+        //    // In production send email. Return token for testing.
+        //    return Ok(new { Token = token.TokenHash });
+        //}
+
+        //[HttpPost("verify-email")]
+        //public async Task<IActionResult> VerifyEmail([FromBody] TokenRequest request)
+        //{
+        //    if (request == null || string.IsNullOrWhiteSpace(request.Token)) return BadRequest();
+
+        //    var token = await EmailVerificationTokenBLL.GetByToken(request.Token);
+        //    if (token == null) return NotFound();
+        //    if (token.ExpiresAt < DateTime.UtcNow) return BadRequest("Token expired");
+
+        //    var userTask = UserBLL.GetByID(token.UserId);
+        //    userTask.Wait();
+        //    var user = userTask.Result;
+        //    if (user == null) return NotFound();
+
+        //    user.EmailVerified = true;
+        //    var userBll = new UserBLL(user);
+        //    userBll.Update();
+
+        //    var evBll = new EmailVerificationTokenBLL();
+        //    evBll.Delete(token.TokenIdId);
+
+        //    return Ok(new { message = "Email verified" });
+        //}
     }
 }

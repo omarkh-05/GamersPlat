@@ -1,6 +1,7 @@
 using Bussiness.Interfaces;
 using Data;
 using DataLayer;
+using Domain.DTOs.Auth;
 namespace Bussiness
 {
     public class UserBLL : IUser
@@ -34,6 +35,11 @@ namespace Bussiness
         public async Task<User?> GetByPhone(string phone)
         {
             return await UserDLL.GetByPhone(phone);
+        }
+
+        public async Task<User?> GetByPhoneOrEmail(RequestResetRequest reqResetPass)
+        {
+            return await UserDLL.GetByPhoneOrEmail(reqResetPass);
         }
 
         public async Task<bool> ExistsByEmail(string? email, int excludeId = 0)

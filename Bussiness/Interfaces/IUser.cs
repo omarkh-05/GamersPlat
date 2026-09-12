@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Data;
+using Domain.DTOs.Auth;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using Data;
 
 namespace Bussiness.Interfaces
 {
@@ -15,6 +16,7 @@ namespace Bussiness.Interfaces
         Task<User?> GetByID(int userId);
         Task<List<User>> GetAll();
         Task<User?> GetByPhone(string phone);
+        Task<User?> GetByPhoneOrEmail(RequestResetRequest reqResetPass);
 
         Task<bool> ExistsByEmail(string? email, int excludeId = 0);
         Task<bool> ExistsByPhone(string? phone, int excludeId = 0);

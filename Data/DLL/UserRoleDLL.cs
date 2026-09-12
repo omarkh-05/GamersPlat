@@ -7,13 +7,13 @@ namespace DataLayer
 {
     public class UserRoleDLL
     {
-        public static int Add(UserRole ur)
+        public static async Task<int> Add(UserRole ur)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
                 db.UserRoles.Add(ur);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return ur.Id;
             }
             catch (Exception ex)

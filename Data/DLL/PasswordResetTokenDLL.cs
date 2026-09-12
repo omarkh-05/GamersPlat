@@ -7,13 +7,13 @@ namespace DataLayer
 {
     public class PasswordResetTokenDLL
     {
-        public static int Add(PasswordResetToken token)
+        public static async Task<int> Add(PasswordResetToken token)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
                 db.PasswordResetTokens.Add(token);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return token.TokenId;
             }
             catch (Exception ex)
@@ -23,7 +23,7 @@ namespace DataLayer
             }
         }
 
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {
@@ -31,7 +31,7 @@ namespace DataLayer
                 var existing = db.PasswordResetTokens.FirstOrDefault(t => t.TokenId == id);
                 if (existing == null) return false;
                 db.PasswordResetTokens.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
