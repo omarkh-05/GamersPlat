@@ -1,5 +1,6 @@
 ﻿using Data;
 using Domain.DTOs.Auth;
+using Domain.DTOs.User;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -13,10 +14,11 @@ namespace Bussiness.Interfaces
         Task<bool> Update(User user);
         Task<bool> Delete(int userId);
 
-        Task<User?> GetByID(int userId);
-        Task<List<User>> GetAll();
-        Task<User?> GetByPhone(string phone);
-        Task<User?> GetByPhoneOrEmail(RequestResetRequest reqResetPass);
+        Task<DTO_UserInfoRequest?> GetUserInfoByID(int userId);
+        Task<List<DTO_UserListResponse>> GetAll();
+        Task<DTO_UserInfoRequest?> GetUserInfoByPhone(string phone);
+        Task<int> GetIdByPhoneOrEmail(RequestResetRequest reqResetPass);
+        Task<User?> GetById(int userId);
 
         Task<bool> ExistsByEmail(string? email, int excludeId = 0);
         Task<bool> ExistsByPhone(string? phone, int excludeId = 0);

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Data;
 using Data.EF;
-using System.Diagnostics;
+using Data.DLL;
 
 namespace DataLayer
 {
@@ -19,11 +19,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add Center Error", ex);
+                EventLog_Helper.WriteEventLog("Add Center Error", ex);
                 return 0;
             }
         }
-
         public static bool Update(Center center)
         {
             try
@@ -36,11 +35,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update Center Error", ex);
+                EventLog_Helper.WriteEventLog("Update Center Error", ex);
                 return false;
             }
         }
-
         public static bool Delete(int centerId)
         {
             try
@@ -53,11 +51,47 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete Center Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Center Error", ex);
                 return false;
             }
         }
+        public static async Task<List<Center>> GetAll()
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Centers
+                    .Include(c => c.City)
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Centers Error", ex);
+                return new List<Center>();
+            }
+        }
+        public static async Task<List<string>> GetCenterNames()
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Centers
+                    .Where(c => c.IsActive == true)
+                    .Select(c => c.CenterName)
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Center Names Error", ex);
+                return new List<string>();
+            }
+        }
+        // ================ CRUD ================
 
+
+        // ================ Read By ================
         public static async Task<Center?> GetByID(int centerId)
         {
             try
@@ -73,54 +107,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Center By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get Center By ID Error", ex);
                 return null;
             }
         }
-
-        public static async Task<List<Center>> GetAll()
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Centers
-                    .Include(c => c.City)
-                    .AsNoTracking()
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Get All Centers Error", ex);
-                return new List<Center>();
-            }
-        }
-
-        public static async Task<List<string>> GetCenterNames()
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Centers
-                    .Where(c => c.IsActive == true)
-                    .Select(c => c.CenterName)
-                    .AsNoTracking()
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Get Center Names Error", ex);
-                return new List<string>();
-            }
-        }
-
-        // ===================== EventLog Helper =====================
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+        // ================ Read By ================
     }
 }

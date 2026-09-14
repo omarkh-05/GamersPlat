@@ -1,12 +1,14 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
-using System.Diagnostics;
+using Domain.DTOs.Player;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataLayer
 {
     public class TournamentPlayerDLL
     {
+        // ================ CRUD ================
         public static int Add(TournamentPlayer tp)
         {
             try
@@ -18,39 +20,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add TournamentPlayer Error", ex);
+                EventLog_Helper.WriteEventLog("Add TournamentPlayer Error", ex);
                 return 0;
             }
         }
-
-        public static async Task<List<TournamentPlayer>> GetByTournamentId(int tournamentId)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.TournamentPlayers.Where(x => x.TournamentId == tournamentId).AsNoTracking().ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Get TournamentPlayers By Tournament Error", ex);
-                return new List<TournamentPlayer>();
-            }
-        }
-
-        public static async Task<TournamentPlayer?> GetByTournamentAndUser(int tournamentId, int userId)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.TournamentPlayers.AsNoTracking().FirstOrDefaultAsync(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Get TournamentPlayer By Tournament and User Error", ex);
-                return null;
-            }
-        }
-
         public static bool DeleteByTournamentAndUser(int tournamentId, int userId)
         {
             try
@@ -63,17 +36,65 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete TournamentPlayer Error", ex);
+                EventLog_Helper.WriteEventLog("Delete TournamentPlayer Error", ex);
                 return false;
             }
         }
-
-        private static void WriteEventLog(string title, Exception ex)
+        public static async Task<List<DTO_PlayerTournamentInfo>?> GetByPlayerId(int playerId)
         {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.TournamentPlayers
+                 .Where(tp => tp.UserId == playerId)
+                 .Select(tp => new DTO_PlayerTournamentInfo
+                 {
+                     CenterName = tp.Tournament.Center.CenterName,
+                     TournamentName = tp.Tournament.TournamentName,
+                     GameName = tp.Tournament.Game.GameName,
+                     DeviceName = tp.Tournament.Device.DeviceName,
+                     WinnerUserId = tp.Tournament.WinnerUser.FullName,
+                     RewardPoints = tp.Tournament.RewardPoints,
+                     JoinedAt = tp.JoinedAt
+                 })
+                 .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get TournamentPlayer By Tournament and User Error", ex);
+                return null;
+            }
         }
+        // ================ CRUD ================
+
+
+        // ================ Read By ================
+        public static async Task<List<TournamentPlayer>> GetByTournamentId(int tournamentId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.TournamentPlayers.Where(x => x.TournamentId == tournamentId).AsNoTracking().ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get TournamentPlayers By Tournament Error", ex);
+                return new List<TournamentPlayer>();
+            }
+        }
+        public static async Task<TournamentPlayer?> GetByTournamentAndUser(int tournamentId, int userId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.TournamentPlayers.AsNoTracking().FirstOrDefaultAsync(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get TournamentPlayer By Tournament and User Error", ex);
+                return null;
+            }
+        }
+        // ================ Read By ================
     }
 }

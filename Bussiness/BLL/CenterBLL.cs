@@ -4,6 +4,7 @@ namespace Bussiness
 {
     public class CenterBLL
     {
+        // ================ CRUD ================
         private enum enMode { AddMode = 1, UpdateMode = 2 }
         private enMode _mode = enMode.AddMode;
 
@@ -30,15 +31,19 @@ namespace Bussiness
             return _centerID > 0;
         }
 
+        // ================ CRUD ================
+
         public bool Update() => CenterDLL.Update(_center);
 
         public bool Delete(int centerId) => CenterDLL.Delete(centerId);
 
+        // ================ Read By ================
         public static Task<Center?> GetByID(int centerId) => CenterDLL.GetByID(centerId);
 
         public static Task<List<Center>> GetAll() => CenterDLL.GetAll();
 
         public static Task<List<string>> GetCenterNames() => CenterDLL.GetCenterNames();
+        // ================ Read By ================
 
         public bool Save() => _mode switch
         {

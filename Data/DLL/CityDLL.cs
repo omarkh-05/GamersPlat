@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace DataLayer
@@ -18,7 +19,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add City Error", ex);
+                EventLog_Helper.WriteEventLog("Add City Error", ex);
                 return 0;
             }
         }
@@ -35,7 +36,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update City Error", ex);
+                EventLog_Helper.WriteEventLog("Update City Error", ex);
                 return false;
             }
         }
@@ -52,7 +53,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete City Error", ex);
+                EventLog_Helper.WriteEventLog("Delete City Error", ex);
                 return false;
             }
         }
@@ -66,7 +67,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get City By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get City By ID Error", ex);
                 return null;
             }
         }
@@ -80,17 +81,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get All Cities Error", ex);
+                EventLog_Helper.WriteEventLog("Get All Cities Error", ex);
                 return new List<City>();
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

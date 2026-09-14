@@ -1,8 +1,9 @@
 using Data;
+using Data.DLL;
 using Data.EF;
 using Domain.DTOs.Auth;
+using Domain.DTOs.User;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 
 namespace DataLayer
 {
@@ -20,168 +21,164 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add User Error", ex);
+                EventLog_Helper.WriteEventLog("Add User Error", ex);
                 return 0;
             }
         }
-
-        public static async Task<User?> GetByPhone(string phone)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(phone)) return null;
-                using var db = new GamersPlatDbContext();
-                return await db.Users
-                    .Include(u => u.UserRoles)
-                    .Include(u => u.RefreshTokens)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.PhoneNumber == phone);
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Get User By Phone Error", ex);
-                return null;
-            }
-        }
-
-        public static async Task<bool> ChangePassword(int userId, string newPasswordHash)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
-                if (existing == null) return false;
-                existing.PasswordHash = newPasswordHash;
-                existing.UpdatedAt = DateTime.UtcNow;
-                return await db.SaveChangesAsync() > 0;
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Update Password Error", ex);
-                return false;
-            }
-        }
-
-        public static async Task<bool> VerifyEmail(int userId)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
-                if (existing == null) return false;
-                existing.EmailVerified = true;
-                existing.UpdatedAt = DateTime.UtcNow;
-                return db.SaveChanges() > 0;
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Verify Email Error", ex);
-                return false;
-            }
-        }
-
-        public static async Task<bool> VerifyPhone(int userId)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
-                if (existing == null) return false;
-                existing.PhoneVerified = true;
-                existing.UpdatedAt = DateTime.UtcNow;
-                return db.SaveChanges() > 0;
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Verify Phone Error", ex);
-                return false;
-            }
-        }
-
         public static async Task<bool> Update(User user)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == user.UserId);
+                var existing = await db.Users.FindAsync(user.UserId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(user);
                 return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update User Error", ex);
+                EventLog_Helper.WriteEventLog("Update User Error", ex);
                 return false;
             }
         }
-
         public static async Task<bool> Delete(int userId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+                var existing = await db.Users.FindAsync(userId);
                 if (existing == null) return false;
                 db.Users.Remove(existing);
                 return db.SaveChanges() > 0;
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete User Error", ex);
+                EventLog_Helper.WriteEventLog("Delete User Error", ex);
                 return false;
             }
         }
-
-        public static async Task<User?> GetByID(int userId)
+        public static async Task<List<DTO_UserListResponse>> GetAll()
         {
             try
             {
                 using var db = new GamersPlatDbContext();
                 return await db.Users
-                    .Include(u => u.UserRoles)
-                    .Include(u => u.RefreshTokens)
                     .AsNoTracking()
+            .Select(u => new DTO_UserListResponse
+            {
+                UserId = u.UserId,
+                FullName = u.FullName,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                CityId = u.CityId,
+                Points = u.Points,
+                IsActive = u.IsActive,
+                PhoneVerified = u.PhoneVerified == false ? false : true,
+                EmailVerified = u.EmailVerified == false ? false : true,
+
+                Roles = u.UserRoles
+                    .Select(ur => ur.Role.RoleName)
+                    .ToList()
+            })
+            .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Users Error", ex);
+                return new List<DTO_UserListResponse>();
+            }
+        }
+        // ================ CRUD ================
+
+
+        // ================ Read By ================
+        public static async Task<User?> GetById(int userId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Users
+                    .Include(u => u.UserRoles!)
+                        .ThenInclude(ur => ur.Role)
                     .FirstOrDefaultAsync(u => u.UserId == userId);
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get User By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get User By ID Error", ex);
                 return null;
             }
         }
-
-        public static async Task<User?> GetByPhoneOrEmail(RequestResetRequest reqResetPass)
+        public static async Task<DTO_UserInfoRequest?> GetUserInfoByPhone(string phoneNumber)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(phoneNumber)) return null;
+                using var db = new GamersPlatDbContext();
+                return await db.Users
+                    .Where(u => u.PhoneNumber == phoneNumber)
+                        .Select(u => new DTO_UserInfoRequest
+                        {
+                            PhoneNumber = u.PhoneNumber,
+                            FullName = u.FullName,
+                            Email = u.Email,
+                            CityId = u.CityId,
+                            Points = u.Points,
+                            IsActive = u.IsActive,
+                            PhoneVerified = u.PhoneVerified == false ? false : true,
+                            EmailVerified = u.EmailVerified == false ? false : true
+                        })
+                        .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get User By Phone Error", ex);
+                return null;
+            }
+        }
+        public static async Task<DTO_UserInfoRequest?> GetUserInfoByID(int userId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
                 return await db.Users
-                    .Include(u => u.UserId)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.Email == reqResetPass.Email || u.PhoneNumber == reqResetPass.PhoneNumber);
+          .Where(u => u.UserId == userId)
+          .Select(u => new DTO_UserInfoRequest
+          {
+              PhoneNumber = u.PhoneNumber,
+              FullName = u.FullName,
+              Email = u.Email,
+              CityId = u.CityId,
+              Points = u.Points,
+              IsActive = u.IsActive,
+              PhoneVerified = u.PhoneVerified == false ? false : true,
+              EmailVerified = u.EmailVerified == false ? false : true
+          })
+          .FirstOrDefaultAsync();
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get User By Phone Or Email ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get User By ID Error", ex);
                 return null;
             }
         }
-
-        public static async Task<List<User>> GetAll()
+        public static async Task<int> GetIdByPhoneOrEmail(RequestResetRequest reqResetPass)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
                 return await db.Users
-                    .AsNoTracking()
-                    .ToListAsync();
+                   .Where(u => u.Email == reqResetPass.Email || u.PhoneNumber == reqResetPass.PhoneNumber)
+                    .Select(u => u.UserId)
+                    .FirstOrDefaultAsync();
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get All Users Error", ex);
-                return new List<User>();
+                EventLog_Helper.WriteEventLog("Get User By Phone Or Email ID Error", ex);
+                return -1;
             }
         }
+        // ================ Read By ================
+
 
         // ================ Validation ============
         public static async Task<bool> ExistsByEmail(string? email, int excludeId = 0)
@@ -194,11 +191,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Exists By Email Error", ex);
+                EventLog_Helper.WriteEventLog("Exists By Email Error", ex);
                 return false;
             }
         }
-
         public static async Task<bool> ExistsByPhone(string? phone, int excludeId = 0)
         {
             try
@@ -209,19 +205,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Exists By Phone Error", ex);
+                EventLog_Helper.WriteEventLog("Exists By Phone Error", ex);
                 return false;
             }
         }
-
-        // ===================== EventLog Helper =====================
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+        // ================ Validation ============
     }
 }

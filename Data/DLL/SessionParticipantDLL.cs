@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace DataLayer
@@ -19,7 +20,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add SessionParticipant Error", ex);
+                EventLog_Helper.WriteEventLog("Add SessionParticipant Error", ex);
                 return 0;
             }
         }
@@ -36,7 +37,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete SessionParticipant Error", ex);
+                EventLog_Helper.WriteEventLog("Delete SessionParticipant Error", ex);
                 return false;
             }
         }
@@ -50,17 +51,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get SessionParticipant By Session Error", ex);
+                EventLog_Helper.WriteEventLog("Get SessionParticipant By Session Error", ex);
                 return null;
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

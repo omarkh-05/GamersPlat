@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
-using System.Diagnostics;
 
 namespace DataLayer
 {
@@ -18,7 +18,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add CenterImage Error", ex);
+                EventLog_Helper.WriteEventLog("Add CenterImage Error", ex);
                 return 0;
             }
         }
@@ -35,7 +35,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update CenterImage Error", ex);
+                EventLog_Helper.WriteEventLog("Update CenterImage Error", ex);
                 return false;
             }
         }
@@ -52,7 +52,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete CenterImage Error", ex);
+                EventLog_Helper.WriteEventLog("Delete CenterImage Error", ex);
                 return false;
             }
         }
@@ -69,7 +69,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get CenterImage By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get CenterImage By ID Error", ex);
                 return null;
             }
         }
@@ -83,17 +83,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get All CenterImages Error", ex);
+                EventLog_Helper.WriteEventLog("Get All CenterImages Error", ex);
                 return new List<CenterImage>();
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

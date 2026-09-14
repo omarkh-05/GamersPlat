@@ -1,52 +1,39 @@
 using Data;
 using DataLayer;
+using Domain.DTOs.Player;
 namespace Bussiness
 {
     public class BookingBLL
     {
-        private enum enMode { AddMode = 1, UpdateMode = 2 }
-        private enMode _mode = enMode.AddMode;
-
-        private Booking _booking;
-        public int _bookingID = -1;
-
-        public BookingBLL()
+        private readonly ResourcesTypeBLL _resourcesTypeBLL;
+        public BookingBLL(ResourcesTypeBLL resourcesTypeBLL)
         {
-            _booking = new Booking();
-            _mode = enMode.AddMode;
+            _resourcesTypeBLL = resourcesTypeBLL;
         }
-
-        public BookingBLL(Booking booking)
-        {
-            _booking = booking;
-            _mode = enMode.UpdateMode;
-        }
-
-        public Booking CurrentBooking { get => _booking; set => _booking = value; }
         public string? LastError { get; private set; }
 
-        public bool Add()
+        // ================ CRUD ================
+        public async Task<bool> Add(Booking booking)
         {
-            // Validate resource availability
             try
             {
-                var rt = DataLayer.ResourcesTypeDLL.GetByID(_booking.ResourcesTypeId);
+                var rt = await _resourcesTypeBLL.GetByID(booking.ResourcesTypeId);
                 if (rt == null)
                 {
                     LastError = "Resource type not found";
                     return false;
                 }
 
-                var booked = BookingDLL.GetBookedQuantity(_booking.ResourcesTypeId, _booking.BookingDate);
+                var booked = await BookingDLL.GetBookedQuantity(booking.ResourcesTypeId, booking.BookingDate);
                 var available = rt.TotalQuantity - booked;
-                if (_booking.Quantity > available)
+                if (booking.Quantity > available)
                 {
                     LastError = "Not enough availability";
                     return false;
                 }
 
-                _bookingID = BookingDLL.Add(_booking);
-                return _bookingID > 0;
+               int bookingID = await BookingDLL.Add(booking);
+                return bookingID > 0;
             }
             catch (Exception ex)
             {
@@ -54,13 +41,12 @@ namespace Bussiness
                 return false;
             }
         }
-
-        public bool Update()
+        public async Task<bool> Update(Booking booking)
         {
             // Validate availability when changing booking date/resource/quantity
             try
             {
-                var existingTask = BookingDLL.GetByID(_booking.BookingId);
+                var existingTask = BookingDLL.GetByID(booking.BookingId);
                 existingTask.Wait();
                 var existing = existingTask.Result;
 
@@ -71,32 +57,32 @@ namespace Bussiness
                 }
 
                 // if resource/date/quantity changed, validate availability
-                bool needsCheck = existing.BookingDate != _booking.BookingDate || existing.ResourcesTypeId != _booking.ResourcesTypeId || existing.Quantity != _booking.Quantity;
+                bool needsCheck = existing.BookingDate != booking.BookingDate || existing.ResourcesTypeId != booking.ResourcesTypeId || existing.Quantity != booking.Quantity;
                 if (needsCheck)
                 {
-                    var rt = DataLayer.ResourcesTypeDLL.GetByID(_booking.ResourcesTypeId);
+                    var rt = await _resourcesTypeBLL.GetByID(booking.ResourcesTypeId);
                     if (rt == null)
                     {
                         LastError = "Resource type not found";
                         return false;
                     }
 
-                    var booked = BookingDLL.GetBookedQuantity(_booking.ResourcesTypeId, _booking.BookingDate);
+                    var booked = await BookingDLL.GetBookedQuantity(booking.ResourcesTypeId, booking.BookingDate);
                     // remove existing booking's quantity from booked count if same resource/date
-                    if (existing.ResourcesTypeId == _booking.ResourcesTypeId && existing.BookingDate == _booking.BookingDate)
+                    if (existing.ResourcesTypeId == booking.ResourcesTypeId && existing.BookingDate == booking.BookingDate)
                     {
                         booked -= existing.Quantity;
                     }
 
                     var available = rt.TotalQuantity - booked;
-                    if (_booking.Quantity > available)
+                    if (booking.Quantity > available)
                     {
                         LastError = "Not enough availability";
                         return false;
                     }
                 }
 
-                return BookingDLL.Update(_booking);
+                return await BookingDLL.Update(booking);
             }
             catch (Exception ex)
             {
@@ -104,20 +90,15 @@ namespace Bussiness
                 return false;
             }
         }
+        public async Task<bool> Delete(int bookingID) => await BookingDLL.Delete(bookingID);
+        public async Task<bool> Cancel(int bookingID) => await BookingDLL.Cancel(bookingID);
+        public async Task<List<Booking>> GetAll() => await BookingDLL.GetAll();
+        // ================ CRUD ================
 
-        public bool Delete(int bookingID) => BookingDLL.Delete(bookingID);
 
-        public static Task<Booking?> GetByID(int bookingID) => BookingDLL.GetByID(bookingID);
-
-        public static Task<List<Booking>> GetAll() => BookingDLL.GetAll();
-
-        public static Task<List<Booking>> GetByUserId(int userId) => BookingDLL.GetByUserId(userId);
-
-        public bool Save() => _mode switch
-        {
-            enMode.AddMode => Add(),
-            enMode.UpdateMode => Update(),
-            _ => false
-        };
+        // ================ Read By ================
+        public async Task<List<DTO_PlayerBookingsInfo>> GetByUserId(int userId) => await BookingDLL.GetByUserId(userId);
+        public async Task<Booking?> GetByID(int bookingID) => await BookingDLL.GetByID(bookingID);
+        // ================ Read By ================
     }
 }

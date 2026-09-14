@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
-using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataLayer
 {
@@ -18,7 +18,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add Device Error", ex);
+                EventLog_Helper.WriteEventLog("Add Device Error", ex);
                 return 0;
             }
         }
@@ -35,7 +35,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update Device Error", ex);
+                EventLog_Helper.WriteEventLog("Update Device Error", ex);
                 return false;
             }
         }
@@ -52,7 +52,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete Device Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Device Error", ex);
                 return false;
             }
         }
@@ -66,7 +66,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Device By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get Device By ID Error", ex);
                 return null;
             }
         }
@@ -80,17 +80,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get All Devices Error", ex);
+                EventLog_Helper.WriteEventLog("Get All Devices Error", ex);
                 return new List<Device>();
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

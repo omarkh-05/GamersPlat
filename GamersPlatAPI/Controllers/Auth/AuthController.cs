@@ -18,6 +18,7 @@ namespace GamersPlatAPI.Controllers
             _authService = authService;
         }
 
+        // ================ User Auth Management ================
         [HttpPost("register/player")]
         [EnableRateLimiting("AuthLimiter")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -147,6 +148,21 @@ namespace GamersPlatAPI.Controllers
             }
         }
 
+        [HttpGet("CheckAuth")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public IActionResult CheckAuth()
+        {
+            var phoneNumber = User.FindFirst(ClaimTypes.MobilePhone)?.Value;
+            if (string.IsNullOrEmpty(phoneNumber))
+                return Unauthorized("Invalid token"); ;
+
+            return Ok();
+        }
+        // ================ User Auth Management ================
+
+
+        // ================ Password Management ================
         [Authorize]
         [HttpPut("change-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -212,8 +228,10 @@ namespace GamersPlatAPI.Controllers
                 return BadRequest("Error in resetting password: " + ex.Message);
             }
         }
+        // ================ Password Management ================
 
-        
+
+        // ================ Verification Management ================
         //[HttpPost("request-verify-email")]
         //public IActionResult RequestVerifyEmail([FromBody] VerifyEmailRequest request)
         //{
@@ -265,5 +283,6 @@ namespace GamersPlatAPI.Controllers
 
         //    return Ok(new { message = "Email verified" });
         //}
+        // ================ Verification Management ================
     }
 }

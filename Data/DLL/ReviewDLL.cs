@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
-using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataLayer
 {
@@ -18,11 +18,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add Review Error", ex);
+                EventLog_Helper.WriteEventLog("Add Review Error", ex);
                 return 0;
             }
         }
-
         public static bool Update(Review review)
         {
             try
@@ -35,11 +34,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update Review Error", ex);
+                EventLog_Helper.WriteEventLog("Update Review Error", ex);
                 return false;
             }
         }
-
         public static bool Delete(int reviewId)
         {
             try
@@ -52,29 +50,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete Review Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Review Error", ex);
                 return false;
             }
         }
-
-        public static async Task<Review?> GetByID(int reviewId)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Reviews
-                    .Include(r => r.User)
-                    .Include(r => r.Center)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(r => r.ReviewId == reviewId);
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Get Review By ID Error", ex);
-                return null;
-            }
-        }
-
         public static async Task<List<Review>> GetAll()
         {
             try
@@ -86,17 +65,46 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get All Reviews Error", ex);
+                EventLog_Helper.WriteEventLog("Get All Reviews Error", ex);
                 return new List<Review>();
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
+        public static async Task<Review?> GetByID(int reviewId)
         {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Reviews
+                    .Include(r => r.User.FullName)
+                    .Include(r => r.Center.CenterName)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.ReviewId == reviewId);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Review By ID Error", ex);
+                return null;
+            }
+        }
+        public static async Task<List<Review>?> GetByUserId(int userId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Reviews
+                    .Where(r => r.UserId == userId)
+                    .Include(r => r.User.FullName)
+                    .Include(r => r.Center.CenterName)
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Review By UserID Error", ex);
+                return null;
+            }
+           
         }
     }
 }

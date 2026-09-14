@@ -4,6 +4,7 @@ namespace Bussiness
 {
     public class AuditLogBLL
     {
+        // ================ CRUD ================
         private enum enMode { AddMode = 1, UpdateMode = 2 }
         private enMode _mode = enMode.AddMode;
 
@@ -30,7 +31,11 @@ namespace Bussiness
             return _auditLogID > 0;
         }
 
+        // ================ CRUD ================
+
+        // ================ Read By ================
         public static async Task<List<AuditLog>> GetByUserId(int userId) => await AuditLogDLL.GetByUserId(userId);
+        // ================ Read By ================
 
         public bool Save() => _mode switch
         {

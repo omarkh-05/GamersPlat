@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace DataLayer
@@ -18,7 +19,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add Notification Error", ex);
+                EventLog_Helper.WriteEventLog("Add Notification Error", ex);
                 return 0;
             }
         }
@@ -35,7 +36,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update Notification Error", ex);
+                EventLog_Helper.WriteEventLog("Update Notification Error", ex);
                 return false;
             }
         }
@@ -52,7 +53,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete Notification Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Notification Error", ex);
                 return false;
             }
         }
@@ -66,7 +67,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Notification By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get Notification By ID Error", ex);
                 return null;
             }
         }
@@ -80,17 +81,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get All Notifications Error", ex);
+                EventLog_Helper.WriteEventLog("Get All Notifications Error", ex);
                 return new List<Notification>();
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

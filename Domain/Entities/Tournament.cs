@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data;
 
@@ -39,5 +40,6 @@ public partial class Tournament
 
     public virtual ICollection<TournamentPlayer> TournamentPlayers { get; set; } = new List<TournamentPlayer>();
 
+    [ForeignKey("WinnerUserId")]
     public virtual User WinnerUser { get; set; } = null!;
 }

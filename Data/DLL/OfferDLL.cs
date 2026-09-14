@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace DataLayer
@@ -19,7 +20,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add Offer Error", ex);
+                EventLog_Helper.WriteEventLog("Add Offer Error", ex);
                 return 0;
             }
         }
@@ -36,7 +37,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update Offer Error", ex);
+                EventLog_Helper.WriteEventLog("Update Offer Error", ex);
                 return false;
             }
         }
@@ -53,7 +54,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete Offer Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Offer Error", ex);
                 return false;
             }
         }
@@ -71,7 +72,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Offer By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get Offer By ID Error", ex);
                 return null;
             }
         }
@@ -88,7 +89,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get All Offers Error", ex);
+                EventLog_Helper.WriteEventLog("Get All Offers Error", ex);
                 return new List<Offer>();
             }
         }
@@ -106,7 +107,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Offers By Center Error", ex);
+                EventLog_Helper.WriteEventLog("Get Offers By Center Error", ex);
                 return new List<Offer>();
             }
         }
@@ -125,19 +126,12 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Active Offers Error", ex);
+                EventLog_Helper.WriteEventLog("Get Active Offers Error", ex);
                 return new List<Offer>();
             }
         }
 
         // ===================== EventLog Helper =====================
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
 
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
     }
 }

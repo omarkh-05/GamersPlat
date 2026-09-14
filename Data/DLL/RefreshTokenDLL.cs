@@ -1,4 +1,5 @@
 using Data;
+using Data.DLL;
 using Data.EF;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
@@ -20,7 +21,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add RefreshToken Error", ex);
+                EventLog_Helper.WriteEventLog("Add RefreshToken Error", ex);
                 return 0;
             }
         }
@@ -43,7 +44,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get RefreshToken By Token Error", ex);
+                EventLog_Helper.WriteEventLog("Get RefreshToken By Token Error", ex);
                 return null;
             }
         }
@@ -62,17 +63,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update RefreshToken Error", ex);
+                EventLog_Helper.WriteEventLog("Update RefreshToken Error", ex);
                 return false;
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

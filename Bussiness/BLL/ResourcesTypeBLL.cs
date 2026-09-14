@@ -4,44 +4,20 @@ namespace Bussiness
 {
     public class ResourcesTypeBLL
     {
-        private enum enMode { AddMode = 1, UpdateMode = 2 }
-        private enMode _mode = enMode.AddMode;
-
-        private ResourcesType _rt;
-        public int _rtID = -1;
-
-        public ResourcesTypeBLL()
+        // ================ CRUD ================
+        public async Task<bool> Add(ResourcesType rt)
         {
-            _rt = new ResourcesType();
-            _mode = enMode.AddMode;
+            int rtID = await ResourcesTypeDLL.Add(rt);
+            return rtID > 0;
         }
+        public async Task<bool> Update(ResourcesType rt) => await ResourcesTypeDLL.Update(rt);
+        public async Task<bool> Delete(int id) => await ResourcesTypeDLL.Delete(id);
+        // ================ CRUD ================
 
-        public ResourcesTypeBLL(ResourcesType rt)
-        {
-            _rt = rt;
-            _mode = enMode.UpdateMode;
-        }
 
-        public ResourcesType CurrentResourcesType { get => _rt; set => _rt = value; }
-
-        public bool Add()
-        {
-            _rtID = ResourcesTypeDLL.Add(_rt);
-            return _rtID > 0;
-        }
-
-        public bool Update() => ResourcesTypeDLL.Update(_rt);
-
-        public bool Delete(int id) => ResourcesTypeDLL.Delete(id);
-
-        public static Task<List<ResourcesType>> GetAll() => ResourcesTypeDLL.GetAll();
-        public static ResourcesType? GetByID(int id) => ResourcesTypeDLL.GetByID(id);
-
-        public bool Save() => _mode switch
-        {
-            enMode.AddMode => Add(),
-            enMode.UpdateMode => Update(),
-            _ => false
-        };
+        // ================ Read By ================
+        public async Task<List<ResourcesType>> GetAll() => await ResourcesTypeDLL.GetAll();
+        public async Task<ResourcesType?> GetByID(int id) => await ResourcesTypeDLL.GetByID(id);
+        // ================ Read By ================
     }
 }

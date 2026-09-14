@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
 using System.Diagnostics;
 
@@ -7,6 +8,7 @@ namespace DataLayer
 {
     public class UserRoleDLL
     {
+        // ================ CRUD ================
         public static async Task<int> Add(UserRole ur)
         {
             try
@@ -18,11 +20,14 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add UserRole Error", ex);
+               EventLog_Helper.WriteEventLog("Add UserRole Error", ex);
                 return 0;
             }
         }
+        // ================ CRUD ================
 
+
+        // ================ Read By ================
         public static async Task<List<UserRole>> GetByUserId(int userId)
         {
             try
@@ -32,17 +37,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get UserRoles By User Error", ex);
+                EventLog_Helper.WriteEventLog("Get UserRoles By User Error", ex);
                 return new List<UserRole>();
             }
         }
-
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+        // ================ Read By ================
     }
 }

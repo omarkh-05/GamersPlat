@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace DataLayer
@@ -18,7 +19,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add Service Error", ex);
+                EventLog_Helper.WriteEventLog("Add Service Error", ex);
                 return 0;
             }
         }
@@ -35,7 +36,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update Service Error", ex);
+                EventLog_Helper.WriteEventLog("Update Service Error", ex);
                 return false;
             }
         }
@@ -52,7 +53,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete Service Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Service Error", ex);
                 return false;
             }
         }
@@ -69,7 +70,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Service By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get Service By ID Error", ex);
                 return null;
             }
         }
@@ -86,17 +87,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get All Services Error", ex);
+                EventLog_Helper.WriteEventLog("Get All Services Error", ex);
                 return new List<Service>();
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

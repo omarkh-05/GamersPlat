@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace DataLayer
@@ -18,7 +19,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add Game Error", ex);
+                EventLog_Helper.WriteEventLog("Add Game Error", ex);
                 return 0;
             }
         }
@@ -35,7 +36,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update Game Error", ex);
+                EventLog_Helper.WriteEventLog("Update Game Error", ex);
                 return false;
             }
         }
@@ -52,7 +53,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete Game Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Game Error", ex);
                 return false;
             }
         }
@@ -68,7 +69,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Game By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get Game By ID Error", ex);
                 return null;
             }
         }
@@ -84,17 +85,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get All Games Error", ex);
+                EventLog_Helper.WriteEventLog("Get All Games Error", ex);
                 return new List<Game>();
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

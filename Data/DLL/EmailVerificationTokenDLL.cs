@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
-using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataLayer
 {
@@ -18,7 +18,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add EmailVerificationToken Error", ex);
+                EventLog_Helper.WriteEventLog("Add EmailVerificationToken Error", ex);
                 return 0;
             }
         }
@@ -35,7 +35,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete EmailVerificationToken Error", ex);
+                EventLog_Helper.WriteEventLog("Delete EmailVerificationToken Error", ex);
                 return false;
             }
         }
@@ -49,7 +49,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get EmailVerificationToken By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get EmailVerificationToken By ID Error", ex);
                 return null;
             }
         }
@@ -64,17 +64,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get EmailVerificationToken By Token Error", ex);
+                EventLog_Helper.WriteEventLog("Get EmailVerificationToken By Token Error", ex);
                 return null;
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

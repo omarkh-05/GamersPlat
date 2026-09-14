@@ -1,14 +1,15 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
-using System.Diagnostics;
+using Domain.DTOs.Player;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataLayer
 {
     public class BookingDLL
     {
         // ================ CRUD ================
-        public static int Add(Booking booking)
+        public static async Task<int> Add(Booking booking)
         {
             try
             {
@@ -19,28 +20,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add Booking Error", ex);
+                EventLog_Helper.WriteEventLog("Add Booking Error", ex);
                 return 0;
             }
         }
-
-        public static int GetBookedQuantity(int resourcesTypeId, DateOnly date)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return db.Bookings
-                    .Where(b => b.ResourcesTypeId == resourcesTypeId && b.BookingDate == date && b.Status != "Cancelled")
-                    .Sum(b => (int?)b.Quantity) ?? 0;
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Get Booked Quantity Error", ex);
-                return 0;
-            }
-        }
-
-        public static bool Update(Booking booking)
+        public static async Task<bool> Update(Booking booking)
         {
             try
             {
@@ -52,12 +36,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Update Booking Error", ex);
+                EventLog_Helper.WriteEventLog("Update Booking Error", ex);
                 return false;
             }
         }
-
-        public static bool Delete(int bookingId)
+        public static async Task<bool> Delete(int bookingId)
         {
             try
             {
@@ -69,11 +52,49 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete Booking Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Booking Error", ex);
                 return false;
             }
         }
+        public static async Task<bool> Cancel(int bookingId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                var existing = await db.Bookings
+                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
+                if (existing == null)
+                    return false;
+                existing.Status = "Cancelled";
+                return await db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Cancel Booking Error", ex);
+                return false;
+            }
+        }
+        public static async Task<List<Booking>> GetAll()
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Bookings
+                    .Include(b => b.Center)
+                    .Include(b => b.User)
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Bookings Error", ex);
+                return new List<Booking>();
+            }
+        }
+        // ================ CRUD ================
 
+
+        // ================ Read By ================
         public static async Task<Booking?> GetByID(int bookingId)
         {
             try
@@ -89,54 +110,54 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Booking By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get Booking By ID Error", ex);
                 return null;
             }
         }
-
-        public static async Task<List<Booking>> GetAll()
+        public static async Task<List<DTO_PlayerBookingsInfo>> GetByUserId(int userId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                return await db.Bookings
-                    .Include(b => b.Center)
-                    .Include(b => b.User)
-                    .AsNoTracking()
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                WriteEventLog("Get All Bookings Error", ex);
-                return new List<Booking>();
-            }
-        }
 
-        public static async Task<List<Booking>> GetByUserId(int userId)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
                 return await db.Bookings
                     .Where(b => b.UserId == userId)
                     .AsNoTracking()
+                    .Select(b => new DTO_PlayerBookingsInfo
+                    {
+                        CenterName = b.Center.CenterName,
+                        Resource = b.ResourcesType.Device.DeviceName,
+                        GameName = b.GameName,
+                        OfferId = b.OfferId,
+                        Quantity = b.Quantity,
+                        TotalPrice = b.TotalPrice,
+                        EarnedPoints = b.EarnedPoints,
+                        Status = b.Status,
+                        BookingDate = b.BookingDate
+                    })
                     .ToListAsync();
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get Bookings By User Error", ex);
-                return new List<Booking>();
+                EventLog_Helper.WriteEventLog("Get Bookings By UserID Error", ex);
+                return new List<DTO_PlayerBookingsInfo>();
             }
         }
-
-        // ===================== EventLog Helper =====================
-        private static void WriteEventLog(string title, Exception ex)
+        public static async Task<int> GetBookedQuantity(int resourcesTypeId, DateOnly date)
         {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return db.Bookings
+                    .Where(b => b.ResourcesTypeId == resourcesTypeId && b.BookingDate == date && b.Status != "Cancelled")
+                    .Sum(b => (int?)b.Quantity) ?? 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Booked Quantity Error", ex);
+                return 0;
+            }
         }
+        // ================ Read By ================
     }
 }

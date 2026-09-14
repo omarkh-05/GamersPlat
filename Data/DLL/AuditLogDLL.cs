@@ -18,7 +18,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add AuditLog Error", ex);
+                Data.DLL.EventLog_Helper.WriteEventLog("Add AuditLog Error", ex);
                 return 0;
             }
         }
@@ -32,17 +32,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get AuditLogs By User Error", ex);
+                Data.DLL.EventLog_Helper.WriteEventLog("Get AuditLogs By User Error", ex);
                 return new List<AuditLog>();
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }

@@ -2,7 +2,7 @@
 using Bussiness.Helpers;
 using Bussiness.Interfaces;
 using Data;
-using DataLayer;
+using Data.DLL;
 using Domain.DTOs.Auth;
 using System.Security.Cryptography;
 using System.Text;
@@ -27,6 +27,7 @@ namespace Bussiness.BLL
             _passwordResetTokenBLL = passwordResetTokenBLL;
         }
 
+        // ================ User Auth Management ================
         public async Task RegisterWithRoleAsync(UserRegisterRequest request, string roleName)
         {
             if (string.IsNullOrWhiteSpace(request.FullName) ||
@@ -71,7 +72,7 @@ namespace Bussiness.BLL
                 string.IsNullOrWhiteSpace(request.Password))
                 throw new Exception("Invalid data");
 
-            var user = await _user.GetByPhone(request.PhoneNumber);
+            var user = await AuthDLL.GetUserAuthByPhone(request.PhoneNumber);
 
             if (user == null || !user.IsActive)
                 throw new UnauthorizedAccessException("Invalid credentials");
@@ -79,7 +80,11 @@ namespace Bussiness.BLL
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 throw new UnauthorizedAccessException("Invalid credentials");
 
-            var accessToken = _authHelpers.GenerateAccessToken(user);
+            var fullUser = await _user.GetById(user.UserId);
+            if (fullUser == null || !fullUser.IsActive)
+                throw new UnauthorizedAccessException("Invalid credentials");
+
+            var accessToken = _authHelpers.GenerateAccessToken(fullUser);
             var refreshToken = _authHelpers.GenerateRefreshToken();
 
             var rt = new RefreshToken
@@ -137,12 +142,16 @@ namespace Bussiness.BLL
             if (existingToken.ExpiresAt <= DateTime.UtcNow)
                 throw new UnauthorizedAccessException("Refresh token expired");
 
-            var user = await _user.GetByID(existingToken.UserId);
+            var user = await AuthDLL.GetUserAuthByID(existingToken.UserId);
 
             if (user == null || !user.IsActive)
                 throw new UnauthorizedAccessException("Invalid refresh request");
 
-            var newAccessToken = _authHelpers.GenerateAccessToken(user);
+            var fullUser = await _user.GetById(user.UserId);
+            if (fullUser == null || !fullUser.IsActive)
+                throw new UnauthorizedAccessException("Invalid refresh request");
+
+            var newAccessToken = _authHelpers.GenerateAccessToken(fullUser);
             var newRefreshToken = _authHelpers.GenerateRefreshToken();
 
             existingToken.IsRevoked = true;
@@ -169,7 +178,10 @@ namespace Bussiness.BLL
                 RefreshToken = newRefreshToken
             };
         }
+        // ================ User Auth Management ================
 
+
+        // ================ Password Management ================
         public async Task<bool> ChangePassword(int userId, ChangePasswordRequest request)
         {
             if (userId <= 0 ||
@@ -177,7 +189,7 @@ namespace Bussiness.BLL
                 string.IsNullOrWhiteSpace(request.NewPassword))
                 return false;
 
-            var user = await _user.GetByID(userId);
+            var user = await AuthDLL.GetUserAuthByID(userId);
 
             if (user == null || !user.IsActive)
                 return false;
@@ -185,22 +197,22 @@ namespace Bussiness.BLL
             if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
                 return false;
 
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            var newHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
 
-            if (await _user.Update(user)) return true;
+            if (await AuthDLL.ChangePassword(userId, newHash)) return true;
             else
                 throw new Exception("Error updating user");
         }
 
         public async Task<string> RequestResetPassword(RequestResetRequest request)
         {
-            var user = await _user.GetByPhoneOrEmail(request);
-            if (user == null)
+            int userId = await _user.GetIdByPhoneOrEmail(request);
+            if (userId <=0)
                 throw new Exception("User not found");
 
             var token = new PasswordResetToken
             {
-                UserId = user.UserId,
+                UserId = userId,
                 TokenHash = Guid.NewGuid().ToString(),
                 ExpiresAt = DateTime.UtcNow.AddHours(1),
                 CreatedAt = DateTime.UtcNow
@@ -221,12 +233,12 @@ namespace Bussiness.BLL
             if (token.ExpiresAt < DateTime.UtcNow)
                 throw new Exception("Token expired");
 
-            var user= await _user.GetByID(token.UserId);
+            var user = await AuthDLL.GetUserAuthByID(token.UserId);
             if (user == null)
                 throw new Exception("User not found");
 
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-            if (!await _user.Update(user))
+            var newHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            if (!await AuthDLL.ChangePassword(user.UserId, newHash))
                 throw new Exception("Failed to update password");
 
             if (await _passwordResetTokenBLL.Delete(token.TokenId))
@@ -234,7 +246,10 @@ namespace Bussiness.BLL
             else
                 throw new Exception("Failed to delete password reset token");
         }
-        /* public async Task<bool> VerifyEmail(int userId)
+        // ================ Password Management ================
+        /*
+        // ================ Verification Management ================
+          public async Task<bool> VerifyEmail(int userId)
         {
             return await _user.VerifyEmail(userId);
         }
@@ -242,6 +257,8 @@ namespace Bussiness.BLL
         public async Task<bool> VerifyPhone(int userId)
         {
             return await _user.VerifyPhone(userId);
-        } */
+        } 
+        // ================ Verification Management ================
+         */
     }
 }

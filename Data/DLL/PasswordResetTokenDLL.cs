@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Data;
+using Data.DLL;
 using Data.EF;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace DataLayer
@@ -18,7 +19,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Add PasswordResetToken Error", ex);
+                EventLog_Helper.WriteEventLog("Add PasswordResetToken Error", ex);
                 return 0;
             }
         }
@@ -35,7 +36,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Delete PasswordResetToken Error", ex);
+                EventLog_Helper.WriteEventLog("Delete PasswordResetToken Error", ex);
                 return false;
             }
         }
@@ -50,17 +51,11 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                WriteEventLog("Get PasswordResetToken By Token Error", ex);
+                EventLog_Helper.WriteEventLog("Get PasswordResetToken By Token Error", ex);
                 return null;
             }
         }
 
-        private static void WriteEventLog(string title, Exception ex)
-        {
-            string error = ex.Message;
-            if (ex.InnerException != null)
-                error += "\nInner Exception: " + ex.InnerException.Message;
-            EventLog.WriteEntry("Application", $"{title}: {error}", EventLogEntryType.Error);
-        }
+
     }
 }
