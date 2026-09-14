@@ -9,7 +9,7 @@ namespace DataLayer
     public class OfferDLL
     {
         // ================ CRUD ================
-        public static int Add(Offer offer)
+        public static async Task<int> Add(Offer offer)
         {
             try
             {
@@ -24,16 +24,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
-        public static bool Update(Offer offer)
+        public static async Task<bool> Update(Offer offer)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Offers.FirstOrDefault(o => o.OfferId == offer.OfferId);
+                var existing = await db.Offers.FirstOrDefaultAsync(o => o.OfferId == offer.OfferId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(offer);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -41,16 +40,15 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static bool Delete(int offerId)
+        public static async Task<bool> Delete(int offerId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Offers.FirstOrDefault(o => o.OfferId == offerId);
+                var existing = await db.Offers.FirstOrDefaultAsync(o => o.OfferId == offerId);
                 if (existing == null) return false;
                 db.Offers.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -58,7 +56,26 @@ namespace DataLayer
                 return false;
             }
         }
+        public static async Task<List<Offer>> GetAll()
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Offers
+                    .Include(o => o.Center)
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Offers Error", ex);
+                return new List<Offer>();
+            }
+        }
+        // ================ CRUD ================
 
+
+        // ================ Read By ================
         public static async Task<Offer?> GetByID(int offerId)
         {
             try
@@ -76,25 +93,6 @@ namespace DataLayer
                 return null;
             }
         }
-
-        public static async Task<List<Offer>> GetAll()
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Offers
-                    .Include(o => o.Center)
-                    .AsNoTracking()
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get All Offers Error", ex);
-                return new List<Offer>();
-            }
-        }
-
-        // ================ Relations ===========
         public static async Task<List<Offer>> GetByCenterId(int centerId)
         {
             try
@@ -111,6 +109,9 @@ namespace DataLayer
                 return new List<Offer>();
             }
         }
+
+        // ================ Read By ================
+
 
         // ================ Filtering ===========
         public static async Task<List<Offer>> GetActiveOffers()
@@ -130,8 +131,6 @@ namespace DataLayer
                 return new List<Offer>();
             }
         }
-
-        // ===================== EventLog Helper =====================
-
+        // ================ Filtering ===========
     }
 }

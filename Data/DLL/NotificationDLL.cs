@@ -8,7 +8,8 @@ namespace DataLayer
 {
     public class NotificationDLL
     {
-        public static int Add(Notification n)
+        // ================ CRUD ================
+        public static async Task<int> Add(Notification n)
         {
             try
             {
@@ -23,16 +24,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
-        public static bool Update(Notification n)
+        public static async Task<bool> Update(Notification n)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Notifications.FirstOrDefault(x => x.NotificationId == n.NotificationId);
+                var existing = await db.Notifications.FirstOrDefaultAsync(x => x.NotificationId == n.NotificationId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(n);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,16 +40,15 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Notifications.FirstOrDefault(x => x.NotificationId == id);
+                var existing = await db.Notifications.FirstOrDefaultAsync(x => x.NotificationId == id);
                 if (existing == null) return false;
                 db.Notifications.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -57,21 +56,6 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static async Task<Notification?> GetByID(int id)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Notifications.AsNoTracking().FirstOrDefaultAsync(x => x.NotificationId == id);
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get Notification By ID Error", ex);
-                return null;
-            }
-        }
-
         public static async Task<List<Notification>> GetAll()
         {
             try
@@ -85,7 +69,23 @@ namespace DataLayer
                 return new List<Notification>();
             }
         }
+        // ================ CRUD ================
 
 
+        // ================ Read By ================
+        public static async Task<Notification?> GetByID(int id)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Notifications.AsNoTracking().FirstOrDefaultAsync(x => x.NotificationId == id);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Notification By ID Error", ex);
+                return null;
+            }
+        }
+        // ================ Read By ================
     }
 }

@@ -7,7 +7,8 @@ namespace DataLayer
 {
     public class CenterImageDLL
     {
-        public static int Add(CenterImage img)
+        // ================ CRUD ================
+        public static async Task<int> Add(CenterImage img)
         {
             try
             {
@@ -22,16 +23,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
-        public static bool Update(CenterImage img)
+        public static async Task<bool> Update(CenterImage img)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.CenterImages.FirstOrDefault(i => i.ImageId == img.ImageId);
+                var existing = await db.CenterImages.FirstOrDefaultAsync(i => i.ImageId == img.ImageId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(img);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,16 +39,15 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.CenterImages.FirstOrDefault(i => i.ImageId == id);
+                var existing = await db.CenterImages.FirstOrDefaultAsync(i => i.ImageId == id);
                 if (existing == null) return false;
                 db.CenterImages.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -56,7 +55,23 @@ namespace DataLayer
                 return false;
             }
         }
+        public static async Task<List<CenterImage>> GetAll()
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.CenterImages.AsNoTracking().ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All CenterImages Error", ex);
+                return new List<CenterImage>();
+            }
+        }
+        // ================ CRUD ================
 
+
+        // ================ Read By ================
         public static async Task<CenterImage?> GetByID(int id)
         {
             try
@@ -73,21 +88,6 @@ namespace DataLayer
                 return null;
             }
         }
-
-        public static async Task<List<CenterImage>> GetAll()
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.CenterImages.AsNoTracking().ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get All CenterImages Error", ex);
-                return new List<CenterImage>();
-            }
-        }
-
-
+        // ================ Read By ================
     }
 }

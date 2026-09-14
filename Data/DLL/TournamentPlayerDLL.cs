@@ -9,7 +9,7 @@ namespace DataLayer
     public class TournamentPlayerDLL
     {
         // ================ CRUD ================
-        public static int Add(TournamentPlayer tp)
+        public static async Task<int> Add(TournamentPlayer tp)
         {
             try
             {
@@ -29,10 +29,10 @@ namespace DataLayer
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.TournamentPlayers.FirstOrDefault(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
+                var existing = await db.TournamentPlayers.FirstOrDefaultAsync(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
                 if (existing == null) return false;
                 db.TournamentPlayers.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {

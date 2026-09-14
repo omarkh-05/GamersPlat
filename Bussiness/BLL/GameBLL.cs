@@ -4,45 +4,20 @@ namespace Bussiness
 {
     public class GameBLL
     {
-        private enum enMode { AddMode = 1, UpdateMode = 2 }
-        private enMode _mode = enMode.AddMode;
-
-        private Game _game;
-        public int _gameID = -1;
-
-        public GameBLL()
+        // ================ CRUD ================
+        public bool Add(Game game)
         {
-            _game = new Game();
-            _mode = enMode.AddMode;
+            int gameID = GameDLL.Add(game);
+            return gameID > 0;
         }
-
-        public GameBLL(Game game)
-        {
-            _game = game;
-            _mode = enMode.UpdateMode;
-        }
-
-        public Game CurrentGame { get => _game; set => _game = value; }
-
-        public bool Add()
-        {
-            _gameID = GameDLL.Add(_game);
-            return _gameID > 0;
-        }
-
-        public bool Update() => GameDLL.Update(_game);
-
+        public bool Update(Game game) => GameDLL.Update(game);
         public bool Delete(int id) => GameDLL.Delete(id);
-
-        public static Task<Game?> GetByID(int id) => GameDLL.GetByID(id);
-
         public static Task<List<Game>> GetAll() => GameDLL.GetAll();
+        // ================ CRUD ================
 
-        public bool Save() => _mode switch
-        {
-            enMode.AddMode => Add(),
-            enMode.UpdateMode => Update(),
-            _ => false
-        };
+
+        // ================ Read By ================
+        public static Task<Game?> GetByID(int id) => GameDLL.GetByID(id);
+        // ================ Read By ================
     }
 }

@@ -8,7 +8,8 @@ namespace DataLayer
 {
     public class ServiceDLL
     {
-        public static int Add(Service service)
+        // ================ CRUD ===========
+        public static async Task<int> Add(Service service)
         {
             try
             {
@@ -23,16 +24,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
-        public static bool Update(Service service)
+        public static async Task<bool> Update(Service service)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Services.FirstOrDefault(s => s.ServiceId == service.ServiceId);
+                var existing = await db.Services.FirstOrDefaultAsync(s => s.ServiceId == service.ServiceId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(service);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,16 +40,15 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static bool Delete(int serviceId)
+        public static async Task<bool> Delete(int serviceId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Services.FirstOrDefault(s => s.ServiceId == serviceId);
+                var existing = await db.Services.FirstOrDefaultAsync(s => s.ServiceId == serviceId);
                 if (existing == null) return false;
                 db.Services.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -57,24 +56,6 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static async Task<Service?> GetByID(int serviceId)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Services
-                    .Include(s => s.Center)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get Service By ID Error", ex);
-                return null;
-            }
-        }
-
         public static async Task<List<Service>> GetAll()
         {
             try
@@ -91,7 +72,26 @@ namespace DataLayer
                 return new List<Service>();
             }
         }
+        // ================ CRUD ===========
 
 
+        // ================ Read By ===========
+        public static async Task<Service?> GetByID(int serviceId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Services
+                    .Include(s => s.Center)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Service By ID Error", ex);
+                return null;
+            }
+        }
+        // ================ Read By ===========
     }
 }

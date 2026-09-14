@@ -7,7 +7,8 @@ namespace DataLayer
 {
     public class ReviewDLL
     {
-        public static int Add(Review review)
+        // ================ CRUD ===========
+        public static async Task<int> Add(Review review)
         {
             try
             {
@@ -22,15 +23,15 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static bool Update(Review review)
+        public static async Task<bool> Update(Review review)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Reviews.FirstOrDefault(r => r.ReviewId == review.ReviewId);
+                var existing = await db.Reviews.FirstOrDefaultAsync(r => r.ReviewId == review.ReviewId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(review);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -38,15 +39,15 @@ namespace DataLayer
                 return false;
             }
         }
-        public static bool Delete(int reviewId)
+        public static async Task<bool> Delete(int reviewId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Reviews.FirstOrDefault(r => r.ReviewId == reviewId);
+                var existing = await db.Reviews.FirstOrDefaultAsync(r => r.ReviewId == reviewId);
                 if (existing == null) return false;
                 db.Reviews.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -69,7 +70,10 @@ namespace DataLayer
                 return new List<Review>();
             }
         }
+        // ================ CRUD ===========
 
+
+        // ================ Read By ===========
         public static async Task<Review?> GetByID(int reviewId)
         {
             try
@@ -106,5 +110,6 @@ namespace DataLayer
             }
            
         }
+        // ================ Read By ===========
     }
 }

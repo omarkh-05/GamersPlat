@@ -8,13 +8,14 @@ namespace DataLayer
 {
     public class CountryDLL
     {
+        // ================ CRUD ================
         public static int Add(Country country)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
                 db.Countries.Add(country);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return country.CountryId;
             }
             catch (Exception ex)
@@ -23,16 +24,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
         public static bool Update(Country country)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Countries.FirstOrDefault(c => c.CountryId == country.CountryId);
+                var existing = await db.Countries.FirstOrDefaultAsync(c => c.CountryId == country.CountryId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(country);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,16 +40,15 @@ namespace DataLayer
                 return false;
             }
         }
-
         public static bool Delete(int id)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Countries.FirstOrDefault(c => c.CountryId == id);
+                var existing = await db.Countries.FirstOrDefaultAsync(c => c.CountryId == id);
                 if (existing == null) return false;
                 db.Countries.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -57,21 +56,6 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static async Task<Country?> GetByID(int id)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Countries.AsNoTracking().FirstOrDefaultAsync(c => c.CountryId == id);
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get Country By ID Error", ex);
-                return null;
-            }
-        }
-
         public static async Task<List<Country>> GetAll()
         {
             try
@@ -85,7 +69,23 @@ namespace DataLayer
                 return new List<Country>();
             }
         }
+        // ================ CRUD ================
 
 
+        // ================ Read By ================
+        public static async Task<Country?> GetByID(int id)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Countries.AsNoTracking().FirstOrDefaultAsync(c => c.CountryId == id);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Country By ID Error", ex);
+                return null;
+            }
+        }
+        // ================ Read By ================
     }
 }

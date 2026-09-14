@@ -71,7 +71,6 @@ namespace DataLayer
         //        return false;
         //    }
         //}
-
         public static async Task<Role?> GetByID(int roleId)
         {
             try
@@ -87,7 +86,6 @@ namespace DataLayer
                 return null;
             }
         }
-
         public static async Task<Role?> GetByName(string roleName)
         {
             try
@@ -103,7 +101,6 @@ namespace DataLayer
                 return null;
             }
         }
-        
-
+        // ================ Read By ===========
     }
 }

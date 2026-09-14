@@ -8,7 +8,7 @@ namespace DataLayer
     public class CenterDLL
     {
         // ================ CRUD ================
-        public static int Add(Center center)
+        public static async Task<int> Add(Center center)
         {
             try
             {
@@ -23,15 +23,15 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static bool Update(Center center)
+        public static async Task<bool> Update(Center center)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Centers.FirstOrDefault(c => c.CenterId == center.CenterId);
+                var existing = await db.Centers.FirstOrDefaultAsync(c => c.CenterId == center.CenterId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(center);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,15 +39,15 @@ namespace DataLayer
                 return false;
             }
         }
-        public static bool Delete(int centerId)
+        public static async Task<bool> Delete(int centerId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Centers.FirstOrDefault(c => c.CenterId == centerId);
+                var existing = await db.Centers.FirstOrDefaultAsync(c => c.CenterId == centerId);
                 if (existing == null) return false;
                 db.Centers.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {

@@ -8,7 +8,8 @@ namespace DataLayer
 {
     public class GameDLL
     {
-        public static int Add(Game game)
+        // ================ CRUD ================
+        public static async Task<int> Add(Game game)
         {
             try
             {
@@ -23,16 +24,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
-        public static bool Update(Game game)
+        public static async Task<bool> Update(Game game)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Games.FirstOrDefault(g => g.GameId == game.GameId);
+                var existing = await db.Games.FirstOrDefaultAsync(g => g.GameId == game.GameId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(game);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,16 +40,15 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Games.FirstOrDefault(g => g.GameId == id);
+                var existing = await db.Games.FirstOrDefaultAsync(g => g.GameId == id);
                 if (existing == null) return false;
                 db.Games.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -57,23 +56,6 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static async Task<Game?> GetByID(int id)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Games
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(g => g.GameId == id);
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get Game By ID Error", ex);
-                return null;
-            }
-        }
-
         public static async Task<List<Game>> GetAll()
         {
             try
@@ -89,7 +71,25 @@ namespace DataLayer
                 return new List<Game>();
             }
         }
+        // ================ CRUD ================
 
 
+        // ================ Read By ================
+        public static async Task<Game?> GetByID(int id)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Games
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(g => g.GameId == id);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Game By ID Error", ex);
+                return null;
+            }
+        }
+        // ================ Read By ================
     }
 }

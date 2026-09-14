@@ -4,45 +4,20 @@ namespace Bussiness
 {
     public class DeviceBLL
     {
-        private enum enMode { AddMode = 1, UpdateMode = 2 }
-        private enMode _mode = enMode.AddMode;
-
-        private Device _device;
-        public int _deviceID = -1;
-
-        public DeviceBLL()
+        // ================ CRUD ================
+        public bool Add(Device device)
         {
-            _device = new Device();
-            _mode = enMode.AddMode;
+            int deviceID = DeviceDLL.Add(device);
+            return deviceID > 0;
         }
-
-        public DeviceBLL(Device device)
-        {
-            _device = device;
-            _mode = enMode.UpdateMode;
-        }
-
-        public Device CurrentDevice { get => _device; set => _device = value; }
-
-        public bool Add()
-        {
-            _deviceID = DeviceDLL.Add(_device);
-            return _deviceID > 0;
-        }
-
-        public bool Update() => DeviceDLL.Update(_device);
-
+        public bool Update(Device device) => DeviceDLL.Update(device);
         public bool Delete(int id) => DeviceDLL.Delete(id);
-
-        public static Task<Device?> GetByID(int id) => DeviceDLL.GetByID(id);
-
         public static Task<List<Device>> GetAll() => DeviceDLL.GetAll();
+        // ================ CRUD ================
 
-        public bool Save() => _mode switch
-        {
-            enMode.AddMode => Add(),
-            enMode.UpdateMode => Update(),
-            _ => false
-        };
+
+        // ================ Read By ================
+        public static Task<Device?> GetByID(int id) => DeviceDLL.GetByID(id);
+        // ================ Read By ================
     }
 }

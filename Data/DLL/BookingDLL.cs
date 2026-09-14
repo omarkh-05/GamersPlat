@@ -15,7 +15,7 @@ namespace DataLayer
             {
                 using var db = new GamersPlatDbContext();
                 db.Bookings.Add(booking);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return booking.BookingId;
             }
             catch (Exception ex)
@@ -29,10 +29,10 @@ namespace DataLayer
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Bookings.FirstOrDefault(b => b.BookingId == booking.BookingId);
+                var existing = await db.Bookings.FirstOrDefaultAsync(b => b.BookingId == booking.BookingId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(booking);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -45,10 +45,10 @@ namespace DataLayer
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Bookings.FirstOrDefault(b => b.BookingId == bookingId);
+                var existing = await db.Bookings.FirstOrDefaultAsync(b => b.BookingId == bookingId);
                 if (existing == null) return false;
                 db.Bookings.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -148,9 +148,9 @@ namespace DataLayer
             try
             {
                 using var db = new GamersPlatDbContext();
-                return db.Bookings
+                return await db.Bookings
                     .Where(b => b.ResourcesTypeId == resourcesTypeId && b.BookingDate == date && b.Status != "Cancelled")
-                    .Sum(b => (int?)b.Quantity) ?? 0;
+                    .SumAsync(b => (int?)b.Quantity) ?? 0;
             }
             catch (Exception ex)
             {

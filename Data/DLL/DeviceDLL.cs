@@ -7,7 +7,8 @@ namespace DataLayer
 {
     public class DeviceDLL
     {
-        public static int Add(Device device)
+        // ================ CRUD ================
+        public static async Task<int> Add(Device device)
         {
             try
             {
@@ -22,16 +23,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
-        public static bool Update(Device device)
+        public static async Task<bool> Update(Device device)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Devices.FirstOrDefault(d => d.DeviceId == device.DeviceId);
+                var existing = await db.Devices.FirstOrDefaultAsync(d => d.DeviceId == device.DeviceId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(device);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,16 +39,15 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Devices.FirstOrDefault(d => d.DeviceId == id);
+                var existing = await db.Devices.FirstOrDefaultAsync(d => d.DeviceId == id);
                 if (existing == null) return false;
                 db.Devices.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -56,21 +55,6 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static async Task<Device?> GetByID(int id)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Devices.AsNoTracking().FirstOrDefaultAsync(d => d.DeviceId == id);
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get Device By ID Error", ex);
-                return null;
-            }
-        }
-
         public static async Task<List<Device>> GetAll()
         {
             try
@@ -84,7 +68,23 @@ namespace DataLayer
                 return new List<Device>();
             }
         }
+        // ================ CRUD ================
 
 
+        // ================ Read By ================
+        public static async Task<Device?> GetByID(int id)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Devices.AsNoTracking().FirstOrDefaultAsync(d => d.DeviceId == id);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Device By ID Error", ex);
+                return null;
+            }
+        }
+        // ================ Read By ================
     }
 }

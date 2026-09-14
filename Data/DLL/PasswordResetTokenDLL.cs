@@ -8,6 +8,7 @@ namespace DataLayer
 {
     public class PasswordResetTokenDLL
     {
+        // ================ CRUD ===========
         public static async Task<int> Add(PasswordResetToken token)
         {
             try
@@ -23,7 +24,6 @@ namespace DataLayer
                 return 0;
             }
         }
-
         public static async Task<bool> Delete(int id)
         {
             try
@@ -40,7 +40,10 @@ namespace DataLayer
                 return false;
             }
         }
+        // ================ CRUD ===========
 
+
+        // ================ Read By ===========
         public static async Task<PasswordResetToken?> GetByToken(string token)
         {
             try
@@ -55,7 +58,6 @@ namespace DataLayer
                 return null;
             }
         }
-
-
+        // ================ Read By ===========
     }
 }

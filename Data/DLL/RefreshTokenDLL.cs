@@ -10,6 +10,7 @@ namespace DataLayer
 {
     public class RefreshTokenDLL
     {
+        // ================ CRUD ===========
         public static async Task<int> Add(RefreshToken token)
         {
             try
@@ -25,7 +26,28 @@ namespace DataLayer
                 return 0;
             }
         }
+        public static async Task<bool> Update(RefreshToken token)
+        {
+            try
+            {
+                if (token == null || token.TokenId <= 0)
+                    return false;
 
+                using var db = new GamersPlatDbContext();
+
+                db.RefreshTokens.Update(token);
+                return await db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Update RefreshToken Error", ex);
+                return false;
+            }
+        }
+        // ================ CRUD ===========
+
+
+        // ================ Read By ===========
         public static async Task<RefreshToken?> GetByToken(string token)
         {
             try
@@ -48,26 +70,6 @@ namespace DataLayer
                 return null;
             }
         }
-
-        public static async Task<bool> Update(RefreshToken token)
-        {
-            try
-            {
-                if (token == null || token.TokenId <= 0)
-                    return false;
-
-                using var db = new GamersPlatDbContext();
-
-                db.RefreshTokens.Update(token);
-                return await db.SaveChangesAsync() > 0;
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Update RefreshToken Error", ex);
-                return false;
-            }
-        }
-
-
+        // ================ Read By ===========
     }
 }

@@ -8,7 +8,8 @@ namespace DataLayer
 {
     public class PointTransactionDLL
     {
-        public static int Add(PointTransaction pt)
+        // ================ CRUD ===========
+        public static async Task<int> Add(PointTransaction pt)
         {
             try
             {
@@ -23,7 +24,10 @@ namespace DataLayer
                 return 0;
             }
         }
+        // ================ CRUD ===========
 
+
+        // ================ Read By ===========
         public static async Task<List<PointTransaction>> GetByUserId(int userId)
         {
             try
@@ -37,7 +41,6 @@ namespace DataLayer
                 return new List<PointTransaction>();
             }
         }
-
-
+        // ================ Read By ===========
     }
 }

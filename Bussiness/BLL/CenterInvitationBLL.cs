@@ -4,45 +4,20 @@ namespace Bussiness
 {
     public class CenterInvitationBLL
     {
-        private enum enMode { AddMode = 1, UpdateMode = 2 }
-        private enMode _mode = enMode.AddMode;
-
-        private CenterInvitation _inv;
-        public int _invID = -1;
-
-        public CenterInvitationBLL()
+        // ================ CRUD ================
+        public bool Add(CenterInvitation centerInvitation)
         {
-            _inv = new CenterInvitation();
-            _mode = enMode.AddMode;
+            int invID = CenterInvitationDLL.Add(centerInvitation);
+            return invID > 0;
         }
-
-        public CenterInvitationBLL(CenterInvitation inv)
-        {
-            _inv = inv;
-            _mode = enMode.UpdateMode;
-        }
-
-        public CenterInvitation CurrentInvitation { get => _inv; set => _inv = value; }
-
-        public bool Add()
-        {
-            _invID = CenterInvitationDLL.Add(_inv);
-            return _invID > 0;
-        }
-
-        public bool Update() => CenterInvitationDLL.Update(_inv);
-
+        public bool Update(CenterInvitation centerInvitation) => CenterInvitationDLL.Update(centerInvitation);
         public bool Delete(int id) => CenterInvitationDLL.Delete(id);
-
-        public static Task<CenterInvitation?> GetByID(int id) => CenterInvitationDLL.GetByID(id);
-
         public static Task<List<CenterInvitation>> GetAll() => CenterInvitationDLL.GetAll();
+        // ================ CRUD ================
 
-        public bool Save() => _mode switch
-        {
-            enMode.AddMode => Add(),
-            enMode.UpdateMode => Update(),
-            _ => false
-        };
+
+        // ================ Read By ================
+        public static Task<CenterInvitation?> GetByID(int id) => CenterInvitationDLL.GetByID(id);
+        // ================ Read By ================
     }
 }

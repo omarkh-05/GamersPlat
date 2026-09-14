@@ -7,7 +7,8 @@ namespace DataLayer
 {
     public class AuditLogDLL
     {
-        public static int Add(AuditLog a)
+        // ================ CRUD ================
+        public static async Task<int> Add(AuditLog a)
         {
             try
             {
@@ -22,7 +23,10 @@ namespace DataLayer
                 return 0;
             }
         }
+        // ================ CRUD ================
 
+
+        // ================ Read By ================
         public static async Task<List<AuditLog>> GetByUserId(int userId)
         {
             try
@@ -36,7 +40,7 @@ namespace DataLayer
                 return new List<AuditLog>();
             }
         }
-
+        // ================ Read By ================
 
     }
 }

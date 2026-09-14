@@ -5,42 +5,16 @@ namespace Bussiness
     public class AuditLogBLL
     {
         // ================ CRUD ================
-        private enum enMode { AddMode = 1, UpdateMode = 2 }
-        private enMode _mode = enMode.AddMode;
-
-        private AuditLog _auditLog;
-        public int _auditLogID = -1;
-
-        public AuditLogBLL()
+        public bool Add(AuditLog auditLog)
         {
-            _auditLog = new AuditLog();
-            _mode = enMode.AddMode;
-        }
-
-        public AuditLogBLL(AuditLog auditLog)
-        {
-            _auditLog = auditLog;
-            _mode = enMode.UpdateMode;
-        }
-
-        public AuditLog CurrentAuditLog { get => _auditLog; set => _auditLog = value; }
-
-        public bool Add()
-        {
-            _auditLogID = AuditLogDLL.Add(_auditLog);
+           int _auditLogID = AuditLogDLL.Add(auditLog);
             return _auditLogID > 0;
         }
-
         // ================ CRUD ================
+
 
         // ================ Read By ================
         public static async Task<List<AuditLog>> GetByUserId(int userId) => await AuditLogDLL.GetByUserId(userId);
         // ================ Read By ================
-
-        public bool Save() => _mode switch
-        {
-            enMode.AddMode => Add(),
-            _ => false
-        };
     }
 }

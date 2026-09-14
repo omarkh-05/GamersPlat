@@ -7,7 +7,8 @@ namespace DataLayer
 {
     public class CenterInvitationDLL
     {
-        public static int Add(CenterInvitation inv)
+        // ================ CRUD ================
+        public static async Task<int> Add(CenterInvitation inv)
         {
             try
             {
@@ -22,16 +23,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
-        public static bool Update(CenterInvitation inv)
+        public static async Task<bool> Update(CenterInvitation inv)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.CenterInvitations.FirstOrDefault(i => i.InvitationId == inv.InvitationId);
+                var existing = await db.CenterInvitations.FirstOrDefaultAsync(i => i.InvitationId == inv.InvitationId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(inv);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,16 +39,15 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.CenterInvitations.FirstOrDefault(i => i.InvitationId == id);
+                var existing = await db.CenterInvitations.FirstOrDefaultAsync(i => i.InvitationId == id);
                 if (existing == null) return false;
                 db.CenterInvitations.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -56,7 +55,10 @@ namespace DataLayer
                 return false;
             }
         }
+        // ================ CRUD ================
 
+
+        // ================ Read By ================
         public static async Task<CenterInvitation?> GetByID(int id)
         {
             try
@@ -70,7 +72,6 @@ namespace DataLayer
                 return null;
             }
         }
-
         public static async Task<List<CenterInvitation>> GetAll()
         {
             try
@@ -84,7 +85,7 @@ namespace DataLayer
                 return new List<CenterInvitation>();
             }
         }
-
+        // ================ Read By ================
 
     }
 }

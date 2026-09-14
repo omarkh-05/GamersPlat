@@ -8,7 +8,8 @@ namespace DataLayer
 {
     public class SessionDLL
     {
-        public static int Add(Session session)
+        // ================ CRUD ===========
+        public static async Task<int> Add(Session session)
         {
             try
             {
@@ -23,16 +24,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
-        public static bool Update(Session session)
+        public static async Task<bool> Update(Session session)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Sessions.FirstOrDefault(s => s.SessionId == session.SessionId);
+                var existing = await db.Sessions.FirstOrDefaultAsync(s => s.SessionId == session.SessionId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(session);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,16 +40,15 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static bool Delete(int sessionId)
+        public static async Task<bool> Delete(int sessionId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Sessions.FirstOrDefault(s => s.SessionId == sessionId);
+                var existing = await db.Sessions.FirstOrDefaultAsync(s => s.SessionId == sessionId);
                 if (existing == null) return false;
                 db.Sessions.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -57,7 +56,26 @@ namespace DataLayer
                 return false;
             }
         }
+        public static async Task<List<Session>> GetAll()
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Sessions
+                    .Include(s => s.Center)
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Sessions Error", ex);
+                return new List<Session>();
+            }
+        }
+        // ================ CRUD ===========
 
+        
+        // ================ Read By ===========
         public static async Task<Session?> GetByID(int sessionId)
         {
             try
@@ -76,24 +94,6 @@ namespace DataLayer
                 return null;
             }
         }
-
-        public static async Task<List<Session>> GetAll()
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Sessions
-                    .Include(s => s.Center)
-                    .AsNoTracking()
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get All Sessions Error", ex);
-                return new List<Session>();
-            }
-        }
-
-
+        // ================ Read By ===========
     }
 }

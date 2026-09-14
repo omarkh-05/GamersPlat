@@ -7,7 +7,8 @@ namespace DataLayer
 {
     public class EmailVerificationTokenDLL
     {
-        public static int Add(EmailVerificationToken token)
+        // ================ CRUD ================
+        public static async Task<int> Add(EmailVerificationToken token)
         {
             try
             {
@@ -22,7 +23,6 @@ namespace DataLayer
                 return 0;
             }
         }
-
         public static bool Delete(int id)
         {
             try
@@ -31,7 +31,7 @@ namespace DataLayer
                 var existing = db.EmailVerificationTokens.FirstOrDefault(t => t.TokenIdId == id);
                 if (existing == null) return false;
                 db.EmailVerificationTokens.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,7 +39,10 @@ namespace DataLayer
                 return false;
             }
         }
+        // ================ CRUD ================
 
+
+        // ================ Read By ================
         public static async Task<EmailVerificationToken?> GetByID(int id)
         {
             try
@@ -53,7 +56,6 @@ namespace DataLayer
                 return null;
             }
         }
-
         public static async Task<EmailVerificationToken?> GetByToken(string token)
         {
             try
@@ -68,7 +70,6 @@ namespace DataLayer
                 return null;
             }
         }
-
-
+        // ================ Read By ================
     }
 }

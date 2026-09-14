@@ -8,7 +8,8 @@ namespace DataLayer
 {
     public class CityDLL
     {
-        public static int Add(City city)
+        // ================ CRUD ================
+        public static async Task<int> Add(City city)
         {
             try
             {
@@ -23,16 +24,15 @@ namespace DataLayer
                 return 0;
             }
         }
-
-        public static bool Update(City city)
+        public static async Task<bool> Update(City city)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Cities.FirstOrDefault(c => c.CityId == city.CityId);
+                var existing = await db.Cities.FirstOrDefaultAsync(c => c.CityId == city.CityId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(city);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,16 +40,15 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Cities.FirstOrDefault(c => c.CityId == id);
+                var existing = await db.Cities.FirstOrDefaultAsync(c => c.CityId == id);
                 if (existing == null) return false;
                 db.Cities.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -57,21 +56,6 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public static async Task<City?> GetByID(int id)
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                return await db.Cities.AsNoTracking().FirstOrDefaultAsync(c => c.CityId == id);
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get City By ID Error", ex);
-                return null;
-            }
-        }
-
         public static async Task<List<City>> GetAll()
         {
             try
@@ -85,7 +69,23 @@ namespace DataLayer
                 return new List<City>();
             }
         }
+        // ================ CRUD ================
 
 
+        // ================ Read By ================
+        public static async Task<City?> GetByID(int id)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                return await db.Cities.AsNoTracking().FirstOrDefaultAsync(c => c.CityId == id);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get City By ID Error", ex);
+                return null;
+            }
+        }
+        // ================ Read By ================
     }
 }

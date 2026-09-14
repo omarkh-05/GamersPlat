@@ -8,7 +8,8 @@ namespace DataLayer
 {
     public class SessionParticipantDLL
     {
-        public static int Add(SessionParticipant sp)
+        // ================ CRUD ===========
+        public static async Task<int> Add(SessionParticipant sp)
         {
             try
             {
@@ -24,7 +25,6 @@ namespace DataLayer
                 return 0;
             }
         }
-
         public static bool Delete(int id)
         {
             try
@@ -33,7 +33,7 @@ namespace DataLayer
                 var existing = db.SessionParticipants.SingleOrDefault(x => x.Id == id);
                 if (existing == null) return false;
                 db.SessionParticipants.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -41,7 +41,10 @@ namespace DataLayer
                 return false;
             }
         }
+        // ================ CRUD ===========
 
+
+        // ================ Read By ===========
         public static async Task<SessionParticipant?> GetBySessionId(int sessionId)
         {
             try
@@ -55,7 +58,6 @@ namespace DataLayer
                 return null;
             }
         }
-
-
+        // ================ Read By ===========
     }
 }

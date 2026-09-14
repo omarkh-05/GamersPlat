@@ -8,7 +8,7 @@ namespace DataLayer
     public class TournamentDLL
     {
         // ================ CRUD ================
-        public static int Add(Tournament t)
+        public static async Task<int> Add(Tournament t)
         {
             try
             {
@@ -23,15 +23,15 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static bool Update(Tournament t)
+        public static async Task<bool> Update(Tournament t)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Tournaments.FirstOrDefault(x => x.TournamentId == t.TournamentId);
+                var existing = await db.Tournaments.FirstOrDefaultAsync(x => x.TournamentId == t.TournamentId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(t);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,15 +39,15 @@ namespace DataLayer
                 return false;
             }
         }
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.Tournaments.FirstOrDefault(x => x.TournamentId == id);
+                var existing = await db.Tournaments.FirstOrDefaultAsync(x => x.TournamentId == id);
                 if (existing == null) return false;
                 db.Tournaments.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
