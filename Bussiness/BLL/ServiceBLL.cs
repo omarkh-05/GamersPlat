@@ -10,14 +10,14 @@ namespace Bussiness
             int serviceID = ServiceDLL.Add(service);
             return serviceID > 0;
         }
-        public bool Update(Service service) => ServiceDLL.Update(service);
-        public bool Delete(int serviceId) => ServiceDLL.Delete(serviceId);
-        public Task<List<Service>> GetAll() => ServiceDLL.GetAll();
+        public async Task<bool> Update(Service service) => await ServiceDLL.Update(service);
+        public async Task<bool> Delete(int serviceId) => await ServiceDLL.Delete(serviceId);
+        public async Task<List<Service>> GetAll() => await ServiceDLL.GetAll();
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public Task<Service?> GetByID(int serviceId) => ServiceDLL.GetByID(serviceId);
+        public async Task<Service?> GetByID(int serviceId) => await ServiceDLL.GetByID(serviceId);
         // ================ Read By ================
     }
 }

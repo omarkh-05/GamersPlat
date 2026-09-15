@@ -5,19 +5,19 @@ namespace Bussiness
     public class CountryBLL
     {
         // ================ CRUD ================
-        public bool Add(Country country)
+        public async Task<bool> Add(Country country)
         {
-            int countryID = CountryDLL.Add(country);
+            int countryID = await CountryDLL.Add(country);
             return countryID > 0;
         }
-        public bool Update(Country country) => CountryDLL.Update(country);
-        public bool Delete(int id) => CountryDLL.Delete(id);
-        public static Task<List<Country>> GetAll() => CountryDLL.GetAll();
+        public async Task<bool> Update(Country country) => await CountryDLL.Update(country);
+        public async Task<bool> Delete(int id) => await CountryDLL.Delete(id);
+        public async Task<List<Country>> GetAll() => await CountryDLL.GetAll();
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static Task<Country?> GetByID(int id) => CountryDLL.GetByID(id);
+        public async Task<Country?> GetByID(int id) => await CountryDLL.GetByID(id);
         // ================ Read By ================
     }
 }

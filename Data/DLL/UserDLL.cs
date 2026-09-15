@@ -49,7 +49,7 @@ namespace DataLayer
                 var existing = await db.Users.FindAsync(userId);
                 if (existing == null) return false;
                 db.Users.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {

@@ -5,16 +5,16 @@ namespace Bussiness
     public class AuditLogBLL
     {
         // ================ CRUD ================
-        public bool Add(AuditLog auditLog)
+        public async Task<bool> Add(AuditLog auditLog)
         {
-           int _auditLogID = AuditLogDLL.Add(auditLog);
+           int _auditLogID = await AuditLogDLL.Add(auditLog);
             return _auditLogID > 0;
         }
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static async Task<List<AuditLog>> GetByUserId(int userId) => await AuditLogDLL.GetByUserId(userId);
+        public async Task<List<AuditLog>> GetByUserId(int userId) => await AuditLogDLL.GetByUserId(userId);
         // ================ Read By ================
     }
 }

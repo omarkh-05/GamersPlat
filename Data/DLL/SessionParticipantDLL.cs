@@ -15,7 +15,7 @@ namespace DataLayer
             {
                 using var db = new GamersPlatDbContext();
                 db.SessionParticipants.Add(sp);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 var id = sp.Id;
                 return id;
             }
@@ -25,7 +25,7 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {

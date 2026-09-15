@@ -46,9 +46,8 @@ namespace Bussiness
             // Validate availability when changing booking date/resource/quantity
             try
             {
-                var existingTask = BookingDLL.GetByID(booking.BookingId);
-                existingTask.Wait();
-                var existing = existingTask.Result;
+                var existingTask = await BookingDLL.GetByID(booking.BookingId);
+                var existing = existingTask;
 
                 if (existing == null)
                 {

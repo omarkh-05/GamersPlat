@@ -5,19 +5,19 @@ namespace Bussiness
     public class NotificationBLL
     {
         // ================ CRUD ================
-        public bool Add(Notification notification)
+        public async Task<bool> Add(Notification notification)
         {
-            int notificationID = NotificationDLL.Add(notification);
+            int notificationID = await NotificationDLL.Add(notification);
             return notificationID > 0;
         }
-        public bool Update(Notification notification) => NotificationDLL.Update(notification);
-        public bool Delete(int id) => NotificationDLL.Delete(id);
-        public static Task<List<Notification>> GetAll() => NotificationDLL.GetAll();
+        public async Task<bool> Update(Notification notification) => await NotificationDLL.Update(notification);
+        public async Task<bool> Delete(int id) => await NotificationDLL.Delete(id);
+        public async Task<List<Notification>> GetAll() => await NotificationDLL.GetAll();
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static Task<Notification?> GetByID(int id) => NotificationDLL.GetByID(id);
+        public async Task<Notification?> GetByID(int id) => await NotificationDLL.GetByID(id);
         // ================ Read By ================
 
     }

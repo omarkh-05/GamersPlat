@@ -15,7 +15,7 @@ namespace DataLayer
             {
                 using var db = new GamersPlatDbContext();
                 db.TournamentPlayers.Add(tp);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return tp.Id;
             }
             catch (Exception ex)
@@ -24,7 +24,7 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static bool DeleteByTournamentAndUser(int tournamentId, int userId)
+        public static async Task<bool> DeleteByTournamentAndUser(int tournamentId, int userId)
         {
             try
             {

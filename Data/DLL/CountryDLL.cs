@@ -9,7 +9,7 @@ namespace DataLayer
     public class CountryDLL
     {
         // ================ CRUD ================
-        public static int Add(Country country)
+        public static async Task<int> Add(Country country)
         {
             try
             {
@@ -24,7 +24,7 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static bool Update(Country country)
+        public static async Task<bool> Update(Country country)
         {
             try
             {
@@ -40,7 +40,7 @@ namespace DataLayer
                 return false;
             }
         }
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {

@@ -10,14 +10,14 @@ namespace Bussiness
             int imageID = CenterImageDLL.Add(image);
             return imageID > 0;
         }
-        public bool Update(CenterImage image) => CenterImageDLL.Update(image);
-        public bool Delete(int id) => CenterImageDLL.Delete(id);
-        public static Task<List<CenterImage>> GetAll() => CenterImageDLL.GetAll();
+        public async Task<bool> Update(CenterImage image) => await CenterImageDLL.Update(image);
+        public async Task<bool> Delete(int id) => await CenterImageDLL.Delete(id);
+        public async Task<List<CenterImage>> GetAll() => await CenterImageDLL.GetAll();
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static Task<CenterImage?> GetByID(int id) => CenterImageDLL.GetByID(id);
+        public async Task<CenterImage?> GetByID(int id) => await CenterImageDLL.GetByID(id);
         // ================ Read By ================
     }
 }

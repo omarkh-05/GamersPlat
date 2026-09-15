@@ -11,8 +11,8 @@ namespace Bussiness
         //public async Task<bool> ExistsByName(string? name, int excludeId = 0) => await RoleDLL.ExistsByName(name, excludeId);
 
         // ================ Read By ================
-        public static Task<Role?> GetByID(int roleId) => RoleDLL.GetByID(roleId);
-        public static Task<Role?> GetByName(string name) => RoleDLL.GetByName(name);
+        public static async Task<Role?> GetByID(int roleId) => await RoleDLL.GetByID(roleId);
+        public static async Task<Role?> GetByName(string name) => await RoleDLL.GetByName(name);
         // ================ Read By ================
     }
 }

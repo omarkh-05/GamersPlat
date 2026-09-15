@@ -10,15 +10,15 @@ namespace Bussiness
             int centerID = CenterDLL.Add(center);
             return centerID > 0;
         }
-        public bool Update(Center center) => CenterDLL.Update(center);
-        public bool Delete(int centerId) => CenterDLL.Delete(centerId);
+        public async Task<bool> Update(Center center) => await CenterDLL.Update(center);
+        public async Task<bool> Delete(int centerId) => await CenterDLL.Delete(centerId);
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static Task<Center?> GetByID(int centerId) => CenterDLL.GetByID(centerId);
-        public static Task<List<Center>> GetAll() => CenterDLL.GetAll();
-        public static Task<List<string>> GetCenterNames() => CenterDLL.GetCenterNames();
+        public async Task<Center?> GetByID(int centerId) => await CenterDLL.GetByID(centerId);
+        public async Task<List<Center>> GetAll() => await CenterDLL.GetAll();
+        public async Task<List<string>> GetCenterNames() => await CenterDLL.GetCenterNames();
         // ================ Read By ================
     }
 }

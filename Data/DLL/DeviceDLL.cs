@@ -14,7 +14,7 @@ namespace DataLayer
             {
                 using var db = new GamersPlatDbContext();
                 db.Devices.Add(device);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return device.DeviceId;
             }
             catch (Exception ex)

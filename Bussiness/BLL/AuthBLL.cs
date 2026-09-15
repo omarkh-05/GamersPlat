@@ -65,7 +65,6 @@ namespace Bussiness.BLL
                 if(!await _userRole.Add(userRole))
                 throw new Exception("Failed to add user role");
         }
-
         public async Task<TokenResponse> LoginAsync(LoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.PhoneNumber) ||
@@ -105,7 +104,6 @@ namespace Bussiness.BLL
                 RefreshToken = refreshToken
             };
         }
-
         public async Task<bool> LogoutAsync(string refreshToken)
         {
             if (string.IsNullOrWhiteSpace(refreshToken))
@@ -203,7 +201,6 @@ namespace Bussiness.BLL
             else
                 throw new Exception("Error updating user");
         }
-
         public async Task<string> RequestResetPassword(RequestResetRequest request)
         {
             int userId = await _user.GetIdByPhoneOrEmail(request);
@@ -223,7 +220,6 @@ namespace Bussiness.BLL
 
             return token.TokenHash;
         }
-
         public async Task<bool> ResetPassword(ResetPasswordRequest request)
         {
             var token = await _passwordResetTokenBLL.GetByToken(request.Token);

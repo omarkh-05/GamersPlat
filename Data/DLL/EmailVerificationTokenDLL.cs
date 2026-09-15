@@ -14,7 +14,7 @@ namespace DataLayer
             {
                 using var db = new GamersPlatDbContext();
                 db.EmailVerificationTokens.Add(token);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return token.TokenIdId;
             }
             catch (Exception ex)
@@ -23,12 +23,12 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static bool Delete(int id)
+        public static async Task<bool> Delete(int id)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = db.EmailVerificationTokens.FirstOrDefault(t => t.TokenIdId == id);
+                var existing = await db.EmailVerificationTokens.FirstOrDefaultAsync(t => t.TokenIdId == id);
                 if (existing == null) return false;
                 db.EmailVerificationTokens.Remove(existing);
                 return await db.SaveChangesAsync() > 0;

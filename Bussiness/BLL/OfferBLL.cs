@@ -5,21 +5,21 @@ namespace Bussiness
     public class OfferBLL
     {
         // ================ CRUD ================
-        public bool Add(Offer offer)
+        public async Task<bool> Add(Offer offer)
         {
-            int offerID = OfferDLL.Add(offer);
+            int offerID = await OfferDLL.Add(offer);
             return offerID > 0;
         }
-        public bool Update(Offer offer) => OfferDLL.Update(offer);
-        public bool Delete(int offerId) => OfferDLL.Delete(offerId);
-        public static Task<List<Offer>> GetAll() => OfferDLL.GetAll();
+        public async Task<bool> Update(Offer offer) => await OfferDLL.Update(offer);
+        public async Task<bool> Delete(int offerId) => await OfferDLL.Delete(offerId);
+        public async Task<List<Offer>> GetAll() => await OfferDLL.GetAll();
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static Task<Offer?> GetByID(int offerId) => OfferDLL.GetByID(offerId);
-        public static Task<List<Offer>> GetByCenterId(int centerId) => OfferDLL.GetByCenterId(centerId);
-        public static Task<List<Offer>> GetActiveOffers() => OfferDLL.GetActiveOffers();
+        public async Task<Offer?> GetByID(int offerId) => await OfferDLL.GetByID(offerId);
+        public async Task<List<Offer>> GetByCenterId(int centerId) => await OfferDLL.GetByCenterId(centerId);
+        public async Task<List<Offer>> GetActiveOffers() => await OfferDLL.GetActiveOffers();
         // ================ Read By ================
     }
 }
