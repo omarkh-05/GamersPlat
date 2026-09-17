@@ -28,7 +28,7 @@ namespace DataLayer
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = await db.ResourcesTypes.FirstOrDefaultAsync(r => r.ResourcesTypeId == rt.ResourcesTypeId);
+                var existing = await db.ResourcesTypes.FirstOrDefaultAsync(r => r.ResourcesTypeId == rt.ResourcesTypeId && r.CenterId == rt.CenterId);
                 if (existing == null) return false;
                 db.Entry(existing).CurrentValues.SetValues(rt);
                 return await db.SaveChangesAsync() > 0;
@@ -36,6 +36,31 @@ namespace DataLayer
             catch (Exception ex)
             {
                 EventLog_Helper.WriteEventLog("Update ResourcesType Error", ex);
+                return false;
+            }
+        }
+        public static async Task<bool> UpdateActiveStatus(int centerId,int resourceId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+
+                var resource = await db.ResourcesTypes
+             .FirstOrDefaultAsync(r =>
+                 r.ResourcesTypeId == resourceId &&
+                 r.CenterId == centerId);
+
+
+                if (resource == null)
+                    return false;
+
+                resource.IsActive = !resource.IsActive;
+
+                return await db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Update ResourcesType Active Status Error", ex);
                 return false;
             }
         }

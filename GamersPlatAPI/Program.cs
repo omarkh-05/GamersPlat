@@ -9,6 +9,7 @@ using Microsoft.OpenApi;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
+using GamersPlatAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -177,7 +178,6 @@ builder.Services.AddRateLimiter(options =>
 
 
 var app = builder.Build();
-
 // Seed roles at startup
 using (var scope = app.Services.CreateScope())
 {
@@ -235,7 +235,7 @@ app.Use(async (context, next) =>
 
 app.UseAuthentication();
 // Global error response middleware
-app.UseMiddleware<GamersPlatAPI.Middleware.ErrorResponseMiddleware>();
+app.UseMiddleware<ErrorResponseMiddleware>();
 
 app.UseAuthorization();
 

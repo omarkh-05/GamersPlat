@@ -4,10 +4,12 @@ namespace Bussiness
 {
     public class CenterImageBLL
     {
+        public int _imageID { get; private set; }
         // ================ CRUD ================
-        public bool Add(CenterImage image)
+        public async Task<bool> Add(CenterImage image)
         {
-            int imageID = CenterImageDLL.Add(image);
+            int imageID = await CenterImageDLL.Add(image);
+            _imageID = imageID;
             return imageID > 0;
         }
         public async Task<bool> Update(CenterImage image) => await CenterImageDLL.Update(image);

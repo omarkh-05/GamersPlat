@@ -5,9 +5,9 @@ namespace Bussiness
     public class CityBLL
     {
         // ================ CRUD ================
-        public bool Add(City city)
+        public async Task<bool> Add(City city)
         {
-            int cityID = CityDLL.Add(city);
+            int cityID = await CityDLL.Add(city);
             return cityID > 0;
         }
         public async Task<bool> Update(City city) => await CityDLL.Update(city);

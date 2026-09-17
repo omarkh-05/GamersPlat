@@ -4,10 +4,12 @@ namespace Bussiness
 {
     public class TournamentBLL
     {
+        public int _tID { get; private set; }
         // ================ CRUD ================
-        public bool Add(Tournament t)
+        public async Task<bool> Add(Tournament t)
         {
-            int tID = TournamentDLL.Add(t);
+            int tID = await TournamentDLL.Add(t);
+            _tID = tID;
             return tID > 0;
         }
         public async Task<bool> Update(Tournament t) => await TournamentDLL.Update(t);

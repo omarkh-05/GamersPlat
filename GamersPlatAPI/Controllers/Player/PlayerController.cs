@@ -1,4 +1,5 @@
 using Bussiness;
+using Bussiness.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -9,6 +10,15 @@ namespace GamersPlatAPI.Controllers
     [Route("api/[controller]")]
     public class PlayerController : ControllerBase
     {
+        readonly IUser _user;
+        readonly BookingBLL _booking;
+
+        public PlayerController(IUser user, BookingBLL booking)
+        {
+            _user = user;
+            _booking = booking;
+        }
+
         [Authorize]
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile()
@@ -16,10 +26,10 @@ namespace GamersPlatAPI.Controllers
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
 
-            var user = await UserBLL.GetByID(userId);
+            var user = await _user.GetById(userId);
             if (user == null) return NotFound();
 
-            var dto = new GamersPlatAPI.DTOs.UserProfileDTO
+            var dto = new DTOs.UserProfileDTO
             {
                 UserId = user.UserId,
                 FullName = user.FullName,
@@ -38,15 +48,14 @@ namespace GamersPlatAPI.Controllers
 
         [Authorize]
         [HttpPut("profile")]
-        public IActionResult UpdateProfile([FromBody] Data.User model)
+        public async Task<IActionResult> UpdateProfile([FromBody] Data.User model)
         {
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
 
             if (model == null || model.UserId != userId) return BadRequest();
 
-            var bll = new UserBLL(model);
-            if (!bll.Update()) return StatusCode(500);
+            if (!await _user.Update(userId, model)) return StatusCode(500);
             return NoContent();
         }
 
@@ -57,7 +66,7 @@ namespace GamersPlatAPI.Controllers
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
 
-            var bookings = await BookingBLL.GetByUserId(userId);
+            var bookings = await _booking.GetByUserId(userId);
             return Ok(bookings);
         }
     }

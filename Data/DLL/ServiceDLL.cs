@@ -14,13 +14,18 @@ namespace DataLayer
             try
             {
                 using var db = new GamersPlatDbContext();
+
                 db.Services.Add(service);
+
                 await db.SaveChangesAsync();
+
                 return service.ServiceId;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Add Service Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Add Service Error", ex);
+
                 return 0;
             }
         }
@@ -29,30 +34,76 @@ namespace DataLayer
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = await db.Services.FirstOrDefaultAsync(s => s.ServiceId == service.ServiceId);
-                if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(service);
+
+                var existing = await db.Services
+                    .FirstOrDefaultAsync(s =>
+                        s.ServiceId == service.ServiceId &&
+                        s.CenterId == service.CenterId);
+
+                if (existing == null)
+                    return false;
+
+                existing.Name = service.Name;
+                existing.IsActive = service.IsActive;
+                existing.UpdatedAt = DateTime.UtcNow;
+
                 return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Update Service Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Update Service Error", ex);
+
                 return false;
             }
         }
-        public static async Task<bool> Delete(int serviceId)
+        public static async Task<bool> Delete( int serviceId, int centerId)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = await db.Services.FirstOrDefaultAsync(s => s.ServiceId == serviceId);
-                if (existing == null) return false;
+
+                var existing = await db.Services
+                    .FirstOrDefaultAsync(s =>
+                        s.ServiceId == serviceId &&
+                        s.CenterId == centerId);
+
+                if (existing == null)
+                    return false;
+
                 db.Services.Remove(existing);
+
                 return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Delete Service Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Delete Service Error", ex);
+
+                return false;
+            }
+        }
+        public static async Task<bool> UpdateActiveStatus(int serviceId,int centerId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+
+                var service = await db.Services
+                    .FirstOrDefaultAsync(s =>
+                        s.ServiceId == serviceId &&
+                        s.CenterId == centerId);
+
+                if (service == null)
+                    return false;
+
+                service.IsActive = !service.IsActive;
+
+                return await db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Update Service Active Status Error", ex);
                 return false;
             }
         }

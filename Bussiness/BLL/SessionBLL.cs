@@ -5,9 +5,9 @@ namespace Bussiness
     public class SessionBLL
     {
         // ================ CRUD ================
-        public bool Add(Session session)
+        public async Task<bool> Add(Session session)
         {
-            int sessionID = SessionDLL.Add(session);
+            int sessionID = await SessionDLL.Add(session);
             return sessionID > 0;
         }
         public async Task<bool> Update(Session session) => await SessionDLL.Update(session);

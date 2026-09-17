@@ -17,12 +17,11 @@ namespace GamersPlatAPI.Controllers.Owner
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var center = await CenterBLL.GetByID(t.CenterId);
+            var center = await new CenterBLL().GetByID(t.CenterId);
             if (center == null) return NotFound();
             if (center.OwnerUserId != uid) return Forbid();
-
-            var bll = new TournamentBLL(t);
-            if (!bll.Add()) return StatusCode(500);
+            var bll = new TournamentBLL();
+            if (!await bll.Add(t)) return StatusCode(500);
             return CreatedAtAction("GetById", "Tournaments", new { id = bll._tID }, t);
         }
 
@@ -34,31 +33,29 @@ namespace GamersPlatAPI.Controllers.Owner
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var existing = await TournamentBLL.GetByID(id);
+            var existing = await new TournamentBLL().GetByID(id);
             if (existing == null) return NotFound();
 
-            var center = await CenterBLL.GetByID(existing.CenterId);
+            var center = await new CenterBLL().GetByID(existing.CenterId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-
-            var bll = new TournamentBLL(t);
-            if (!bll.Update()) return StatusCode(500);
+            var bll = new TournamentBLL();
+            if (!await bll.Update(t)) return StatusCode(500);
             return NoContent();
         }
 
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var existing = await TournamentBLL.GetByID(id);
+            var existing = await new TournamentBLL().GetByID(id);
             if (existing == null) return NotFound();
 
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var center = await CenterBLL.GetByID(existing.CenterId);
+            var center = await new CenterBLL().GetByID(existing.CenterId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-
             var bll = new TournamentBLL();
-            if (!bll.Delete(id)) return StatusCode(500);
+            if (!await bll.Delete(id)) return StatusCode(500);
             return NoContent();
         }
     }

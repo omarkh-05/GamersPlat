@@ -25,14 +25,14 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(User user)
+        public static async Task<bool> Update(int userId, User updateUserInfoRequest)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FindAsync(user.UserId);
+                var existing = await db.Users.FindAsync(userId);
                 if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(user);
+                db.Entry(existing).CurrentValues.SetValues(updateUserInfoRequest);
                 return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)

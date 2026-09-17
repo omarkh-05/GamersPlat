@@ -12,14 +12,14 @@ namespace GamersPlatAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var t = await TournamentBLL.GetAll();
+            var t = await new TournamentBLL().GetAll();
             return Ok(t);
         }
 
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var t = await TournamentBLL.GetByID(id);
+            var t = await new TournamentBLL().GetByID(id);
             if (t == null) return NotFound();
             return Ok(t);
         }
@@ -27,11 +27,11 @@ namespace GamersPlatAPI.Controllers
         [HttpGet("results/{id:int}")]
         public async Task<IActionResult> GetResults(int id)
         {
-            var t = await TournamentBLL.GetByID(id);
+            var t = await new TournamentBLL().GetByID(id);
             if (t == null) return NotFound();
 
             // For now, tournament results are the list of players who joined, ordered by JoinedAt
-            var participants = await TournamentPlayerBLL.GetByTournamentId(id);
+            var participants = await new TournamentPlayerBLL().GetByTournamentId(id);
             var users = participants.Select(p => new { p.UserId, p.JoinedAt }).ToList();
 
             var resp = new
@@ -52,15 +52,15 @@ namespace GamersPlatAPI.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized();
 
-            var tournament = await TournamentBLL.GetByID(id);
+            var tournament = await new TournamentBLL().GetByID(id);
             if (tournament == null) return NotFound("Tournament not found");
 
             // check if already joined
-            var existing = await TournamentPlayerBLL.GetByTournamentAndUser(id, userId);
+            var existing = await new TournamentPlayerBLL().GetByTournamentAndUser(id, userId);
             if (existing != null) return Conflict("User already joined this tournament");
 
             // check capacity
-            var participants = await TournamentPlayerBLL.GetByTournamentId(id);
+            var participants = await new TournamentPlayerBLL().GetByTournamentId(id);
             if (tournament.MaxPlayers.HasValue && participants.Count >= tournament.MaxPlayers.Value)
                 return Conflict("Tournament is full");
 
@@ -71,8 +71,8 @@ namespace GamersPlatAPI.Controllers
                 JoinedAt = DateTime.UtcNow
             };
 
-            var bll = new TournamentPlayerBLL(tp);
-            if (!bll.Add()) return StatusCode(500, "Unable to join tournament");
+            var bll = new TournamentPlayerBLL();
+            if (!await bll.Add(tp)) return StatusCode(500, "Unable to join tournament");
 
             // return info
             var resp = new GamersPlatAPI.DTOs.TournamentJoinResponse
@@ -92,10 +92,9 @@ namespace GamersPlatAPI.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized();
 
-            var existing = await TournamentPlayerBLL.GetByTournamentAndUser(id, userId);
+            var existing = await new TournamentPlayerBLL().GetByTournamentAndUser(id, userId);
             if (existing == null) return NotFound();
-
-            var ok = TournamentPlayerBLL.DeleteByTournamentAndUser(id, userId);
+            var ok = await new TournamentPlayerBLL().DeleteByTournamentAndUser(id, userId);
             if (!ok) return StatusCode(500, "Unable to leave tournament");
 
             return Ok(new { message = "Left tournament" });

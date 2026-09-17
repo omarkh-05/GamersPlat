@@ -1,6 +1,7 @@
 using Data;
 using Data.DLL;
 using Data.EF;
+using Domain.DTOs.Booking;
 using Domain.DTOs.Player;
 using Microsoft.EntityFrameworkCore;
 
@@ -127,7 +128,6 @@ namespace DataLayer
                     {
                         CenterName = b.Center.CenterName,
                         Resource = b.ResourcesType.Device.DeviceName,
-                        GameName = b.GameName,
                         OfferId = b.OfferId,
                         Quantity = b.Quantity,
                         TotalPrice = b.TotalPrice,
@@ -159,5 +159,105 @@ namespace DataLayer
             }
         }
         // ================ Read By ================
+
+        // ================ Owner Booking Managament ================
+        public static async Task<bool> Accept_RejectBooking(int bookingId, string status)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+
+                var booking = await db.Bookings.FirstOrDefaultAsync(b =>b.BookingId == bookingId);
+
+                if (booking == null)
+                    return false;
+
+                booking.Status = status;
+                booking.UpdatedAt = DateTime.UtcNow;
+
+                return await db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Update Booking Status Error", ex);
+
+                return false;
+            }
+        }
+        public static async Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+
+                return await db.Bookings
+                    .Where(b => b.Center.OwnerUserId == ownerId)
+                    .AsNoTracking()
+                    .OrderBy(b => b.BookingDate)
+                    .Select(b => new DTO_BookingDetails
+                    {
+                        CustomerName = b.CustomerName,
+                        PhoneNumber = b.PhoneNumber,
+                        CenterName = b.Center.CenterName,
+                        ResourcesType = (b.ResourcesType.Device.DeviceName+ " - " + b.ResourcesType.RoomType),
+                        StartTime = b.StartTime,
+                        EndTime = b.EndTime.HasValue
+                                ? b.EndTime.Value.ToString("HH:mm")
+                                : "Open Time",
+
+                        Duration = b.EndTime.HasValue
+                                ? $"{(b.EndTime.Value - b.StartTime).TotalMinutes} Minutes"
+                                : "Open Time",
+                        BookingDate = b.BookingDate,
+                        TotalPrice = b.TotalPrice,
+                        Status = b.Status,
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Bookings By Owner Error", ex);
+
+                return new List<DTO_BookingDetails>();
+            }
+        }
+        public static async Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+
+                return await db.Bookings
+                     .Where(b => b.CenterId == centerId)
+                     .AsNoTracking()
+                     .OrderBy(b => b.BookingDate)
+                     .Select(b => new DTO_BookingDetails
+                     {
+                        CustomerName = b.CustomerName,
+                        PhoneNumber = b.PhoneNumber,
+                        CenterName = b.Center.CenterName,
+                        ResourcesType = (b.ResourcesType.Device.DeviceName + " - " + b.ResourcesType.RoomType),
+                        StartTime = b.StartTime,
+                         EndTime = b.EndTime.HasValue
+                                ? b.EndTime.Value.ToString("HH:mm")
+                                : "Open Time",
+
+                         Duration = b.EndTime.HasValue
+                                ? $"{(b.EndTime.Value - b.StartTime).TotalMinutes} Minutes"
+                                : "Open Time",
+                         BookingDate = b.BookingDate,
+                        TotalPrice = b.TotalPrice,
+                        Status = b.Status,
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Bookings By Center Error", ex);
+
+                return new List<DTO_BookingDetails>();
+            }
+        }
+        // ================ Owner Booking Managament ================
     }
 }

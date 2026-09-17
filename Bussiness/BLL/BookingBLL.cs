@@ -1,10 +1,12 @@
 using Data;
 using DataLayer;
+using Domain.DTOs.Booking;
 using Domain.DTOs.Player;
 namespace Bussiness
 {
     public class BookingBLL
     {
+        public int _bookingID { get; private set; }
         private readonly ResourcesTypeBLL _resourcesTypeBLL;
         public BookingBLL(ResourcesTypeBLL resourcesTypeBLL)
         {
@@ -13,26 +15,32 @@ namespace Bussiness
         public string? LastError { get; private set; }
 
         // ================ CRUD ================
-        public async Task<bool> Add(Booking booking)
+        public async Task<bool> Add(DTO_AddBooking addBooking)
         {
             try
             {
-                var rt = await _resourcesTypeBLL.GetByID(booking.ResourcesTypeId);
+                var rt = await _resourcesTypeBLL.GetByID(addBooking.ResourcesTypeId);
                 if (rt == null)
                 {
                     LastError = "Resource type not found";
                     return false;
                 }
 
-                var booked = await BookingDLL.GetBookedQuantity(booking.ResourcesTypeId, booking.BookingDate);
-                var available = rt.TotalQuantity - booked;
-                if (booking.Quantity > available)
+                var booked = await BookingDLL.GetBookedQuantity(addBooking.ResourcesTypeId, addBooking.BookingDate);
+                var booking = new Booking
                 {
-                    LastError = "Not enough availability";
-                    return false;
-                }
-
-               int bookingID = await BookingDLL.Add(booking);
+                    UserId = addBooking.UserId,
+                    CenterId = addBooking.CenterId,
+                    ResourcesTypeId = addBooking.ResourcesTypeId,
+                    BookingDate = addBooking.BookingDate,
+                    StartTime = addBooking.StartTime,
+                    EndTime = addBooking.EndTime,
+                    CustomerName = addBooking.CustomerName,
+                    PhoneNumber = addBooking.PhoneNumber,
+                    OfferId = addBooking.OfferId
+                };
+                int bookingID = await BookingDLL.Add(booking);
+                _bookingID = bookingID;
                 return bookingID > 0;
             }
             catch (Exception ex)
@@ -41,12 +49,12 @@ namespace Bussiness
                 return false;
             }
         }
-        public async Task<bool> Update(Booking booking)
+        public async Task<bool> Update(DTO_UpdateBooking updaetBooking)
         {
             // Validate availability when changing booking date/resource/quantity
             try
             {
-                var existingTask = await BookingDLL.GetByID(booking.BookingId);
+                var existingTask = await BookingDLL.GetByID(updaetBooking.BookingId);
                 var existing = existingTask;
 
                 if (existing == null)
@@ -55,31 +63,15 @@ namespace Bussiness
                     return false;
                 }
 
-                // if resource/date/quantity changed, validate availability
-                bool needsCheck = existing.BookingDate != booking.BookingDate || existing.ResourcesTypeId != booking.ResourcesTypeId || existing.Quantity != booking.Quantity;
-                if (needsCheck)
+                var booking = new Booking
                 {
-                    var rt = await _resourcesTypeBLL.GetByID(booking.ResourcesTypeId);
-                    if (rt == null)
-                    {
-                        LastError = "Resource type not found";
-                        return false;
-                    }
-
-                    var booked = await BookingDLL.GetBookedQuantity(booking.ResourcesTypeId, booking.BookingDate);
-                    // remove existing booking's quantity from booked count if same resource/date
-                    if (existing.ResourcesTypeId == booking.ResourcesTypeId && existing.BookingDate == booking.BookingDate)
-                    {
-                        booked -= existing.Quantity;
-                    }
-
-                    var available = rt.TotalQuantity - booked;
-                    if (booking.Quantity > available)
-                    {
-                        LastError = "Not enough availability";
-                        return false;
-                    }
-                }
+                    BookingId = updaetBooking.BookingId,
+                    BookingDate = updaetBooking.BookingDate,
+                    StartTime = updaetBooking.StartTime,
+                    EndTime = updaetBooking.EndTime,
+                    CustomerName = updaetBooking.CustomerName,
+                    PhoneNumber = updaetBooking.PhoneNumber
+                };
 
                 return await BookingDLL.Update(booking);
             }
@@ -99,5 +91,12 @@ namespace Bussiness
         public async Task<List<DTO_PlayerBookingsInfo>> GetByUserId(int userId) => await BookingDLL.GetByUserId(userId);
         public async Task<Booking?> GetByID(int bookingID) => await BookingDLL.GetByID(bookingID);
         // ================ Read By ================
+
+
+        // ================ Owner Booking Managament ================
+        public async Task<bool> Accept_RejectBooking(int bookingId,string status) => await BookingDLL.Accept_RejectBooking(bookingId,status);
+        public async Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId) => await BookingDLL.GetBookingsByOwnerId(ownerId);
+        public async Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId) => await BookingDLL.GetBookingsByCenterId(centerId);
+        // ================ Owner Booking Managament ================
     }
 }

@@ -13,9 +13,9 @@ namespace Bussiness
             var userId = await UserDLL.Add(user);
             return userId > 0;
         }
-        public async Task<bool> Update(User user)
+        public async Task<bool> Update(int userId, User updateUserInfoRequest)
         {
-            return await UserDLL.Update(user);
+            return await UserDLL.Update(userId, updateUserInfoRequest);
         }
         public async Task<bool> Delete(int userId)
         {
@@ -37,7 +37,6 @@ namespace Bussiness
         {
             return await UserDLL.GetUserInfoByPhone(phone);
         }
-        
         public async Task<User?> GetById(int userId)
         {
             return await UserDLL.GetById(userId);

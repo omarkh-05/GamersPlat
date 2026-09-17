@@ -18,7 +18,7 @@ namespace GamersPlatAPI.Controllers.Centers
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var center = await CenterBLL.GetByID(centerId);
+            var center = await new CenterBLL().GetByID(centerId);
             if (center == null) return NotFound();
             if (center.OwnerUserId != uid) return Forbid();
 
@@ -43,8 +43,8 @@ namespace GamersPlatAPI.Controllers.Centers
                 CreatedAt = DateTime.UtcNow
             };
 
-            var bll = new CenterImageBLL(img);
-            if (!bll.Add()) return StatusCode(500);
+            var bll = new CenterImageBLL();
+            if (!await bll.Add(img)) return StatusCode(500);
 
             return CreatedAtAction(nameof(GetById), new { centerId = centerId, id = bll._imageID }, img);
         }
@@ -52,7 +52,7 @@ namespace GamersPlatAPI.Controllers.Centers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int centerId, int id)
         {
-            var img = await CenterImageBLL.GetByID(id);
+            var img = await new CenterImageBLL().GetByID(id);
             if (img == null || img.CenterId != centerId) return NotFound();
             return Ok(img);
         }
@@ -64,13 +64,12 @@ namespace GamersPlatAPI.Controllers.Centers
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var img = await CenterImageBLL.GetByID(id);
+            var img = await new CenterImageBLL().GetByID(id);
             if (img == null) return NotFound();
-            var center = await CenterBLL.GetByID(centerId);
+            var center = await new CenterBLL().GetByID(centerId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-
             var bll = new CenterImageBLL();
-            if (!bll.Delete(id)) return StatusCode(500);
+            if (!await bll.Delete(id)) return StatusCode(500);
 
             // attempt to delete file from disk (best-effort)
             try

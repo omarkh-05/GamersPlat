@@ -11,15 +11,14 @@ namespace GamersPlatAPI.Controllers
     {
         [Authorize]
         [HttpPost]
-        public IActionResult Create([FromBody] Data.Booking booking)
+        public async Task<IActionResult> Create([FromBody] Data.Booking booking)
         {
             if (booking == null) return BadRequest();
 
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (int.TryParse(idClaim, out var userId)) booking.UserId = userId;
-
-            var bll = new BookingBLL(booking);
-            if (!bll.Add())
+            var bll = new BookingBLL(new ResourcesTypeBLL());
+            if (!await bll.Add(booking))
             {
                 if (!string.IsNullOrWhiteSpace(bll.LastError))
                 {
@@ -39,7 +38,7 @@ namespace GamersPlatAPI.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var b = await BookingBLL.GetByID(id);
+            var b = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
             if (b == null) return NotFound();
             return Ok(b);
         }
@@ -48,12 +47,12 @@ namespace GamersPlatAPI.Controllers
         [HttpPut("cancel/{id:int}")]
         public async Task<IActionResult> Cancel(int id)
         {
-            var existing = await BookingBLL.GetByID(id);
+            var existing = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
             if (existing == null) return NotFound();
 
             existing.Status = "Cancelled";
-            var bll = new BookingBLL(existing);
-            if (!bll.Update())
+            var bll = new BookingBLL(new ResourcesTypeBLL());
+            if (!await bll.Update(existing))
             {
                 if (!string.IsNullOrWhiteSpace(bll.LastError))
                     return BadRequest(new { message = bll.LastError });
@@ -68,7 +67,7 @@ namespace GamersPlatAPI.Controllers
         {
             if (req == null) return BadRequest();
 
-            var existing = await BookingBLL.GetByID(id);
+            var existing = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
             if (existing == null) return NotFound();
 
             // Only allow user who booked or admin/owner to postpone
@@ -81,8 +80,8 @@ namespace GamersPlatAPI.Controllers
             var newDate = DateOnly.FromDateTime(req.NewDate);
             existing.BookingDate = newDate;
 
-            var bll = new BookingBLL(existing);
-            if (!bll.Update())
+            var bll = new BookingBLL(new ResourcesTypeBLL());
+            if (!await bll.Update(existing))
             {
                 if (!string.IsNullOrWhiteSpace(bll.LastError))
                     return Conflict(new { message = bll.LastError });
