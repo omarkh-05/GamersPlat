@@ -158,6 +158,40 @@ namespace DataLayer
                 return 0;
             }
         }
+        public static async Task<int> GetBookedQuantityForTimeSlot(int resourcesTypeId, DateOnly date, TimeOnly startTime, TimeOnly? endTime)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                var reqEnd = endTime ?? startTime.AddHours(1);
+                return await db.Bookings
+                    .Where(b => b.ResourcesTypeId == resourcesTypeId && b.BookingDate == date && b.Status != "Cancelled"
+                        && (b.StartTime < reqEnd && (b.EndTime ?? b.StartTime.AddHours(1)) > startTime))
+                    .SumAsync(b => (int?)b.Quantity) ?? 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Booked Quantity For Time Slot Error", ex);
+                return 0;
+            }
+        }
+        public static async Task<int> GetBookedQuantityForTimeSlotExcludingBooking(int resourcesTypeId, DateOnly date, TimeOnly startTime, TimeOnly? endTime, int excludeBookingId)
+        {
+            try
+            {
+                using var db = new GamersPlatDbContext();
+                var reqEnd = endTime ?? startTime.AddHours(1);
+                return await db.Bookings
+                    .Where(b => b.ResourcesTypeId == resourcesTypeId && b.BookingDate == date && b.Status != "Cancelled" && b.BookingId != excludeBookingId
+                        && (b.StartTime < reqEnd && (b.EndTime ?? b.StartTime.AddHours(1)) > startTime))
+                    .SumAsync(b => (int?)b.Quantity) ?? 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Booked Quantity For Time Slot Excluding Booking Error", ex);
+                return 0;
+            }
+        }
         // ================ Read By ================
 
         // ================ Owner Booking Managament ================

@@ -56,7 +56,7 @@ namespace Bussiness.BLL
         {
             var List = new List<DTO_PlayerBookingsInfo>();
             
-            List = await _booking.GetByUserId(playerId);
+            List = await _booking.GetByPlayerId(playerId);
             if (List == null)
                 throw new Exception("No bookings found for the specified user.");
             return List;

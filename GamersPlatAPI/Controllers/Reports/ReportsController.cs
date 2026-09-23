@@ -15,7 +15,7 @@ namespace GamersPlatAPI.Controllers
             var id = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(id, out var uid)) return Unauthorized();
 
-            var bookings = await new BookingBLL(new ResourcesTypeBLL()).GetByUserId(uid);
+            var bookings = await new BookingBLL(new ResourcesTypeBLL()).GetByPlayerId(uid);
             var totalSpent = bookings.Sum(b => b.TotalPrice);
             var totalPoints = bookings.Sum(b => b.EarnedPoints ?? 0);
 

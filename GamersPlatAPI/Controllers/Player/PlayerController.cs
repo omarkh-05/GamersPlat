@@ -66,7 +66,7 @@ namespace GamersPlatAPI.Controllers
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
 
-            var bookings = await _booking.GetByUserId(userId);
+            var bookings = await _booking.GetByPlayerId(userId);
             return Ok(bookings);
         }
     }

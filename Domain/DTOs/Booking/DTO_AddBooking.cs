@@ -16,6 +16,9 @@ namespace Domain.DTOs.Booking
         public TimeOnly StartTime { get; set; }
         public TimeOnly? EndTime { get; set; }
 
+        // Number of resources to book (default 1)
+        public int Quantity { get; set; } = 1;
+
         public int? OfferId { get; set; }
 
         public string CustomerName { get; set; } = null!;

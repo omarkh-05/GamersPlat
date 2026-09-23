@@ -10,6 +10,7 @@ namespace Domain.DTOs.Booking
         public DateOnly BookingDate { get; set; }
         public TimeOnly StartTime { get; set; }
         public TimeOnly? EndTime { get; set; }
+        public int Quantity { get; set; } = 1;
         public string CustomerName { get; set; } = null!;
         public string PhoneNumber { get; set; } = null!;
     }
