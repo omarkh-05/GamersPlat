@@ -86,6 +86,9 @@ public partial class User
     public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();
 
     [InverseProperty("User")]
+    public virtual Staff? Staff { get; set; }
+
+    [InverseProperty("User")]
     public virtual ICollection<TournamentPlayer> TournamentPlayers { get; set; } = new List<TournamentPlayer>();
 
     [InverseProperty("WinnerUser")]

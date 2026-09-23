@@ -4,6 +4,7 @@ using Bussiness.Interfaces;
 using Data;
 using Data.DLL;
 using Domain.DTOs.Auth;
+using Domain.DTOs.User;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -122,7 +123,6 @@ namespace Bussiness.BLL
 
             return await _refreshTokenBLL.Update(existingToken);
         }
-
         // احتاج اضافة ترانس اكشن عند تعديل التوكن ثم اضافة توكن جديدة للتأكد من عدم تحديث التوكن دون اضافتها في الجدول
         public async Task<TokenResponse> RefreshAsync(string refreshToken)
         {
@@ -176,6 +176,7 @@ namespace Bussiness.BLL
                 RefreshToken = newRefreshToken
             };
         }
+        public async Task<DTO_UserInfoRequest?> CheckAuth(string phoneNumber) => await _user.GetUserInfoByPhone(phoneNumber);
         // ================ User Auth Management ================
 
 

@@ -50,5 +50,5 @@ public partial class Session
     public virtual Game Game { get; set; } = null!;
 
     [InverseProperty("Session")]
-    public virtual SessionParticipant? SessionParticipant { get; set; }
+    public virtual ICollection<SessionParticipant> SessionParticipants { get; set; } = new List<SessionParticipant>();
 }

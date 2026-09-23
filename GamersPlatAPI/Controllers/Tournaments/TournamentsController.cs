@@ -61,8 +61,8 @@ namespace GamersPlatAPI.Controllers
 
             // check capacity
             var participants = await new TournamentPlayerBLL().GetByTournamentId(id);
-            if (tournament.MaxPlayers.HasValue && participants.Count >= tournament.MaxPlayers.Value)
-                return Conflict("Tournament is full");
+            //if (tournament.MaxPlayers.HasValue && participants.Count >= tournament.MaxPlayers.Value)
+            //    return Conflict("Tournament is full");
 
             var tp = new Data.TournamentPlayer
             {

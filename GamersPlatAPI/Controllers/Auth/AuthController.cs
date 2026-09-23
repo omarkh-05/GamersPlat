@@ -148,16 +148,28 @@ namespace GamersPlatAPI.Controllers
             }
         }
 
-        [HttpGet("CheckAuth")]
+        [HttpGet("current-user")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public IActionResult CheckAuth()
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CurrentUser()
         {
-            var phoneNumber = User.FindFirst(ClaimTypes.MobilePhone)?.Value;
-            if (string.IsNullOrEmpty(phoneNumber))
-                return Unauthorized("Invalid token"); ;
+            try
+            {
+                var phoneNumber = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(phoneNumber))
+                    return Unauthorized("No Token Found"); ;
 
-            return Ok();
+                var userInfo = await _authService.CheckAuth(phoneNumber);
+                if (userInfo == null)
+                    return Unauthorized("User is not authorized");
+
+                return Ok(userInfo);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, "Internal server error");
+            }
         }
         // ================ User Auth Management ================
 

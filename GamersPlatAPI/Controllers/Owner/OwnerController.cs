@@ -10,28 +10,28 @@ namespace GamersPlatAPI.Controllers
     [Route("api/[controller]")]
     public class OwnerController : ControllerBase
     {
-        [Authorize(Roles = "Owner")]
-        [HttpPost("centers")]
-        public async Task<IActionResult> CreateCenter([FromBody] Data.Center center)
-        {
-            if (center == null) return BadRequest();
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(id, out var uid)) center.OwnerUserId = uid;
-            var bll = new CenterBLL();
-            if (!await bll.Add(center)) return StatusCode(500);
-            return CreatedAtAction("GetCenter", new { id = bll._centerID }, center);
-        }
+        //[Authorize(Roles = "Owner")]
+        //[HttpPost("centers")]
+        //public async Task<IActionResult> CreateCenter([FromBody] Data.Center center)
+        //{
+        //    if (center == null) return BadRequest();
+        //    var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (int.TryParse(id, out var uid)) center.OwnerUserId = uid;
+        //    var bll = new CenterBLL();
+        //    if (!await bll.Add(center)) return StatusCode(500);
+        //    return CreatedAtAction("GetCenter", new { id = bll._centerID }, center);
+        //}
 
-        [Authorize(Roles = "Owner")]
-        [HttpGet("centers")]
-        public async Task<IActionResult> GetMyCenters()
-        {
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(id, out var uid)) return Unauthorized();
-            var all = await new CenterBLL().GetAll();
-            var mine = all.Where(c => c.OwnerUserId == uid).ToList();
-            return Ok(mine);
-        }
+        //[Authorize(Roles = "Owner")]
+        //[HttpGet("centers")]
+        //public async Task<IActionResult> GetMyCenters()
+        //{
+        //    var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (!int.TryParse(id, out var uid)) return Unauthorized();
+        //    var all = await new CenterBLL().GetAll();
+        //    var mine = all.Where(c => c.OwnerUserId == uid).ToList();
+        //    return Ok(mine);
+        //}
 
         [Authorize(Roles = "Owner")]
         [HttpGet("offers/{centerId:int}")]
@@ -100,70 +100,70 @@ namespace GamersPlatAPI.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Owner")]
-        [HttpGet("bookings")]
-        public async Task<IActionResult> GetOwnerBookings()
-        {
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(id, out var uid)) return Unauthorized();
+        //[Authorize(Roles = "Owner")]
+        //[HttpGet("bookings")]
+        //public async Task<IActionResult> GetOwnerBookings()
+        //{
+        //    var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (!int.TryParse(id, out var uid)) return Unauthorized();
 
-            var centers = (await new CenterBLL().GetAll()).Where(c => c.OwnerUserId == uid).Select(c => c.CenterId).ToList();
-            var allBookings = await new BookingBLL(new ResourcesTypeBLL()).GetAll();
-            var mine = allBookings.Where(b => centers.Contains(b.CenterId)).ToList();
-            return Ok(mine);
-        }
+        //    var centers = (await new CenterBLL().GetAll()).Where(c => c.OwnerUserId == uid).Select(c => c.CenterId).ToList();
+        //    var allBookings = await new BookingBLL(new ResourcesTypeBLL()).GetAll();
+        //    var mine = allBookings.Where(b => centers.Contains(b.CenterId)).ToList();
+        //    return Ok(mine);
+        //}
 
-        [Authorize(Roles = "Owner")]
-        [HttpPut("bookings/status/{id:int}")]
-        public async Task<IActionResult> UpdateBookingStatus(int id, [FromBody] UpdateBookingStatusRequest req)
-        {
-            if (req == null || string.IsNullOrWhiteSpace(req.Status)) return BadRequest();
+        //[Authorize(Roles = "Owner")]
+        //[HttpPut("bookings/status/{id:int}")]
+        //public async Task<IActionResult> UpdateBookingStatus(int id, [FromBody] UpdateBookingStatusRequest req)
+        //{
+        //    if (req == null || string.IsNullOrWhiteSpace(req.Status)) return BadRequest();
 
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
+        //    var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var booking = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
-            if (booking == null) return NotFound();
+        //    var booking = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
+        //    if (booking == null) return NotFound();
 
-            // ensure owner owns the center
-            var center = await new CenterBLL().GetByID(booking.CenterId);
-            if (center == null || center.OwnerUserId != uid) return Forbid();
+        //    // ensure owner owns the center
+        //    var center = await new CenterBLL().GetByID(booking.CenterId);
+        //    if (center == null || center.OwnerUserId != uid) return Forbid();
 
-            booking.Status = req.Status;
-            if (req.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) booking.CancelledAt = DateTime.UtcNow;
+        //    booking.Status = req.Status;
+        //    if (req.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) booking.CancelledAt = DateTime.UtcNow;
 
-            var bll = new BookingBLL(new ResourcesTypeBLL());
-            if (!await bll.Update(booking)) return StatusCode(500);
-            return NoContent();
-        }
+        //    var bll = new BookingBLL(new ResourcesTypeBLL());
+        //    if (!await bll.Update(booking)) return StatusCode(500);
+        //    return NoContent();
+        //}
 
-        [Authorize(Roles = "Owner")]
-        [HttpGet("dashboard")]
-        public async Task<IActionResult> Dashboard()
-        {
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(id, out var uid)) return Unauthorized();
+        //[Authorize(Roles = "Owner")]
+        //[HttpGet("dashboard")]
+        //public async Task<IActionResult> Dashboard()
+        //{
+        //    var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (!int.TryParse(id, out var uid)) return Unauthorized();
 
-            var centers = (await new CenterBLL().GetAll()).Where(c => c.OwnerUserId == uid).ToList();
-            var centerIds = centers.Select(c => c.CenterId).ToList();
+        //    var centers = (await new CenterBLL().GetAll()).Where(c => c.OwnerUserId == uid).ToList();
+        //    var centerIds = centers.Select(c => c.CenterId).ToList();
 
-            var bookings = (await new BookingBLL(new ResourcesTypeBLL()).GetAll()).Where(b => centerIds.Contains(b.CenterId)).ToList();
-            var tournaments = (await new TournamentBLL().GetAll()).Where(t => centerIds.Contains(t.CenterId)).ToList();
+        //    var bookings = (await new BookingBLL(new ResourcesTypeBLL()).GetAll()).Where(b => centerIds.Contains(b.CenterId)).ToList();
+        //    var tournaments = (await new TournamentBLL().GetAll()).Where(t => centerIds.Contains(t.CenterId)).ToList();
 
-            decimal revenue = bookings.Sum(b => b.TotalPrice);
-            int devicesCount = tournaments.Select(t => t.DeviceId).Distinct().Count();
+        //    decimal revenue = bookings.Sum(b => b.TotalPrice);
+        //    int devicesCount = tournaments.Select(t => t.DeviceId).Distinct().Count();
 
-            var dashboard = new GamersPlatAPI.DTOs.OwnerDashboardDTO
-            {
-                OwnerUserId = uid,
-                CentersCount = centers.Count,
-                BookingsCount = bookings.Count,
-                RevenueTotal = revenue,
-                DevicesCount = devicesCount,
-                TournamentsCount = tournaments.Count
-            };
+        //    var dashboard = new GamersPlatAPI.DTOs.OwnerDashboardDTO
+        //    {
+        //        OwnerUserId = uid,
+        //        CentersCount = centers.Count,
+        //        BookingsCount = bookings.Count,
+        //        RevenueTotal = revenue,
+        //        DevicesCount = devicesCount,
+        //        TournamentsCount = tournaments.Count
+        //    };
 
-            return Ok(dashboard);
-        }
+        //    return Ok(dashboard);
+        //}
     }
 }

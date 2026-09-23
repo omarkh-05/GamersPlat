@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace Data;
 
 [Index("SessionId", "UserId", Name = "UQ_SessionParticipants_SessionId_UserId", IsUnique = true)]
-[Index("SessionId", Name = "UQ__SessionP__C9F49291B016FBF8", IsUnique = true)]
 public partial class SessionParticipant
 {
     [Key]
@@ -21,7 +20,7 @@ public partial class SessionParticipant
     public DateTime JoinedAt { get; set; }
 
     [ForeignKey("SessionId")]
-    [InverseProperty("SessionParticipant")]
+    [InverseProperty("SessionParticipants")]
     public virtual Session Session { get; set; } = null!;
 
     [ForeignKey("UserId")]

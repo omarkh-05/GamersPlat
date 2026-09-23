@@ -11,85 +11,85 @@ namespace GamersPlatAPI.Controllers
     {
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Data.Booking booking)
-        {
-            if (booking == null) return BadRequest();
+        //public async Task<IActionResult> Create([FromBody] Data.Booking booking)
+        //{
+        //    if (booking == null) return BadRequest();
 
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(idClaim, out var userId)) booking.UserId = userId;
-            var bll = new BookingBLL(new ResourcesTypeBLL());
-            if (!await bll.Add(booking))
-            {
-                if (!string.IsNullOrWhiteSpace(bll.LastError))
-                {
-                    if (bll.LastError.Contains("availability", StringComparison.OrdinalIgnoreCase))
-                        return Conflict(new { message = bll.LastError });
-                    if (bll.LastError.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                        return NotFound(new { message = bll.LastError });
-                    return BadRequest(new { message = bll.LastError });
-                }
+        //    var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (int.TryParse(idClaim, out var userId)) booking.UserId = userId;
+        //    var bll = new BookingBLL(new ResourcesTypeBLL());
+        //    if (!await bll.Add(booking))
+        //    {
+        //        if (!string.IsNullOrWhiteSpace(bll.LastError))
+        //        {
+        //            if (bll.LastError.Contains("availability", StringComparison.OrdinalIgnoreCase))
+        //                return Conflict(new { message = bll.LastError });
+        //            if (bll.LastError.Contains("not found", StringComparison.OrdinalIgnoreCase))
+        //                return NotFound(new { message = bll.LastError });
+        //            return BadRequest(new { message = bll.LastError });
+        //        }
 
-                return StatusCode(500);
-            }
+        //        return StatusCode(500);
+        //    }
 
-            return CreatedAtAction(nameof(GetById), new { id = bll._bookingID }, booking);
-        }
+        //    return CreatedAtAction(nameof(GetById), new { id = bll._bookingID }, booking);
+        //}
 
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            var b = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
-            if (b == null) return NotFound();
-            return Ok(b);
-        }
+        //[HttpGet("{id:int}")]
+        //public async Task<IActionResult> GetById(int id)
+        //{
+        //    var b = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
+        //    if (b == null) return NotFound();
+        //    return Ok(b);
+        //}
 
-        [Authorize]
-        [HttpPut("cancel/{id:int}")]
-        public async Task<IActionResult> Cancel(int id)
-        {
-            var existing = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
-            if (existing == null) return NotFound();
+        //[Authorize]
+        //[HttpPut("cancel/{id:int}")]
+        //public async Task<IActionResult> Cancel(int id)
+        //{
+        //    var existing = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
+        //    if (existing == null) return NotFound();
 
-            existing.Status = "Cancelled";
-            var bll = new BookingBLL(new ResourcesTypeBLL());
-            if (!await bll.Update(existing))
-            {
-                if (!string.IsNullOrWhiteSpace(bll.LastError))
-                    return BadRequest(new { message = bll.LastError });
-                return StatusCode(500);
-            }
-            return NoContent();
-        }
+        //    existing.Status = "Cancelled";
+        //    var bll = new BookingBLL(new ResourcesTypeBLL());
+        //    if (!await bll.Update(existing))
+        //    {
+        //        if (!string.IsNullOrWhiteSpace(bll.LastError))
+        //            return BadRequest(new { message = bll.LastError });
+        //        return StatusCode(500);
+        //    }
+        //    return NoContent();
+        //}
 
-        [Authorize]
-        [HttpPut("postpone/{id:int}")]
-        public async Task<IActionResult> Postpone(int id, [FromBody] PostponeBookingRequest req)
-        {
-            if (req == null) return BadRequest();
+        //[Authorize]
+        //[HttpPut("postpone/{id:int}")]
+        //public async Task<IActionResult> Postpone(int id, [FromBody] PostponeBookingRequest req)
+        //{
+        //    if (req == null) return BadRequest();
 
-            var existing = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
-            if (existing == null) return NotFound();
+        //    var existing = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
+        //    if (existing == null) return NotFound();
 
-            // Only allow user who booked or admin/owner to postpone
-            var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
+        //    // Only allow user who booked or admin/owner to postpone
+        //    var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        //    if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            if (existing.UserId.HasValue && existing.UserId != uid && !User.IsInRole("Admin")) return Forbid();
+        //    if (existing.UserId.HasValue && existing.UserId != uid && !User.IsInRole("Admin")) return Forbid();
 
-            // update date
-            var newDate = DateOnly.FromDateTime(req.NewDate);
-            existing.BookingDate = newDate;
+        //    // update date
+        //    var newDate = DateOnly.FromDateTime(req.NewDate);
+        //    existing.BookingDate = newDate;
 
-            var bll = new BookingBLL(new ResourcesTypeBLL());
-            if (!await bll.Update(existing))
-            {
-                if (!string.IsNullOrWhiteSpace(bll.LastError))
-                    return Conflict(new { message = bll.LastError });
-                return StatusCode(500);
-            }
+        //    var bll = new BookingBLL(new ResourcesTypeBLL());
+        //    if (!await bll.Update(existing))
+        //    {
+        //        if (!string.IsNullOrWhiteSpace(bll.LastError))
+        //            return Conflict(new { message = bll.LastError });
+        //        return StatusCode(500);
+        //    }
 
-            return NoContent();
-        }
+        //    return NoContent();
+        //}
 
         [HttpGet("check-availability")]
         public IActionResult CheckAvailability([FromQuery] int centerId, [FromQuery] int resourcesTypeId, [FromQuery] DateTime date, [FromQuery] int? quantity)

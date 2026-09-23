@@ -124,6 +124,7 @@ namespace DataLayer
                             CityId = u.CityId,
                             Points = u.Points,
                             IsActive = u.IsActive,
+                            Role = u.UserRoles.Select(ur => ur.Role.RoleName).FirstOrDefault() ?? "",
                             PhoneVerified = u.PhoneVerified == false ? false : true,
                             EmailVerified = u.EmailVerified == false ? false : true
                         })
@@ -150,6 +151,7 @@ namespace DataLayer
               CityId = u.CityId,
               Points = u.Points,
               IsActive = u.IsActive,
+              Role = u.UserRoles.Select(ur => ur.Role.RoleName).FirstOrDefault() ?? "",
               PhoneVerified = u.PhoneVerified == false ? false : true,
               EmailVerified = u.EmailVerified == false ? false : true
           })

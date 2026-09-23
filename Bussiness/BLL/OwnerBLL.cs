@@ -1,12 +1,12 @@
 ﻿using Bussiness.Interfaces;
 using Data;
 using Data.DLL;
-using DataLayer;
 using Domain.DTOs.Booking;
 using Domain.DTOs.Center;
 using Domain.DTOs.Owner;
 using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
+using Domain.DTOs.Staff;
 using Domain.DTOs.User;
 
 namespace Bussiness.BLL
@@ -18,14 +18,20 @@ namespace Bussiness.BLL
         readonly ResourcesTypeBLL _resourcesType;
         readonly ServiceBLL _services;
         readonly BookingBLL _booking;
+        readonly StaffBLL _staff;
+        readonly StaffRoleBLL _staffRole;
+        readonly IAuthService _auth;
 
-        public OwnerBLL(IUser user, CenterBLL centerBLL, ResourcesTypeBLL resourcesTypeBLL, ServiceBLL servicesBLL, BookingBLL bookingBLL)
+        public OwnerBLL(IUser user, CenterBLL centerBLL, ResourcesTypeBLL resourcesTypeBLL, ServiceBLL servicesBLL, BookingBLL bookingBLL,StaffBLL staffBLL, StaffRoleBLL staffRoleBLL,IAuthService auth)
         {
             _user = user;
             _center = centerBLL;
             _resourcesType = resourcesTypeBLL;
             _services = servicesBLL;
             _booking = bookingBLL;
+            _staff = staffBLL;
+            _staffRole = staffRoleBLL;
+            _auth = auth;
         }
 
         // ================ Owner Management ================
@@ -86,22 +92,7 @@ namespace Bussiness.BLL
             {
                 throw new ArgumentNullException(nameof(addCenter), "Center cannot be null While Creating Center");
             }
-            var createCenter = new Center
-            {
-                OwnerUserId = addCenter.OwnerUserId <= 0 ? throw new ArgumentException("Invalid owner ID.") : addCenter.OwnerUserId,
-                CenterName = addCenter.CenterName,
-                CityId = addCenter.CityId <= 0 ? throw new ArgumentException("Invalid City ID.") : addCenter.CityId,
-                CenterAddress = addCenter.CenterAddress,
-                CenterDescription = addCenter.CenterDescription,
-                CenterStatus = addCenter.CenterStatus,
-                IsActive = addCenter.IsActive,
-                CenterType = addCenter.CenterType,
-                OpenTime = addCenter.OpenTime <= TimeOnly.MinValue ? throw new ArgumentException("Invalid open time.") : addCenter.OpenTime,
-                CloseTime = addCenter.CloseTime <= TimeOnly.MinValue ? throw new ArgumentException("Invalid close time.") : addCenter.CloseTime,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            return await _center.Add(createCenter);
+            return await _center.Add(addCenter);
         }
         public async Task<bool> UpdateCenter(DTO_UpdateCenter updateCenter, int ownerUserId)
         {
@@ -116,22 +107,7 @@ namespace Bussiness.BLL
             if (center.OwnerUserId != ownerUserId)
                 throw new UnauthorizedAccessException("You are not the owner of this center.");
 
-            var createCenter = new Center
-            {
-                CenterId = updateCenter.CenterId,
-                CenterName = updateCenter.CenterName,
-                CityId = updateCenter.CityId <= 0 ? throw new ArgumentException("Invalid City ID.") : updateCenter.CityId,
-                CenterAddress = updateCenter.CenterAddress,
-                CenterDescription = updateCenter.CenterDescription,
-                CenterStatus = updateCenter.CenterStatus,
-                IsActive = updateCenter.IsActive,
-                CenterType = updateCenter.CenterType,
-                OpenTime = updateCenter.OpenTime <= TimeOnly.MinValue ? throw new ArgumentException("Invalid open time.") : updateCenter.OpenTime,
-                CloseTime = updateCenter.CloseTime <= TimeOnly.MinValue ? throw new ArgumentException("Invalid close time.") : updateCenter.CloseTime,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            return await _center.Update(createCenter, ownerUserId);
+            return await _center.Update(updateCenter, ownerUserId);
         }
         public async Task<bool> Active_DeactiveCenter(int centerId, int ownerUserId)
         {
@@ -160,7 +136,7 @@ namespace Bussiness.BLL
             {
                 throw new ArgumentException("Invalid owner ID.");
             }
-            var centers = await CenterDLL.GetAllCentersByOwnerId(ownerId);
+            var centers = await _center.GetAllCentersByOwnerId(ownerId);
             if(centers == null || centers.Count == 0)
             {
                 throw new InvalidOperationException("No centers found for this owner.");
@@ -446,36 +422,46 @@ namespace Bussiness.BLL
         }
         // ================ Bookings Management ================
 
-        /*
-        // ================ Employees Management ================
-        public async Task<bool> AddEmployee()
+        
+        // ================ Staffs Management ================
+        public async Task<bool> AddStaffMember(DTO_AddStaffMember staffMember)
+            => await _staff.Add(staffMember);
+        public async Task<bool> UpdateStaffMember(int userId,DTO_UpdateUserInfoRequest request) 
         {
-
+            User user = new User
+            {
+                FullName = request.FullName,
+                PhoneNumber = request.PhoneNumber,
+                PasswordHash = request.PasswordHash,
+                Email = request.Email,
+                CityId = request.CityId
+            };
+            return await _user.Update(userId, user);
         }
-        public async Task<bool> UpdateEmployee()
+        public async Task<bool> DeleteStaffMember(int userId)
         {
-
+            return await _staff.Delete(userId);
         }
-        public async Task<bool> DeleteEmployee()
+        public async Task<bool> AddStaffRole_ByCenterId(DTO_StaffRole role)
         {
-
+            return await _staffRole.AddStaffRole(role);
         }
-        public async Task<bool> SetEmployeeRole()
+        public async Task<bool> SetRoleToMember(DTO_SetRoleToMember request)
         {
-
+            return await _staffRole.SetRoleToMember(request);
         }
-        public async Task<List<Employees>> GetAllEmployees()
+        public async Task<List<DTO_StaffDetails>> GetAllStaff()
         {
-
+            return await _staff.GetAll();
         }
-        public async Task<List<Employees>> GetAllEmployees_ByCenterId(int centerId)
+        public async Task<List<DTO_StaffDetails>> GetAllStaff_ByCenterId(int centerId)
         {
-
+            return await _staff.GetAllStaff_ByCenterId(centerId);
         }
-        // ================ Employees Management ================
+        // ================ Staffs Management ================
 
 
-        // ================ Offers Management ================
+        /*// ================ Offers Management ================
         public async Task<bool> AddOffer()
         {
 

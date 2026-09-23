@@ -58,6 +58,10 @@ public partial class GamersPlatDbContext : DbContext
 
     public virtual DbSet<SessionParticipant> SessionParticipants { get; set; }
 
+    public virtual DbSet<Staff> Staff { get; set; }
+
+    public virtual DbSet<StaffRole> StaffRoles { get; set; }
+
     public virtual DbSet<Tournament> Tournaments { get; set; }
 
     public virtual DbSet<TournamentPlayer> TournamentPlayers { get; set; }
@@ -67,8 +71,7 @@ public partial class GamersPlatDbContext : DbContext
     public virtual DbSet<UserRole> UserRoles { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=.;Database=GamersPlatDB;User Id=sa;Password=123456;TrustServerCertificate=True");
+       => optionsBuilder.UseSqlServer(Connection.ConnectionString);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -119,7 +122,7 @@ public partial class GamersPlatDbContext : DbContext
             entity.HasOne(d => d.OwnerUser).WithMany(p => p.Centers).HasConstraintName("FK__Centers__OwnerUs__68487DD7");
         });
 
-        modelBuilder.Entity<CenterImage>(entity =>
+        modelBuilder.Entity<CenterImage>(static entity =>
         {
             entity.HasKey(e => e.ImageId).HasName("PK__CenterIm__7516F70C23F048F9");
 
@@ -129,7 +132,7 @@ public partial class GamersPlatDbContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF_CenterImages_CreatedAt");
 
-            entity.HasOne(d => d.Center).WithOne(p => p.CenterImage)
+            entity.HasOne(d => d.Center).WithMany(p => p.CenterImage)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__CenterIma__Cente__6E01572D");
         });
@@ -320,13 +323,42 @@ public partial class GamersPlatDbContext : DbContext
 
             entity.Property(e => e.JoinedAt).HasDefaultValueSql("(getdate())", "DF__SessionPa__Joine__14270015");
 
-            entity.HasOne(d => d.Session).WithOne(p => p.SessionParticipant)
+            entity.HasOne(d => d.Session).WithMany(p => p.SessionParticipants)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__SessionPa__Sessi__151B244E");
 
             entity.HasOne(d => d.User).WithMany(p => p.SessionParticipants)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__SessionPa__UserI__160F4887");
+        });
+
+        modelBuilder.Entity<Staff>(entity =>
+        {
+            entity.HasKey(e => e.StaffId).HasName("PK__Staff__96D4AB172969DA4E");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(d => d.Center).WithMany(p => p.Staff)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Staff_Center");
+
+            entity.HasOne(d => d.StaffRole).WithMany(p => p.Staff)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Staff_StaffRole");
+
+            entity.HasOne(d => d.User).WithOne(p => p.Staff)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Staff_User");
+        });
+
+        modelBuilder.Entity<StaffRole>(entity =>
+        {
+            entity.HasKey(e => e.StaffRoleId).HasName("PK__StaffRol__10792C91AE937824");
+
+            entity.HasOne(d => d.Center).WithMany(p => p.StaffRoles)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_StaffRole_Center");
         });
 
         modelBuilder.Entity<Tournament>(entity =>

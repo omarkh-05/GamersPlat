@@ -55,25 +55,25 @@ namespace GamersPlatAPI.Controllers
             return Ok(centers);
         }
 
-        [HttpPut("approve/{id:int}")]
-        public async Task<IActionResult> ApproveCenter(int id)
-        {
-            var center = await _center.GetByID(id);
-            if (center == null) return NotFound();
-            center.CenterStatus = "Approved";
-            if (! await _center.Update(center, id)) return StatusCode(500);
-            return NoContent();
-        }
+        //[HttpPut("approve/{id:int}")]
+        //public async Task<IActionResult> ApproveCenter(int id)
+        //{
+        //    var center = await _center.GetByID(id);
+        //    if (center == null) return NotFound();
+        //    center.CenterStatus = "Approved";
+        //    if (! await _center.Update(center, id)) return StatusCode(500);
+        //    return NoContent();
+        //}
 
-        [HttpPut("reject/{id:int}")]
-        public async Task<IActionResult> RejectCenter(int id)
-        {
-            var center = await _center.GetByID(id);
-            if (center == null) return NotFound();
-            center.CenterStatus = "Rejected";
-            if (! await _center.Update(center, id)) return StatusCode(500);
-            return NoContent();
-        }
+        //[HttpPut("reject/{id:int}")]
+        //public async Task<IActionResult> RejectCenter(int id)
+        //{
+        //    var center = await _center.GetByID(id);
+        //    if (center == null) return NotFound();
+        //    center.CenterStatus = "Rejected";
+        //    if (! await _center.Update(center, id)) return StatusCode(500);
+        //    return NoContent();
+        //}
 
         [HttpGet("analytics")]
         public async Task<IActionResult> Analytics()

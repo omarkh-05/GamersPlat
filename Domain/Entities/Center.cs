@@ -45,7 +45,7 @@ public partial class Center
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
     [InverseProperty("Center")]
-    public virtual CenterImage? CenterImage { get; set; }
+    public virtual IEnumerable<CenterImage> CenterImage { get; set; } = new List<CenterImage>();
 
     [InverseProperty("Center")]
     public virtual ICollection<CenterInvitation> CenterInvitations { get; set; } = new List<CenterInvitation>();
@@ -78,6 +78,12 @@ public partial class Center
 
     [InverseProperty("Center")]
     public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();
+
+    [InverseProperty("Center")]
+    public virtual ICollection<Staff> Staff { get; set; } = new List<Staff>();
+
+    [InverseProperty("Center")]
+    public virtual ICollection<StaffRole> StaffRoles { get; set; } = new List<StaffRole>();
 
     [InverseProperty("Center")]
     public virtual ICollection<Tournament> Tournaments { get; set; } = new List<Tournament>();

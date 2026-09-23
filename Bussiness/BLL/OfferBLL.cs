@@ -19,7 +19,7 @@ namespace Bussiness
         // ================ Read By ================
         public async Task<Offer?> GetByID(int offerId) => await OfferDLL.GetByID(offerId);
         public async Task<List<Offer>> GetByCenterId(int centerId) => await OfferDLL.GetByCenterId(centerId);
-        public async Task<List<Offer>> GetActiveOffers() => await OfferDLL.GetActiveOffers();
+        //public async Task<List<Offer>> GetActiveOffers() => await OfferDLL.GetActiveOffers();
         // ================ Read By ================
     }
 }

@@ -114,23 +114,23 @@ namespace DataLayer
 
 
         // ================ Filtering ===========
-        public static async Task<List<Offer>> GetActiveOffers()
-        {
-            try
-            {
-                using var db = new GamersPlatDbContext();
-                var now = DateTime.UtcNow;
-                return await db.Offers
-                    .Where(o => o.IsActive && o.StartDate <= now && o.EndDate >= now)
-                    .AsNoTracking()
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get Active Offers Error", ex);
-                return new List<Offer>();
-            }
-        }
+        //public static async Task<List<Offer>> GetActiveOffers()
+        //{
+        //    try
+        //    {
+        //        using var db = new GamersPlatDbContext();
+        //        var now = DateOnly.FromDateTime(DateTime.UtcNow);
+        //        return await db.Offers
+        //            .Where(o => o.IsActive && o.StartDate <= now && o.EndDate >= now)
+        //            .AsNoTracking()
+        //            .ToListAsync();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        EventLog_Helper.WriteEventLog("Get Active Offers Error", ex);
+        //        return new List<Offer>();
+        //    }
+        //}
         // ================ Filtering ===========
     }
 }
