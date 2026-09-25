@@ -23,6 +23,7 @@ builder.Services.AddScoped<IAuthService, AuthBLL>();
 builder.Services.AddScoped<IUser, UserBLL>();
 builder.Services.AddScoped<IUserRole, UserRoleBLL>();
 builder.Services.AddScoped<IRoles, RoleBLL>();
+builder.Services.AddScoped<AdminBLL>();
 
 #region Swagger
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
