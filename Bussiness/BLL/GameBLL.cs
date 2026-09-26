@@ -5,19 +5,19 @@ namespace Bussiness
     public class GameBLL
     {
         // ================ CRUD ================
-        public bool Add(Game game)
+        public async Task<bool> Add(Game game)
         {
-            int gameID = GameDLL.Add(game);
+            int gameID =await GameDLL.Add(game);
             return gameID > 0;
         }
-        public bool Update(Game game) => GameDLL.Update(game);
-        public bool Delete(int id) => GameDLL.Delete(id);
-        public static Task<List<Game>> GetAll() => GameDLL.GetAll();
+        public async Task<bool> Update(Game game) => await GameDLL.Update(game);
+        public async Task<bool> Delete(int id) => await GameDLL.Delete(id);
+        public async Task<List<Game>> GetAll() => await GameDLL.GetAll();
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static Task<Game?> GetByID(int id) => GameDLL.GetByID(id);
+        public async Task<Game?> GetByID(int id) => await GameDLL.GetByID(id);
         // ================ Read By ================
     }
 }

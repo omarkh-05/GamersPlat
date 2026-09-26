@@ -25,14 +25,14 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(User user)
+        public static async Task<bool> Update(int userId, User updateUserInfoRequest)
         {
             try
             {
                 using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FindAsync(user.UserId);
+                var existing = await db.Users.FindAsync(userId);
                 if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(user);
+                db.Entry(existing).CurrentValues.SetValues(updateUserInfoRequest);
                 return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
@@ -49,7 +49,7 @@ namespace DataLayer
                 var existing = await db.Users.FindAsync(userId);
                 if (existing == null) return false;
                 db.Users.Remove(existing);
-                return db.SaveChanges() > 0;
+                return await db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -124,6 +124,7 @@ namespace DataLayer
                             CityId = u.CityId,
                             Points = u.Points,
                             IsActive = u.IsActive,
+                            Role = u.UserRoles.Select(ur => ur.Role.RoleName).FirstOrDefault() ?? "",
                             PhoneVerified = u.PhoneVerified == false ? false : true,
                             EmailVerified = u.EmailVerified == false ? false : true
                         })
@@ -150,6 +151,7 @@ namespace DataLayer
               CityId = u.CityId,
               Points = u.Points,
               IsActive = u.IsActive,
+              Role = u.UserRoles.Select(ur => ur.Role.RoleName).FirstOrDefault() ?? "",
               PhoneVerified = u.PhoneVerified == false ? false : true,
               EmailVerified = u.EmailVerified == false ? false : true
           })

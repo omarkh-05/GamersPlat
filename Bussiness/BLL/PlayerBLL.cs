@@ -1,6 +1,7 @@
 ﻿using Data;
 using Data.DLL;
 using DataLayer;
+using Domain.DTOs.Booking;
 using Domain.DTOs.Player;
 
 namespace Bussiness.BLL
@@ -55,7 +56,7 @@ namespace Bussiness.BLL
         {
             var List = new List<DTO_PlayerBookingsInfo>();
             
-            List = await _booking.GetByUserId(playerId);
+            List = await _booking.GetByPlayerId(playerId);
             if (List == null)
                 throw new Exception("No bookings found for the specified user.");
             return List;
@@ -89,11 +90,11 @@ namespace Bussiness.BLL
 
 
         // ================ Player Booking Management ================
-        public async Task<bool> AddBooking(Booking booking)
+        public async Task<bool> AddBooking(DTO_AddBooking booking)
         {
             return await _booking.Add(booking) == true;
         }
-        public async Task<bool> UpdateBooking(Booking booking)
+        public async Task<bool> UpdateBooking(DTO_UpdateBooking booking)
         {
             return await _booking.Update(booking) == true;
         }

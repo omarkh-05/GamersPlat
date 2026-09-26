@@ -5,17 +5,17 @@ namespace Bussiness
     public class SessionParticipantBLL
     {
         // ================ CRUD ================
-        public bool Add(SessionParticipant sp)
+        public async Task<bool> Add(SessionParticipant sp)
         {
-            int spID = SessionParticipantDLL.Add(sp);
+            int spID = await SessionParticipantDLL.Add(sp);
             return spID > 0;
         }
-        public bool Delete(int id) => SessionParticipantDLL.Delete(id);
+        public async Task<bool> Delete(int id) => await SessionParticipantDLL.Delete(id);
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static Task<SessionParticipant?> GetBySessionId(int sessionId) => SessionParticipantDLL.GetBySessionId(sessionId);
+        public async Task<SessionParticipant?> GetBySessionId(int sessionId) => await SessionParticipantDLL.GetBySessionId(sessionId);
         // ================ Read By ================
     }
 }

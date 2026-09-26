@@ -9,6 +9,7 @@ using Microsoft.OpenApi;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
+using GamersPlatAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,35 @@ builder.Services.AddScoped<IAuthService, AuthBLL>();
 builder.Services.AddScoped<IUser, UserBLL>();
 builder.Services.AddScoped<IUserRole, UserRoleBLL>();
 builder.Services.AddScoped<IRoles, RoleBLL>();
+builder.Services.AddScoped<AdminBLL>();
+// Register other business layer services so controllers can inject them
+builder.Services.AddScoped<CenterBLL>();
+builder.Services.AddScoped<BookingBLL>();
+builder.Services.AddScoped<CenterImageBLL>();
+builder.Services.AddScoped<NotificationBLL>();
+builder.Services.AddScoped<OfferBLL>();
+builder.Services.AddScoped<TournamentBLL>();
+builder.Services.AddScoped<TournamentPlayerBLL>();
+builder.Services.AddScoped<ReviewBLL>();
+builder.Services.AddScoped<ResourcesTypeBLL>();
+builder.Services.AddScoped<OwnerBLL>();
+builder.Services.AddScoped<DeviceBLL>();
+builder.Services.AddScoped<SessionBLL>();
+builder.Services.AddScoped<SessionParticipantBLL>();
+builder.Services.AddScoped<ServiceBLL>();
+builder.Services.AddScoped<GameBLL>();
+builder.Services.AddScoped<PlayerBLL>();
+// Interface -> implementation registrations
+builder.Services.AddScoped<ICenterService, CenterBLL>();
+builder.Services.AddScoped<IResourcesTypeService, ResourcesTypeBLL>();
+builder.Services.AddScoped<ITournamentService, TournamentBLL>();
+builder.Services.AddScoped<ITournamentPlayerService, TournamentPlayerBLL>();
+builder.Services.AddScoped<IOfferService, OfferBLL>();
+builder.Services.AddScoped<IReviewService, ReviewBLL>();
+builder.Services.AddScoped<INotificationService, NotificationBLL>();
+builder.Services.AddScoped<ICenterImageService, CenterImageBLL>();
+builder.Services.AddScoped<IBookingService, BookingBLL>();
+builder.Services.AddScoped<IOwnerService, OwnerBLL>();
 
 #region Swagger
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -177,7 +207,6 @@ builder.Services.AddRateLimiter(options =>
 
 
 var app = builder.Build();
-
 // Seed roles at startup
 using (var scope = app.Services.CreateScope())
 {
@@ -235,7 +264,7 @@ app.Use(async (context, next) =>
 
 app.UseAuthentication();
 // Global error response middleware
-app.UseMiddleware<GamersPlatAPI.Middleware.ErrorResponseMiddleware>();
+app.UseMiddleware<ErrorResponseMiddleware>();
 
 app.UseAuthorization();
 

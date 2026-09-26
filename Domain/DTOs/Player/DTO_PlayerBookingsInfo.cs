@@ -8,7 +8,7 @@ namespace Domain.DTOs.Player
     {
         public string CenterName { get; set; } = null!;
         public string Resource { get; set; } = null!;
-        public string GameName { get; set; } = null!;
+        public string? GameName { get; set; } = "";
         public int? OfferId { get; set; } = 0;
         public int Quantity { get; set; } = 0;
         public decimal TotalPrice { get; set; } = 0;

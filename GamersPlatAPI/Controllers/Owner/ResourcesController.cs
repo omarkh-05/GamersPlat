@@ -1,4 +1,5 @@
 using Bussiness;
+using Bussiness.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,15 @@ namespace GamersPlatAPI.Controllers.Owner
     [Authorize(Roles = "Owner")]
     public class ResourcesController : ControllerBase
     {
+        private readonly IResourcesTypeService _resources;
+        private readonly ICenterService _center;
+
+        public ResourcesController(IResourcesTypeService resources, ICenterService center)
+        {
+            _resources = resources;
+            _center = center;
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Data.ResourcesType rt)
         {
@@ -18,19 +28,17 @@ namespace GamersPlatAPI.Controllers.Owner
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
             // ensure owner owns the center
-            var center = await CenterBLL.GetByID(rt.CenterId);
+            var center = await _center.GetByID(rt.CenterId);
             if (center == null) return NotFound();
             if (center.OwnerUserId != uid) return Forbid();
-
-            var bll = new ResourcesTypeBLL(rt);
-            if (!bll.Add()) return StatusCode(500);
-            return CreatedAtAction(nameof(GetById), new { id = bll._rtID }, rt);
+            if (!await _resources.Add(rt)) return StatusCode(500);
+            return CreatedAtAction(nameof(GetById), new { id = _resources.LastId }, rt);
         }
 
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var rt = ResourcesTypeBLL.GetByID(id);
+            var rt = await _resources.GetByID(id);
             if (rt == null) return NotFound();
             return Ok(rt);
         }
@@ -43,31 +51,27 @@ namespace GamersPlatAPI.Controllers.Owner
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var existing = ResourcesTypeBLL.GetByID(id);
+            var existing = await _resources.GetByID(id);
             if (existing == null) return NotFound();
 
-            var center = await CenterBLL.GetByID(existing.CenterId);
+            var center = await _center.GetByID(existing.CenterId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-
-            var bll = new ResourcesTypeBLL(rt);
-            if (!bll.Update()) return StatusCode(500);
+            if (!await _resources.Update(rt)) return StatusCode(500);
             return NoContent();
         }
 
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var existing = ResourcesTypeBLL.GetByID(id);
+            var existing = await _resources.GetByID(id);
             if (existing == null) return NotFound();
 
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var center = await CenterBLL.GetByID(existing.CenterId);
+            var center = await _center.GetByID(existing.CenterId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-
-            var bll = new ResourcesTypeBLL();
-            if (!bll.Delete(id)) return StatusCode(500);
+            if (!await _resources.Delete(id)) return StatusCode(500);
             return NoContent();
         }
     }

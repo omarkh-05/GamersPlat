@@ -1,4 +1,5 @@
 using Bussiness;
+using Bussiness.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,6 +9,15 @@ namespace GamersPlatAPI.Controllers.Centers
     [Route("api/centers/{centerId:int}/[controller]")]
     public class CenterImagesController : ControllerBase
     {
+        private readonly ICenterService _center;
+        private readonly ICenterImageService _images;
+
+        public CenterImagesController(ICenterService center, ICenterImageService images)
+        {
+            _center = center;
+            _images = images;
+        }
+
         [Authorize(Roles = "Owner")]
         [HttpPost]
         public async Task<IActionResult> Upload(int centerId, [FromForm] IFormFile file, [FromForm] bool isMain = false)
@@ -18,7 +28,7 @@ namespace GamersPlatAPI.Controllers.Centers
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var center = await CenterBLL.GetByID(centerId);
+            var center = await _center.GetByID(centerId);
             if (center == null) return NotFound();
             if (center.OwnerUserId != uid) return Forbid();
 
@@ -43,16 +53,15 @@ namespace GamersPlatAPI.Controllers.Centers
                 CreatedAt = DateTime.UtcNow
             };
 
-            var bll = new CenterImageBLL(img);
-            if (!bll.Add()) return StatusCode(500);
+            if (!await _images.Add(img)) return StatusCode(500);
 
-            return CreatedAtAction(nameof(GetById), new { centerId = centerId, id = bll._imageID }, img);
+            return CreatedAtAction(nameof(GetById), new { centerId = centerId, id = _images.LastId }, img);
         }
 
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int centerId, int id)
         {
-            var img = await CenterImageBLL.GetByID(id);
+            var img = await _images.GetByID(id);
             if (img == null || img.CenterId != centerId) return NotFound();
             return Ok(img);
         }
@@ -64,13 +73,11 @@ namespace GamersPlatAPI.Controllers.Centers
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var img = await CenterImageBLL.GetByID(id);
+            var img = await _images.GetByID(id);
             if (img == null) return NotFound();
-            var center = await CenterBLL.GetByID(centerId);
+            var center = await _center.GetByID(centerId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-
-            var bll = new CenterImageBLL();
-            if (!bll.Delete(id)) return StatusCode(500);
+            if (!await _images.Delete(id)) return StatusCode(500);
 
             // attempt to delete file from disk (best-effort)
             try

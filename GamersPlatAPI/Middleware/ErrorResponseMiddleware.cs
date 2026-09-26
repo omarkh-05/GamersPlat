@@ -1,4 +1,6 @@
+using System.Net;
 using System.Text.Json;
+
 namespace GamersPlatAPI.Middleware
 {
     public class ErrorResponseMiddleware
@@ -7,7 +9,7 @@ namespace GamersPlatAPI.Middleware
 
         public ErrorResponseMiddleware(RequestDelegate next) => _next = next;
 
-        public async Task Invoke(HttpContext context)
+        public async Task InvokeAsync(HttpContext context)
         {
             try
             {
@@ -15,11 +17,31 @@ namespace GamersPlatAPI.Middleware
             }
             catch (Exception ex)
             {
-                context.Response.StatusCode = 500;
-                context.Response.ContentType = "application/json";
-                var payload = new { success = false, message = "Server error", error = ex.Message };
-                await context.Response.WriteAsync(JsonSerializer.Serialize(payload));
+                await HandleExceptionAsync(context, ex);
             }
+        }
+
+        private static async Task HandleExceptionAsync(HttpContext context, Exception ex)
+        {
+            context.Response.ContentType = "application/json";
+
+            var statusCode = ex switch
+            {
+                ArgumentException => (int)HttpStatusCode.BadRequest,
+                KeyNotFoundException => (int)HttpStatusCode.NotFound,
+                UnauthorizedAccessException => (int)HttpStatusCode.Forbidden,
+                _ => (int)HttpStatusCode.InternalServerError
+            };
+
+            context.Response.StatusCode = statusCode;
+
+            var response = new
+            {
+                statusCode = statusCode,
+                message = ex.Message
+            };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
         }
     }
 }

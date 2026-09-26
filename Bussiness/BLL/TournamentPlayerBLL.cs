@@ -1,9 +1,10 @@
 using Data;
 using DataLayer;
 using Domain.DTOs.Player;
+using Bussiness.Interfaces;
 namespace Bussiness
 {
-    public class TournamentPlayerBLL
+    public class TournamentPlayerBLL : ITournamentPlayerService
     {
         // ================ CRUD ================
         public async Task<bool> Add(TournamentPlayer tp)

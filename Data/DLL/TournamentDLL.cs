@@ -14,7 +14,7 @@ namespace DataLayer
             {
                 using var db = new GamersPlatDbContext();
                 db.Tournaments.Add(t);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return t.TournamentId;
             }
             catch (Exception ex)

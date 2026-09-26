@@ -15,7 +15,7 @@ namespace DataLayer
             {
                 using var db = new GamersPlatDbContext();
                 db.Sessions.Add(session);
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return session.SessionId;
             }
             catch (Exception ex)

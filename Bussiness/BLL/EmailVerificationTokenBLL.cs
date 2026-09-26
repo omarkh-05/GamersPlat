@@ -5,18 +5,18 @@ namespace Bussiness
     public class EmailVerificationTokenBLL
     {
         // ================ CRUD ================
-        public bool Add(EmailVerificationToken token)
+        public async Task<bool> Add(EmailVerificationToken token)
         {
-            int tokenID = EmailVerificationTokenDLL.Add(token);
+            int tokenID = await EmailVerificationTokenDLL.Add(token);
             return tokenID > 0;
         }
-        public bool Delete(int id) => EmailVerificationTokenDLL.Delete(id);
+        public async Task<bool> Delete(int id) => await EmailVerificationTokenDLL.Delete(id);
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static Task<EmailVerificationToken?> GetByID(int id) => EmailVerificationTokenDLL.GetByID(id);
-        public static Task<EmailVerificationToken?> GetByToken(string token) => EmailVerificationTokenDLL.GetByToken(token);
+        public async Task<EmailVerificationToken?> GetByID(int id) => await EmailVerificationTokenDLL.GetByID(id);
+        public async Task<EmailVerificationToken?> GetByToken(string token) => await EmailVerificationTokenDLL.GetByToken(token);
         // ================ Read By ================
     }
 }

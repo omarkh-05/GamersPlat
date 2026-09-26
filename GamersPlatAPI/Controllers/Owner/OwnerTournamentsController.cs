@@ -1,4 +1,5 @@
 using Bussiness;
+using Bussiness.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,15 @@ namespace GamersPlatAPI.Controllers.Owner
     [Authorize(Roles = "Owner")]
     public class OwnerTournamentsController : ControllerBase
     {
+        private readonly ITournamentService _tournaments;
+        private readonly ICenterService _center;
+
+        public OwnerTournamentsController(ITournamentService tournaments, ICenterService center)
+        {
+            _tournaments = tournaments;
+            _center = center;
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Data.Tournament t)
         {
@@ -17,13 +27,11 @@ namespace GamersPlatAPI.Controllers.Owner
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var center = await CenterBLL.GetByID(t.CenterId);
+            var center = await _center.GetByID(t.CenterId);
             if (center == null) return NotFound();
             if (center.OwnerUserId != uid) return Forbid();
-
-            var bll = new TournamentBLL(t);
-            if (!bll.Add()) return StatusCode(500);
-            return CreatedAtAction("GetById", "Tournaments", new { id = bll._tID }, t);
+            if (!await _tournaments.Add(t)) return StatusCode(500);
+            return CreatedAtAction("GetById", "Tournaments", new { id = _tournaments.LastId }, t);
         }
 
         [HttpPut("{id:int}")]
@@ -34,31 +42,27 @@ namespace GamersPlatAPI.Controllers.Owner
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var existing = await TournamentBLL.GetByID(id);
+            var existing = await _tournaments.GetByID(id);
             if (existing == null) return NotFound();
 
-            var center = await CenterBLL.GetByID(existing.CenterId);
+            var center = await _center.GetByID(existing.CenterId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-
-            var bll = new TournamentBLL(t);
-            if (!bll.Update()) return StatusCode(500);
+            if (!await _tournaments.Update(t)) return StatusCode(500);
             return NoContent();
         }
 
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var existing = await TournamentBLL.GetByID(id);
+            var existing = await _tournaments.GetByID(id);
             if (existing == null) return NotFound();
 
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var center = await CenterBLL.GetByID(existing.CenterId);
+            var center = await _center.GetByID(existing.CenterId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-
-            var bll = new TournamentBLL();
-            if (!bll.Delete(id)) return StatusCode(500);
+            if (!await _tournaments.Delete(id)) return StatusCode(500);
             return NoContent();
         }
     }

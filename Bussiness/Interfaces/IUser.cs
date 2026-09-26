@@ -1,17 +1,13 @@
 ﻿using Data;
 using Domain.DTOs.Auth;
 using Domain.DTOs.User;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Bussiness.Interfaces
 {
     public interface IUser
     {
         Task<bool> Add(User user);
-        Task<bool> Update(User user);
+        Task<bool> Update(int userId, User updateUserInfoRequest);
         Task<bool> Delete(int userId);
 
         Task<DTO_UserInfoRequest?> GetUserInfoByID(int userId);

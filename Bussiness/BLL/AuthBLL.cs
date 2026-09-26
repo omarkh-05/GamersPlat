@@ -4,6 +4,7 @@ using Bussiness.Interfaces;
 using Data;
 using Data.DLL;
 using Domain.DTOs.Auth;
+using Domain.DTOs.User;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -65,7 +66,6 @@ namespace Bussiness.BLL
                 if(!await _userRole.Add(userRole))
                 throw new Exception("Failed to add user role");
         }
-
         public async Task<TokenResponse> LoginAsync(LoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.PhoneNumber) ||
@@ -105,7 +105,6 @@ namespace Bussiness.BLL
                 RefreshToken = refreshToken
             };
         }
-
         public async Task<bool> LogoutAsync(string refreshToken)
         {
             if (string.IsNullOrWhiteSpace(refreshToken))
@@ -124,7 +123,6 @@ namespace Bussiness.BLL
 
             return await _refreshTokenBLL.Update(existingToken);
         }
-
         // احتاج اضافة ترانس اكشن عند تعديل التوكن ثم اضافة توكن جديدة للتأكد من عدم تحديث التوكن دون اضافتها في الجدول
         public async Task<TokenResponse> RefreshAsync(string refreshToken)
         {
@@ -178,6 +176,7 @@ namespace Bussiness.BLL
                 RefreshToken = newRefreshToken
             };
         }
+        public async Task<DTO_UserInfoRequest?> CheckAuth(string phoneNumber) => await _user.GetUserInfoByPhone(phoneNumber);
         // ================ User Auth Management ================
 
 
@@ -203,7 +202,6 @@ namespace Bussiness.BLL
             else
                 throw new Exception("Error updating user");
         }
-
         public async Task<string> RequestResetPassword(RequestResetRequest request)
         {
             int userId = await _user.GetIdByPhoneOrEmail(request);
@@ -223,7 +221,6 @@ namespace Bussiness.BLL
 
             return token.TokenHash;
         }
-
         public async Task<bool> ResetPassword(ResetPasswordRequest request)
         {
             var token = await _passwordResetTokenBLL.GetByToken(request.Token);

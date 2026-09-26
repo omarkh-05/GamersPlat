@@ -1,23 +1,27 @@
 using Data;
 using DataLayer;
+using Bussiness.Interfaces;
 namespace Bussiness
 {
-    public class CenterImageBLL
+    public class CenterImageBLL : ICenterImageService
     {
+        public int _imageID { get; private set; }
+        public int LastId => _imageID;
         // ================ CRUD ================
-        public bool Add(CenterImage image)
+        public async Task<bool> Add(CenterImage image)
         {
-            int imageID = CenterImageDLL.Add(image);
+            int imageID = await CenterImageDLL.Add(image);
+            _imageID = imageID;
             return imageID > 0;
         }
-        public bool Update(CenterImage image) => CenterImageDLL.Update(image);
-        public bool Delete(int id) => CenterImageDLL.Delete(id);
-        public static Task<List<CenterImage>> GetAll() => CenterImageDLL.GetAll();
+        public async Task<bool> Update(CenterImage image) => await CenterImageDLL.Update(image);
+        public async Task<bool> Delete(int id) => await CenterImageDLL.Delete(id);
+        public async Task<List<CenterImage>> GetAll() => await CenterImageDLL.GetAll();
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static Task<CenterImage?> GetByID(int id) => CenterImageDLL.GetByID(id);
+        public async Task<CenterImage?> GetByID(int id) => await CenterImageDLL.GetByID(id);
         // ================ Read By ================
     }
 }

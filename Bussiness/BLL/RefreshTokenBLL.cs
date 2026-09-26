@@ -17,7 +17,7 @@ namespace Bussiness
 
 
         // ================ Read By ================
-        public Task<RefreshToken?> GetByToken(string token) => RefreshTokenDLL.GetByToken(token);
+        public async Task<RefreshToken?> GetByToken(string token) => await RefreshTokenDLL.GetByToken(token);
         // ================ Read By ================
     }
 }
