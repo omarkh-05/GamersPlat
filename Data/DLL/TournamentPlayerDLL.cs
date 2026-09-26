@@ -24,7 +24,7 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static bool DeleteByTournamentAndUser(int tournamentId, int userId)
+        public static async Task<bool> DeleteByTournamentAndUser(int tournamentId, int userId)
         {
             try
             {
