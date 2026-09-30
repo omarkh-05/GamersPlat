@@ -20,7 +20,8 @@ namespace GamersPlatAPI.Controllers.Centers
 
         [Authorize(Roles = "Owner")]
         [HttpPost]
-        public async Task<IActionResult> Upload(int centerId, [FromForm] IFormFile file, [FromForm] bool isMain = false)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Upload(int centerId, IFormFile file, [FromForm] bool isMain = false)
         {
             if (file == null || file.Length == 0) return BadRequest();
 

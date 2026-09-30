@@ -12,13 +12,21 @@ namespace Bussiness.BLL
 {
     public class AuthBLL : IAuthService
     {
+        private readonly AuthDLL _authDLL;
         private readonly IUser _user;
         private readonly AuthHelpers _authHelpers;
         private readonly RefreshTokenBLL _refreshTokenBLL;
         private readonly IRoles _roles;
         private readonly IUserRole _userRole;
         private readonly PasswordResetTokenBLL _passwordResetTokenBLL;
-        public AuthBLL(IUser user,AuthHelpers authHelpers, RefreshTokenBLL refreshTokenBLL, IRoles roles, IUserRole userRole, PasswordResetTokenBLL passwordResetTokenBLL)
+        public AuthBLL(
+            IUser user,
+            AuthHelpers authHelpers,
+            RefreshTokenBLL refreshTokenBLL,
+            IRoles roles,
+            IUserRole userRole,
+            PasswordResetTokenBLL passwordResetTokenBLL,
+            AuthDLL authDLL)
         {
             _authHelpers = authHelpers;
             _refreshTokenBLL = refreshTokenBLL;
@@ -26,6 +34,7 @@ namespace Bussiness.BLL
             _roles = roles;
             _userRole = userRole;
             _passwordResetTokenBLL = passwordResetTokenBLL;
+            _authDLL = authDLL;
         }
 
         // ================ User Auth Management ================
@@ -72,7 +81,7 @@ namespace Bussiness.BLL
                 string.IsNullOrWhiteSpace(request.Password))
                 throw new Exception("Invalid data");
 
-            var user = await AuthDLL.GetUserAuthByPhone(request.PhoneNumber);
+            var user = await _authDLL.GetUserAuthByPhone(request.PhoneNumber);
 
             if (user == null || !user.IsActive)
                 throw new UnauthorizedAccessException("Invalid credentials");
@@ -140,7 +149,7 @@ namespace Bussiness.BLL
             if (existingToken.ExpiresAt <= DateTime.UtcNow)
                 throw new UnauthorizedAccessException("Refresh token expired");
 
-            var user = await AuthDLL.GetUserAuthByID(existingToken.UserId);
+            var user = await _authDLL.GetUserAuthByID(existingToken.UserId);
 
             if (user == null || !user.IsActive)
                 throw new UnauthorizedAccessException("Invalid refresh request");
@@ -188,7 +197,7 @@ namespace Bussiness.BLL
                 string.IsNullOrWhiteSpace(request.NewPassword))
                 return false;
 
-            var user = await AuthDLL.GetUserAuthByID(userId);
+            var user = await _authDLL.GetUserAuthByID(userId);
 
             if (user == null || !user.IsActive)
                 return false;
@@ -198,7 +207,7 @@ namespace Bussiness.BLL
 
             var newHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
 
-            if (await AuthDLL.ChangePassword(userId, newHash)) return true;
+            if (await _authDLL.ChangePassword(userId, newHash)) return true;
             else
                 throw new Exception("Error updating user");
         }
@@ -230,12 +239,12 @@ namespace Bussiness.BLL
             if (token.ExpiresAt < DateTime.UtcNow)
                 throw new Exception("Token expired");
 
-            var user = await AuthDLL.GetUserAuthByID(token.UserId);
+            var user = await _authDLL.GetUserAuthByID(token.UserId);
             if (user == null)
                 throw new Exception("User not found");
 
             var newHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-            if (!await AuthDLL.ChangePassword(user.UserId, newHash))
+            if (!await _authDLL.ChangePassword(user.UserId, newHash))
                 throw new Exception("Failed to update password");
 
             if (await _passwordResetTokenBLL.Delete(token.TokenId))

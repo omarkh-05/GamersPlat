@@ -7,23 +7,30 @@ namespace Bussiness
 {
     public class UserBLL : IUser
     {
+        private readonly UserDLL _userDLL;
+
+        public UserBLL(UserDLL userDLL)
+        {
+            _userDLL = userDLL;
+        }
+
         // ================ CRUD ================
         public async Task<bool> Add(User user)
         {
-            var userId = await UserDLL.Add(user);
+            var userId = await _userDLL.Add(user);
             return userId > 0;
         }
         public async Task<bool> Update(int userId, User updateUserInfoRequest)
         {
-            return await UserDLL.Update(userId, updateUserInfoRequest);
+            return await _userDLL.Update(userId, updateUserInfoRequest);
         }
         public async Task<bool> Delete(int userId)
         {
-            return await UserDLL.Delete(userId);
+            return await _userDLL.Delete(userId);
         }
         public async Task<List<DTO_UserListResponse>> GetAll()
         {
-            return await UserDLL.GetAll();
+            return await _userDLL.GetAll();
         }
         // ================ CRUD ================
 
@@ -31,19 +38,19 @@ namespace Bussiness
         // ================ Read By ================
         public async Task<DTO_UserInfoRequest?> GetUserInfoByID(int userId)
         {
-            return await UserDLL.GetUserInfoByID(userId);
+            return await _userDLL.GetUserInfoByID(userId);
         }
         public async Task<DTO_UserInfoRequest?> GetUserInfoByPhone(string phone)
         {
-            return await UserDLL.GetUserInfoByPhone(phone);
+            return await _userDLL.GetUserInfoByPhone(phone);
         }
         public async Task<User?> GetById(int userId)
         {
-            return await UserDLL.GetById(userId);
+            return await _userDLL.GetById(userId);
         }
         public async Task<int> GetIdByPhoneOrEmail(RequestResetRequest reqResetPass)
         {
-            return await UserDLL.GetIdByPhoneOrEmail(reqResetPass);
+            return await _userDLL.GetIdByPhoneOrEmail(reqResetPass);
         }
         // ================ Read By ================
 
@@ -51,11 +58,11 @@ namespace Bussiness
         // ================ Validation ============
         public async Task<bool> ExistsByEmail(string? email, int excludeId = 0)
         {
-            return await UserDLL.ExistsByEmail(email, excludeId);
+            return await _userDLL.ExistsByEmail(email, excludeId);
         }
         public async Task<bool> ExistsByPhone(string? phone, int excludeId = 0)
         {
-            return await UserDLL.ExistsByPhone(phone, excludeId);
+            return await _userDLL.ExistsByPhone(phone, excludeId);
         }
         // ================ Validation ============
     }

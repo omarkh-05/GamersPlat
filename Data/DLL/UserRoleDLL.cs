@@ -8,14 +8,20 @@ namespace DataLayer
 {
     public class UserRoleDLL
     {
-        // ================ CRUD ================
-        public static async Task<int> Add(UserRole ur)
+        private readonly GamersPlatDbContext _db;
+
+        public UserRoleDLL(GamersPlatDbContext db)
         {
+            _db = db;
+        }
+        // ================ CRUD ================
+        public async Task<int> Add(UserRole ur)
+        {
+
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.UserRoles.Add(ur);
-                await db.SaveChangesAsync();
+                _db.UserRoles.Add(ur);
+                await _db.SaveChangesAsync();
                 return ur.Id;
             }
             catch (Exception ex)
@@ -28,12 +34,11 @@ namespace DataLayer
 
 
         // ================ Read By ================
-        public static async Task<List<UserRole>> GetByUserId(int userId)
+        public async Task<List<UserRole>> GetByUserId(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.UserRoles.Where(x => x.UserId == userId).AsNoTracking().ToListAsync();
+                return await _db.UserRoles.Where(x => x.UserId == userId).AsNoTracking().ToListAsync();
             }
             catch (Exception ex)
             {

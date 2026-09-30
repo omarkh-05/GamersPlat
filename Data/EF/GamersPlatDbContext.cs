@@ -70,8 +70,6 @@ public partial class GamersPlatDbContext : DbContext
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-       => optionsBuilder.UseSqlServer(Connection.ConnectionString);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

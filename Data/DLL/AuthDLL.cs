@@ -1,30 +1,36 @@
 ﻿using Data.EF;
-using DataLayer;
 using Domain.DTOs.Auth;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 
 namespace Data.DLL
 {
     public class AuthDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public AuthDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ Read By For Auth ================
-        public static async Task<DTO_UserAuthInfo?> GetUserAuthByPhone(string phoneNumber)
+        public async Task<DTO_UserAuthInfo?> GetUserAuthByPhone(string phoneNumber)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(phoneNumber)) return null;
-                using var db = new GamersPlatDbContext();
-                return await db.Users
+
+                return await _db.Users
                     .Where(u => u.PhoneNumber == phoneNumber)
-                        .Select(u => new DTO_UserAuthInfo
-                        {
-                            UserId = u.UserId,
-                            PasswordHash = u.PasswordHash,
-                            PhoneNumber = u.PhoneNumber,
-                            Email = u.Email,
-                        })
-                        .FirstOrDefaultAsync();
+                    .Select(u => new DTO_UserAuthInfo
+                    {
+                        UserId = u.UserId,
+                        PasswordHash = u.PasswordHash,
+                        PhoneNumber = u.PhoneNumber,
+                        Email = u.Email,
+                        IsActive = u.IsActive,
+                    })
+                    .FirstOrDefaultAsync();
             }
             catch (Exception ex)
             {
@@ -32,21 +38,22 @@ namespace Data.DLL
                 return null;
             }
         }
-        public static async Task<DTO_UserAuthInfo?> GetUserAuthByID(int userId)
+
+        public async Task<DTO_UserAuthInfo?> GetUserAuthByID(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Users
-          .Where(u => u.UserId == userId)
-          .Select(u => new DTO_UserAuthInfo
-          {
-              UserId = u.UserId,
-              PasswordHash = u.PasswordHash,
-              PhoneNumber = u.PhoneNumber,
-              Email = u.Email,
-          })
-          .FirstOrDefaultAsync();
+                return await _db.Users
+                    .Where(u => u.UserId == userId)
+                    .Select(u => new DTO_UserAuthInfo
+                    {
+                        UserId = u.UserId,
+                        PasswordHash = u.PasswordHash,
+                        PhoneNumber = u.PhoneNumber,
+                        Email = u.Email,
+                        IsActive = u.IsActive,
+                    })
+                    .FirstOrDefaultAsync();
             }
             catch (Exception ex)
             {
@@ -54,20 +61,23 @@ namespace Data.DLL
                 return null;
             }
         }
+
         // ================ Read By For Auth ================
 
 
         // ================ Security ================
-        public static async Task<bool> ChangePassword(int userId, string newPasswordHash)
+        public async Task<bool> ChangePassword(int userId, string newPasswordHash)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FindAsync(userId);
+                var existing = await _db.Users.FindAsync(userId);
+
                 if (existing == null) return false;
+
                 existing.PasswordHash = newPasswordHash;
                 existing.UpdatedAt = DateTime.UtcNow;
-                return await db.SaveChangesAsync() > 0;
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -75,16 +85,19 @@ namespace Data.DLL
                 return false;
             }
         }
-        public static async Task<bool> VerifyEmail(int userId)
+
+        public async Task<bool> VerifyEmail(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FindAsync(userId);
+                var existing = await _db.Users.FindAsync(userId);
+
                 if (existing == null) return false;
+
                 existing.EmailVerified = true;
                 existing.UpdatedAt = DateTime.UtcNow;
-                return await db.SaveChangesAsync() > 0;
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -92,16 +105,19 @@ namespace Data.DLL
                 return false;
             }
         }
-        public static async Task<bool> VerifyPhone(int userId)
+
+        public async Task<bool> VerifyPhone(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FindAsync(userId);
+                var existing = await _db.Users.FindAsync(userId);
+
                 if (existing == null) return false;
+
                 existing.PhoneVerified = true;
                 existing.UpdatedAt = DateTime.UtcNow;
-                return await db.SaveChangesAsync() > 0;
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -109,8 +125,7 @@ namespace Data.DLL
                 return false;
             }
         }
+
         // ================ Security ================
-
-
     }
 }

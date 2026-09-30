@@ -8,6 +8,12 @@ namespace DataLayer
 {
     public class RoleDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public RoleDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
         //public static int Add(Role role)
         //{
         //    try
@@ -71,12 +77,11 @@ namespace DataLayer
         //        return false;
         //    }
         //}
-        public static async Task<Role?> GetByID(int roleId)
+        public async Task<Role?> GetByID(int roleId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Roles
+                return await _db.Roles
                     .AsNoTracking()
                     .FirstOrDefaultAsync(r => r.RoleId == roleId);
             }
@@ -86,12 +91,11 @@ namespace DataLayer
                 return null;
             }
         }
-        public static async Task<Role?> GetByName(string roleName)
+        public async Task<Role?> GetByName(string roleName)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Roles
+                return await _db.Roles
                     .AsNoTracking()
                     .FirstOrDefaultAsync(r => r.RoleName == roleName);
             }

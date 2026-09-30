@@ -9,14 +9,20 @@ namespace DataLayer
 {
     public class UserDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public UserDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(User user)
+        public async Task<int> Add(User user)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.Users.Add(user);
-                await db.SaveChangesAsync();
+                _db.Users.Add(user);
+                await _db.SaveChangesAsync();
                 return user.UserId;
             }
             catch (Exception ex)
@@ -25,15 +31,14 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(int userId, User updateUserInfoRequest)
+        public async Task<bool> Update(int userId, User updateUserInfoRequest)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FindAsync(userId);
+                var existing = await _db.Users.FindAsync(userId);
                 if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(updateUserInfoRequest);
-                return await db.SaveChangesAsync() > 0;
+                _db.Entry(existing).CurrentValues.SetValues(updateUserInfoRequest);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -41,15 +46,14 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int userId)
+        public async Task<bool> Delete(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Users.FindAsync(userId);
+                var existing = await _db.Users.FindAsync(userId);
                 if (existing == null) return false;
-                db.Users.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                _db.Users.Remove(existing);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -57,12 +61,11 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<DTO_UserListResponse>> GetAll()
+        public async Task<List<DTO_UserListResponse>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Users
+                return await _db.Users
                     .AsNoTracking()
             .Select(u => new DTO_UserListResponse
             {
@@ -92,12 +95,11 @@ namespace DataLayer
 
 
         // ================ Read By ================
-        public static async Task<User?> GetById(int userId)
+        public async Task<User?> GetById(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Users
+                return await _db.Users
                     .Include(u => u.UserRoles!)
                         .ThenInclude(ur => ur.Role)
                     .FirstOrDefaultAsync(u => u.UserId == userId);
@@ -108,13 +110,12 @@ namespace DataLayer
                 return null;
             }
         }
-        public static async Task<DTO_UserInfoRequest?> GetUserInfoByPhone(string phoneNumber)
+        public async Task<DTO_UserInfoRequest?> GetUserInfoByPhone(string phoneNumber)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(phoneNumber)) return null;
-                using var db = new GamersPlatDbContext();
-                return await db.Users
+                return await _db.Users
                     .Where(u => u.PhoneNumber == phoneNumber)
                         .Select(u => new DTO_UserInfoRequest
                         {
@@ -136,12 +137,11 @@ namespace DataLayer
                 return null;
             }
         }
-        public static async Task<DTO_UserInfoRequest?> GetUserInfoByID(int userId)
+        public async Task<DTO_UserInfoRequest?> GetUserInfoByID(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Users
+                return await _db.Users
           .Where(u => u.UserId == userId)
           .Select(u => new DTO_UserInfoRequest
           {
@@ -163,12 +163,11 @@ namespace DataLayer
                 return null;
             }
         }
-        public static async Task<int> GetIdByPhoneOrEmail(RequestResetRequest reqResetPass)
+        public async Task<int> GetIdByPhoneOrEmail(RequestResetRequest reqResetPass)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Users
+                return await _db.Users
                    .Where(u => u.Email == reqResetPass.Email || u.PhoneNumber == reqResetPass.PhoneNumber)
                     .Select(u => u.UserId)
                     .FirstOrDefaultAsync();
@@ -183,13 +182,12 @@ namespace DataLayer
 
 
         // ================ Validation ============
-        public static async Task<bool> ExistsByEmail(string? email, int excludeId = 0)
+        public async Task<bool> ExistsByEmail(string? email, int excludeId = 0)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(email)) return false;
-                using var db = new GamersPlatDbContext();
-                return await db.Users.AnyAsync(u => u.Email == email && (excludeId == 0 || u.UserId != excludeId));
+                return await _db.Users.AnyAsync(u => u.Email == email && (excludeId == 0 || u.UserId != excludeId));
             }
             catch (Exception ex)
             {
@@ -197,13 +195,12 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> ExistsByPhone(string? phone, int excludeId = 0)
+        public async Task<bool> ExistsByPhone(string? phone, int excludeId = 0)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(phone)) return false;
-                using var db = new GamersPlatDbContext();
-                return await db.Users.AnyAsync(u => u.PhoneNumber == phone && (excludeId == 0 || u.UserId != excludeId));
+                return await _db.Users.AnyAsync(u => u.PhoneNumber == phone && (excludeId == 0 || u.UserId != excludeId));
             }
             catch (Exception ex)
             {

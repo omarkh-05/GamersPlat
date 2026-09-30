@@ -8,21 +8,27 @@ namespace Bussiness.BLL
 {
     public class PlayerBLL
     {
+        private readonly UserDLL _userDLL;
         private readonly BookingBLL _booking;
         private readonly ReviewBLL _review;
         private readonly TournamentPlayerBLL _tournament;
 
-        public PlayerBLL(BookingBLL booking, ReviewBLL review, TournamentPlayerBLL tournament)
+        public PlayerBLL(
+            BookingBLL booking,
+            ReviewBLL review,
+            TournamentPlayerBLL tournament,
+            UserDLL userDLL)
         {
             _booking = booking;
             _review = review;
             _tournament = tournament;
+            _userDLL = userDLL;
         }
 
         // ================ Read Player Profile ================
         public async Task<DTO_PlayerProfile?> GetPlayerProfile(int userId)
         {
-                var userInfo = await UserDLL.GetUserInfoByID(userId);
+                var userInfo = await _userDLL.GetUserInfoByID(userId);
 
                 if (userInfo == null)
                 throw new Exception("User not found.");

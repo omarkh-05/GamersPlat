@@ -1,23 +1,31 @@
 using Bussiness;
 using Bussiness.BLL;
+using Bussiness.Helpers;
 using Bussiness.Interfaces;
+using Data.DLL;
+using Data.EF;
+using DataLayer;
 using GamersPlatAPI.Authorization;
+using GamersPlatAPI.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
-using GamersPlatAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 //builder.Services.AddOpenApi();
 
-// Add services to the container.
+// Add services to the container.s
 builder.Services.AddControllers();
+builder.Services.AddDbContext<GamersPlatDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("GamersPlat")));
 
 builder.Services.AddScoped<IAuthService, AuthBLL>();
 builder.Services.AddScoped<IUser, UserBLL>();
@@ -41,6 +49,17 @@ builder.Services.AddScoped<SessionParticipantBLL>();
 builder.Services.AddScoped<ServiceBLL>();
 builder.Services.AddScoped<GameBLL>();
 builder.Services.AddScoped<PlayerBLL>();
+builder.Services.AddScoped<StaffBLL>();
+builder.Services.AddScoped<StaffRoleBLL>();
+builder.Services.AddScoped<AuthHelpers>();
+builder.Services.AddScoped<RefreshTokenBLL>();
+builder.Services.AddScoped<PasswordResetTokenBLL>();
+builder.Services.AddScoped<CountryBLL>();
+builder.Services.AddScoped<UserDLL>();
+builder.Services.AddScoped<RoleDLL>();
+builder.Services.AddScoped<UserRoleDLL>();
+builder.Services.AddScoped<AuthDLL>();
+builder.Services.AddScoped<RefreshTokenDLL>();
 // Interface -> implementation registrations
 builder.Services.AddScoped<ICenterService, CenterBLL>();
 builder.Services.AddScoped<IResourcesTypeService, ResourcesTypeBLL>();
@@ -52,6 +71,7 @@ builder.Services.AddScoped<INotificationService, NotificationBLL>();
 builder.Services.AddScoped<ICenterImageService, CenterImageBLL>();
 builder.Services.AddScoped<IBookingService, BookingBLL>();
 builder.Services.AddScoped<IOwnerService, OwnerBLL>();
+builder.Services.AddScoped<CityBLL>();
 
 #region Swagger
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -208,12 +228,15 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 // Seed roles at startup
+// Seed roles at startup
 using (var scope = app.Services.CreateScope())
 {
     try
     {
-        var db = new Data.EF.GamersPlatDbContext();
+        var db = scope.ServiceProvider.GetRequiredService<GamersPlatDbContext>();
+
         var roles = new[] { "Admin", "Owner", "Player" };
+
         foreach (var rn in roles)
         {
             if (!db.Roles.Any(r => r.RoleName == rn))
@@ -221,6 +244,7 @@ using (var scope = app.Services.CreateScope())
                 db.Roles.Add(new Data.Role { RoleName = rn });
             }
         }
+
         db.SaveChanges();
     }
     catch

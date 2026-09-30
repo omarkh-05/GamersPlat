@@ -2,7 +2,6 @@ using Data;
 using Data.DLL;
 using Data.EF;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -10,14 +9,20 @@ namespace DataLayer
 {
     public class RefreshTokenDLL
     {
-        // ================ CRUD ===========
-        public static async Task<int> Add(RefreshToken token)
+        private readonly GamersPlatDbContext _db;
+
+        public RefreshTokenDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
+        // ================ CRUD ================
+        public async Task<int> Add(RefreshToken token)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.RefreshTokens.Add(token);
-                await db.SaveChangesAsync();
+                _db.RefreshTokens.Add(token);
+                await _db.SaveChangesAsync();
                 return token.TokenId;
             }
             catch (Exception ex)
@@ -26,17 +31,16 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(RefreshToken token)
+
+        public async Task<bool> Update(RefreshToken token)
         {
             try
             {
                 if (token == null || token.TokenId <= 0)
                     return false;
 
-                using var db = new GamersPlatDbContext();
-
-                db.RefreshTokens.Update(token);
-                return await db.SaveChangesAsync() > 0;
+                _db.RefreshTokens.Update(token);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -44,23 +48,21 @@ namespace DataLayer
                 return false;
             }
         }
-        // ================ CRUD ===========
+        // ================ CRUD ================
 
 
-        // ================ Read By ===========
-        public static async Task<RefreshToken?> GetByToken(string token)
+        // ================ Read By ================
+        public async Task<RefreshToken?> GetByToken(string token)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(token))
                     return null;
 
-                using var db = new GamersPlatDbContext();
-
                 var tokenHash = Convert.ToHexString(
                     SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
-                return await db.RefreshTokens
+                return await _db.RefreshTokens
                     .AsNoTracking()
                     .FirstOrDefaultAsync(t => t.TokenHash == tokenHash);
             }
@@ -70,6 +72,6 @@ namespace DataLayer
                 return null;
             }
         }
-        // ================ Read By ===========
+        // ================ Read By ================
     }
 }
