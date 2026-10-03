@@ -7,14 +7,21 @@ namespace DataLayer
 {
     public class ReviewDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public ReviewDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ===========
-        public static async Task<int> Add(Review review)
+
+        public async Task<int> Add(Review review)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.Reviews.Add(review);
-                await db.SaveChangesAsync();
+                _db.Reviews.Add(review);
+                await _db.SaveChangesAsync();
                 return review.ReviewId;
             }
             catch (Exception ex)
@@ -23,15 +30,20 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(Review review)
+
+        public async Task<bool> Update(Review review)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Reviews.FirstOrDefaultAsync(r => r.ReviewId == review.ReviewId);
-                if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(review);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Reviews
+                    .FirstOrDefaultAsync(r => r.ReviewId == review.ReviewId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Entry(existing).CurrentValues.SetValues(review);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,15 +51,20 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int reviewId)
+
+        public async Task<bool> Delete(int reviewId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Reviews.FirstOrDefaultAsync(r => r.ReviewId == reviewId);
-                if (existing == null) return false;
-                db.Reviews.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Reviews
+                    .FirstOrDefaultAsync(r => r.ReviewId == reviewId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Reviews.Remove(existing);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -55,12 +72,12 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<Review>> GetAll()
+
+        public async Task<List<Review>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Reviews
+                return await _db.Reviews
                     .AsNoTracking()
                     .ToListAsync();
             }
@@ -70,16 +87,17 @@ namespace DataLayer
                 return new List<Review>();
             }
         }
+
         // ================ CRUD ===========
 
 
         // ================ Read By ===========
-        public static async Task<Review?> GetByID(int reviewId)
+
+        public async Task<Review?> GetByID(int reviewId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Reviews
+                return await _db.Reviews
                     .Include(r => r.User.FullName)
                     .Include(r => r.Center.CenterName)
                     .AsNoTracking()
@@ -91,12 +109,12 @@ namespace DataLayer
                 return null;
             }
         }
-        public static async Task<List<Review>?> GetByUserId(int userId)
+
+        public async Task<List<Review>?> GetByUserId(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Reviews
+                return await _db.Reviews
                     .Where(r => r.UserId == userId)
                     .Include(r => r.User.FullName)
                     .Include(r => r.Center.CenterName)
@@ -108,8 +126,8 @@ namespace DataLayer
                 EventLog_Helper.WriteEventLog("Get Review By UserID Error", ex);
                 return null;
             }
-           
         }
+
         // ================ Read By ===========
     }
 }

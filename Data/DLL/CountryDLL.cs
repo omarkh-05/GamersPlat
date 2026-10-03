@@ -8,14 +8,20 @@ namespace DataLayer
 {
     public class CountryDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public CountryDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(Country country)
+        public async Task<int> Add(Country country)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.Countries.Add(country);
-                await db.SaveChangesAsync();
+                _db.Countries.Add(country);
+                await _db.SaveChangesAsync();
                 return country.CountryId;
             }
             catch (Exception ex)
@@ -24,15 +30,20 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(Country country)
+
+        public async Task<bool> Update(Country country)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Countries.FirstOrDefaultAsync(c => c.CountryId == country.CountryId);
-                if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(country);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Countries
+                    .FirstOrDefaultAsync(c => c.CountryId == country.CountryId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Entry(existing).CurrentValues.SetValues(country);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,15 +51,20 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int id)
+
+        public async Task<bool> Delete(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Countries.FirstOrDefaultAsync(c => c.CountryId == id);
-                if (existing == null) return false;
-                db.Countries.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Countries
+                    .FirstOrDefaultAsync(c => c.CountryId == id);
+
+                if (existing == null)
+                    return false;
+
+                _db.Countries.Remove(existing);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -56,12 +72,14 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<Country>> GetAll()
+
+        public async Task<List<Country>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Countries.AsNoTracking().ToListAsync();
+                return await _db.Countries
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
@@ -69,16 +87,18 @@ namespace DataLayer
                 return new List<Country>();
             }
         }
+
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static async Task<Country?> GetByID(int id)
+        public async Task<Country?> GetByID(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Countries.AsNoTracking().FirstOrDefaultAsync(c => c.CountryId == id);
+                return await _db.Countries
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.CountryId == id);
             }
             catch (Exception ex)
             {
@@ -86,6 +106,7 @@ namespace DataLayer
                 return null;
             }
         }
+
         // ================ Read By ================
     }
 }

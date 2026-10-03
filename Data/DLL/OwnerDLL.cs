@@ -1,22 +1,24 @@
 ﻿using Dapper;
 using Data.EF;
 using Domain.DTOs.Owner;
-using Domain.DTOs.Player;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Data.DLL
 {
     public class OwnerDLL
     {
-        public static async Task<DTO_OwnerDashboard?> GetOwnerDashboard(int ownerId)
+        private readonly GamersPlatDbContext _db;
+
+        public OwnerDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
+        public async Task<DTO_OwnerDashboard?> GetOwnerDashboard(int ownerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                using var connection = db.Database.GetDbConnection();
+                using var connection = _db.Database.GetDbConnection();
 
                 await connection.OpenAsync();
 
@@ -29,7 +31,10 @@ namespace Data.DLL
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get Owner Dashboard Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Get Owner Dashboard Error",
+                    ex);
+
                 return null;
             }
         }

@@ -2,45 +2,59 @@ using Data;
 using Data.DLL;
 using Data.EF;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 
 namespace DataLayer
 {
     public class PointTransactionDLL
     {
-        // ================ CRUD ===========
-        public static async Task<int> Add(PointTransaction pt)
+        private readonly GamersPlatDbContext _db;
+
+        public PointTransactionDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
+        // ================ CRUD ================
+        public async Task<int> Add(PointTransaction pt)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.PointTransactions.Add(pt);
-                await db.SaveChangesAsync();
+                _db.PointTransactions.Add(pt);
+                await _db.SaveChangesAsync();
+
                 return pt.TransactionId;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Add PointTransaction Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Add PointTransaction Error",
+                    ex);
+
                 return 0;
             }
         }
-        // ================ CRUD ===========
+        // ================ CRUD ================
 
 
-        // ================ Read By ===========
-        public static async Task<List<PointTransaction>> GetByUserId(int userId)
+        // ================ Read By ================
+        public async Task<List<PointTransaction>> GetByUserId(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.PointTransactions.Where(p => p.UserId == userId).AsNoTracking().ToListAsync();
+                return await _db.PointTransactions
+                    .Where(p => p.UserId == userId)
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get PointTransactions By User Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Get PointTransactions By User Error",
+                    ex);
+
                 return new List<PointTransaction>();
             }
         }
-        // ================ Read By ===========
+        // ================ Read By ================
     }
 }

@@ -8,14 +8,20 @@ namespace DataLayer
 {
     public class OfferDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public OfferDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(Offer offer)
+        public async Task<int> Add(Offer offer)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.Offers.Add(offer);
-                await db.SaveChangesAsync();
+                _db.Offers.Add(offer);
+                await _db.SaveChangesAsync();
                 return offer.OfferId;
             }
             catch (Exception ex)
@@ -24,15 +30,19 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(Offer offer)
+
+        public async Task<bool> Update(Offer offer)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Offers.FirstOrDefaultAsync(o => o.OfferId == offer.OfferId);
+                var existing = await _db.Offers
+                    .FirstOrDefaultAsync(o => o.OfferId == offer.OfferId);
+
                 if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(offer);
-                return await db.SaveChangesAsync() > 0;
+
+                _db.Entry(existing).CurrentValues.SetValues(offer);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,15 +50,19 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int offerId)
+
+        public async Task<bool> Delete(int offerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Offers.FirstOrDefaultAsync(o => o.OfferId == offerId);
+                var existing = await _db.Offers
+                    .FirstOrDefaultAsync(o => o.OfferId == offerId);
+
                 if (existing == null) return false;
-                db.Offers.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+
+                _db.Offers.Remove(existing);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -56,12 +70,12 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<Offer>> GetAll()
+
+        public async Task<List<Offer>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Offers
+                return await _db.Offers
                     .Include(o => o.Center)
                     .AsNoTracking()
                     .ToListAsync();
@@ -76,12 +90,11 @@ namespace DataLayer
 
 
         // ================ Read By ================
-        public static async Task<Offer?> GetByID(int offerId)
+        public async Task<Offer?> GetByID(int offerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Offers
+                return await _db.Offers
                     .Include(o => o.Center)
                     .Include(o => o.Bookings)
                     .AsNoTracking()
@@ -93,12 +106,12 @@ namespace DataLayer
                 return null;
             }
         }
-        public static async Task<List<Offer>> GetByCenterId(int centerId)
+
+        public async Task<List<Offer>> GetByCenterId(int centerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Offers
+                return await _db.Offers
                     .Where(o => o.CenterId == centerId)
                     .AsNoTracking()
                     .ToListAsync();

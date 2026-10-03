@@ -7,51 +7,77 @@ namespace DataLayer
 {
     public class CenterInvitationDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public CenterInvitationDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(CenterInvitation inv)
+        public async Task<int> Add(CenterInvitation inv)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.CenterInvitations.Add(inv);
-                await db.SaveChangesAsync();
+                _db.CenterInvitations.Add(inv);
+                await _db.SaveChangesAsync();
+
                 return inv.InvitationId;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Add CenterInvitation Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Add CenterInvitation Error",
+                    ex);
+
                 return 0;
             }
         }
-        public static async Task<bool> Update(CenterInvitation inv)
+
+        public async Task<bool> Update(CenterInvitation inv)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.CenterInvitations.FirstOrDefaultAsync(i => i.InvitationId == inv.InvitationId);
-                if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(inv);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.CenterInvitations
+                    .FirstOrDefaultAsync(i => i.InvitationId == inv.InvitationId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Entry(existing).CurrentValues.SetValues(inv);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Update CenterInvitation Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Update CenterInvitation Error",
+                    ex);
+
                 return false;
             }
         }
-        public static async Task<bool> Delete(int id)
+
+        public async Task<bool> Delete(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.CenterInvitations.FirstOrDefaultAsync(i => i.InvitationId == id);
-                if (existing == null) return false;
-                db.CenterInvitations.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.CenterInvitations
+                    .FirstOrDefaultAsync(i => i.InvitationId == id);
+
+                if (existing == null)
+                    return false;
+
+                _db.CenterInvitations.Remove(existing);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Delete CenterInvitation Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Delete CenterInvitation Error",
+                    ex);
+
                 return false;
             }
         }
@@ -59,33 +85,41 @@ namespace DataLayer
 
 
         // ================ Read By ================
-        public static async Task<CenterInvitation?> GetByID(int id)
+        public async Task<CenterInvitation?> GetByID(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.CenterInvitations.AsNoTracking().FirstOrDefaultAsync(i => i.InvitationId == id);
+                return await _db.CenterInvitations
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(i => i.InvitationId == id);
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get CenterInvitation By ID Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Get CenterInvitation By ID Error",
+                    ex);
+
                 return null;
             }
         }
-        public static async Task<List<CenterInvitation>> GetAll()
+
+        public async Task<List<CenterInvitation>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.CenterInvitations.AsNoTracking().ToListAsync();
+                return await _db.CenterInvitations
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get All CenterInvitations Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Get All CenterInvitations Error",
+                    ex);
+
                 return new List<CenterInvitation>();
             }
         }
         // ================ Read By ================
-
     }
 }

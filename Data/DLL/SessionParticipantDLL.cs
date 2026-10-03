@@ -8,14 +8,19 @@ namespace DataLayer
 {
     public class SessionParticipantDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public SessionParticipantDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
         // ================ CRUD ===========
-        public static async Task<int> Add(SessionParticipant sp)
+        public async Task<int> Add(SessionParticipant sp)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.SessionParticipants.Add(sp);
-                await db.SaveChangesAsync();
+                _db.SessionParticipants.Add(sp);
+                await _db.SaveChangesAsync();
                 var id = sp.Id;
                 return id;
             }
@@ -25,15 +30,14 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Delete(int id)
+        public async Task<bool> Delete(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = db.SessionParticipants.SingleOrDefault(x => x.Id == id);
+                var existing = _db.SessionParticipants.SingleOrDefault(x => x.Id == id);
                 if (existing == null) return false;
-                db.SessionParticipants.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                _db.SessionParticipants.Remove(existing);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -45,12 +49,11 @@ namespace DataLayer
 
 
         // ================ Read By ===========
-        public static async Task<SessionParticipant?> GetBySessionId(int sessionId)
+        public async Task<SessionParticipant?> GetBySessionId(int sessionId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.SessionParticipants.AsNoTracking().FirstOrDefaultAsync(x => x.SessionId == sessionId);
+                return await _db.SessionParticipants.AsNoTracking().FirstOrDefaultAsync(x => x.SessionId == sessionId);
             }
             catch (Exception ex)
             {

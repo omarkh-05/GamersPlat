@@ -7,14 +7,20 @@ namespace DataLayer
 {
     public class CenterImageDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public CenterImageDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(CenterImage img)
+        public async Task<int> Add(CenterImage img)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.CenterImages.Add(img);
-                await db.SaveChangesAsync();
+                _db.CenterImages.Add(img);
+                await _db.SaveChangesAsync();
                 return img.ImageId;
             }
             catch (Exception ex)
@@ -23,15 +29,20 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(CenterImage img)
+
+        public async Task<bool> Update(CenterImage img)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.CenterImages.FirstOrDefaultAsync(i => i.ImageId == img.ImageId);
-                if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(img);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.CenterImages
+                    .FirstOrDefaultAsync(i => i.ImageId == img.ImageId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Entry(existing).CurrentValues.SetValues(img);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,15 +50,20 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int id)
+
+        public async Task<bool> Delete(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.CenterImages.FirstOrDefaultAsync(i => i.ImageId == id);
-                if (existing == null) return false;
-                db.CenterImages.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.CenterImages
+                    .FirstOrDefaultAsync(i => i.ImageId == id);
+
+                if (existing == null)
+                    return false;
+
+                _db.CenterImages.Remove(existing);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -55,12 +71,14 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<CenterImage>> GetAll()
+
+        public async Task<List<CenterImage>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.CenterImages.AsNoTracking().ToListAsync();
+                return await _db.CenterImages
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
@@ -72,12 +90,11 @@ namespace DataLayer
 
 
         // ================ Read By ================
-        public static async Task<CenterImage?> GetByID(int id)
+        public async Task<CenterImage?> GetByID(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.CenterImages
+                return await _db.CenterImages
                     .Include(i => i.Center)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(i => i.ImageId == id);

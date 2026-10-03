@@ -8,14 +8,20 @@ namespace DataLayer
 {
     public class CityDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public CityDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(City city)
+        public async Task<int> Add(City city)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.Cities.Add(city);
-                await db.SaveChangesAsync();
+                _db.Cities.Add(city);
+                await _db.SaveChangesAsync();
                 return city.CityId;
             }
             catch (Exception ex)
@@ -24,15 +30,20 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(City city)
+
+        public async Task<bool> Update(City city)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Cities.FirstOrDefaultAsync(c => c.CityId == city.CityId);
-                if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(city);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Cities
+                    .FirstOrDefaultAsync(c => c.CityId == city.CityId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Entry(existing).CurrentValues.SetValues(city);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,15 +51,20 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int id)
+
+        public async Task<bool> Delete(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Cities.FirstOrDefaultAsync(c => c.CityId == id);
-                if (existing == null) return false;
-                db.Cities.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Cities
+                    .FirstOrDefaultAsync(c => c.CityId == id);
+
+                if (existing == null)
+                    return false;
+
+                _db.Cities.Remove(existing);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -56,12 +72,14 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<City>> GetAll()
+
+        public async Task<List<City>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Cities.AsNoTracking().ToListAsync();
+                return await _db.Cities
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
@@ -69,16 +87,18 @@ namespace DataLayer
                 return new List<City>();
             }
         }
+
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static async Task<City?> GetByID(int id)
+        public async Task<City?> GetByID(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Cities.AsNoTracking().FirstOrDefaultAsync(c => c.CityId == id);
+                return await _db.Cities
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.CityId == id);
             }
             catch (Exception ex)
             {
@@ -86,6 +106,7 @@ namespace DataLayer
                 return null;
             }
         }
+
         // ================ Read By ================
     }
 }

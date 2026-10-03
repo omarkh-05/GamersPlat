@@ -8,14 +8,21 @@ namespace DataLayer
 {
     public class NotificationDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public NotificationDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(Notification n)
+
+        public async Task<int> Add(Notification n)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.Notifications.Add(n);
-                await db.SaveChangesAsync();
+                _db.Notifications.Add(n);
+                await _db.SaveChangesAsync();
                 return n.NotificationId;
             }
             catch (Exception ex)
@@ -24,15 +31,20 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(Notification n)
+
+        public async Task<bool> Update(Notification n)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Notifications.FirstOrDefaultAsync(x => x.NotificationId == n.NotificationId);
-                if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(n);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Notifications
+                    .FirstOrDefaultAsync(x => x.NotificationId == n.NotificationId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Entry(existing).CurrentValues.SetValues(n);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,15 +52,20 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int id)
+
+        public async Task<bool> Delete(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Notifications.FirstOrDefaultAsync(x => x.NotificationId == id);
-                if (existing == null) return false;
-                db.Notifications.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Notifications
+                    .FirstOrDefaultAsync(x => x.NotificationId == id);
+
+                if (existing == null)
+                    return false;
+
+                _db.Notifications.Remove(existing);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -56,12 +73,14 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<Notification>> GetAll()
+
+        public async Task<List<Notification>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Notifications.AsNoTracking().ToListAsync();
+                return await _db.Notifications
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
@@ -69,16 +88,19 @@ namespace DataLayer
                 return new List<Notification>();
             }
         }
+
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static async Task<Notification?> GetByID(int id)
+
+        public async Task<Notification?> GetByID(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Notifications.AsNoTracking().FirstOrDefaultAsync(x => x.NotificationId == id);
+                return await _db.Notifications
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.NotificationId == id);
             }
             catch (Exception ex)
             {
@@ -86,6 +108,7 @@ namespace DataLayer
                 return null;
             }
         }
+
         // ================ Read By ================
     }
 }

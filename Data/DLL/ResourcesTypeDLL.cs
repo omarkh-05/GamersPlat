@@ -7,14 +7,19 @@ namespace DataLayer
 {
     public class ResourcesTypeDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public ResourcesTypeDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
         // ================ CRUD ===========
-        public static async Task<int> Add(ResourcesType rt)
+        public async Task<int> Add(ResourcesType rt)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.ResourcesTypes.Add(rt);
-                await db.SaveChangesAsync();
+                _db.ResourcesTypes.Add(rt);
+                await _db.SaveChangesAsync();
                 return rt.ResourcesTypeId;
             }
             catch (Exception ex)
@@ -23,15 +28,14 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(ResourcesType rt)
+        public async Task<bool> Update(ResourcesType rt)
         {
             try
-            {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.ResourcesTypes.FirstOrDefaultAsync(r => r.ResourcesTypeId == rt.ResourcesTypeId && r.CenterId == rt.CenterId);
+            { 
+                var existing = await _db.ResourcesTypes.FirstOrDefaultAsync(r => r.ResourcesTypeId == rt.ResourcesTypeId && r.CenterId == rt.CenterId);
                 if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(rt);
-                return await db.SaveChangesAsync() > 0;
+                _db.Entry(existing).CurrentValues.SetValues(rt);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,13 +43,12 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> UpdateActiveStatus(int centerId,int resourceId)
+        public async Task<bool> UpdateActiveStatus(int centerId,int resourceId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
 
-                var resource = await db.ResourcesTypes
+                var resource = await _db.ResourcesTypes
              .FirstOrDefaultAsync(r =>
                  r.ResourcesTypeId == resourceId &&
                  r.CenterId == centerId);
@@ -56,7 +59,7 @@ namespace DataLayer
 
                 resource.IsActive = !resource.IsActive;
 
-                return await db.SaveChangesAsync() > 0;
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -64,15 +67,14 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int id)
+        public async Task<bool> Delete(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.ResourcesTypes.FirstOrDefaultAsync(r => r.ResourcesTypeId == id);
+                var existing = await _db.ResourcesTypes.FirstOrDefaultAsync(r => r.ResourcesTypeId == id);
                 if (existing == null) return false;
-                db.ResourcesTypes.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                _db.ResourcesTypes.Remove(existing);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -80,12 +82,11 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<ResourcesType>> GetAll()
+        public async Task<List<ResourcesType>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.ResourcesTypes.AsNoTracking().ToListAsync();
+                return await _db.ResourcesTypes.AsNoTracking().ToListAsync();
             }
             catch (Exception ex)
             {
@@ -97,12 +98,11 @@ namespace DataLayer
 
 
         // ================ Read By ===========
-        public static async Task<ResourcesType?> GetByID(int id)
+        public async Task<ResourcesType?> GetByID(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.ResourcesTypes.AsNoTracking().FirstOrDefaultAsync(r => r.ResourcesTypeId == id);
+                return await _db.ResourcesTypes.AsNoTracking().FirstOrDefaultAsync(r => r.ResourcesTypeId == id);
             }
             catch (Exception ex)
             {

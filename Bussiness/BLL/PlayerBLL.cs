@@ -12,17 +12,20 @@ namespace Bussiness.BLL
         private readonly BookingBLL _booking;
         private readonly ReviewBLL _review;
         private readonly TournamentPlayerBLL _tournament;
+        private readonly PlayerDLL _playerDLL;
 
         public PlayerBLL(
             BookingBLL booking,
             ReviewBLL review,
             TournamentPlayerBLL tournament,
-            UserDLL userDLL)
+            UserDLL userDLL,
+            PlayerDLL playerDLL)
         {
             _booking = booking;
             _review = review;
             _tournament = tournament;
             _userDLL = userDLL;
+            _playerDLL = playerDLL;
         }
 
         // ================ Read Player Profile ================
@@ -33,9 +36,9 @@ namespace Bussiness.BLL
                 if (userInfo == null)
                 throw new Exception("User not found.");
 
-            var statistics = await PlayerDLL.GetPlayerProfile(userId);
+            var statistics = await _playerDLL.GetPlayerProfile(userId);
 
-                if (statistics == null)
+            if (statistics == null)
                 throw new Exception("Player Profile not found.");
 
             return new DTO_PlayerProfile

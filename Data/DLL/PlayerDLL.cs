@@ -7,13 +7,19 @@ namespace Data.DLL
 {
     public class PlayerDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public PlayerDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ Read By ================
-        public static async Task<DTO_PlayerProfile?> GetPlayerProfile(int userId)
+        public async Task<DTO_PlayerProfile?> GetPlayerProfile(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                using var connection = db.Database.GetDbConnection();
+                using var connection = _db.Database.GetDbConnection();
 
                 await connection.OpenAsync();
 
@@ -26,7 +32,10 @@ namespace Data.DLL
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get Player Statistics Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Get Player Statistics Error",
+                    ex);
+
                 return null;
             }
         }

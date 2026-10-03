@@ -6,11 +6,16 @@ namespace Data.DLL
 {
     public class StaffDLL
     {
-        // ================ CRUD ================
-        public static async Task<int> Add(DTO_AddStaffMember staff)
+        private readonly GamersPlatDbContext _db;
+
+        public StaffDLL(GamersPlatDbContext db)
         {
-            using var db = new GamersPlatDbContext();
-            using var transaction = await db.Database.BeginTransactionAsync();
+            _db = db;
+        }
+        // ================ CRUD ================
+        public async Task<int> Add(DTO_AddStaffMember staff)
+        {
+            using var transaction = await _db.Database.BeginTransactionAsync();
 
             try
             {
@@ -23,8 +28,8 @@ namespace Data.DLL
                     CityId = staff.CityId
                 };
 
-                db.Users.Add(user);
-                await db.SaveChangesAsync();
+                _db.Users.Add(user);
+                await _db.SaveChangesAsync();
 
                 Staff staffEntity = new Staff
                 {
@@ -34,8 +39,8 @@ namespace Data.DLL
                     IsActive = staff.IsActive
                 };
 
-                db.Staff.Add(staffEntity);
-                await db.SaveChangesAsync();
+                _db.Staff.Add(staffEntity);
+                await _db.SaveChangesAsync();
 
                 await transaction.CommitAsync();
 
@@ -49,19 +54,18 @@ namespace Data.DLL
                 return 0;
             }
         }
-        public static async Task<bool> Delete(int staffId)
+        public async Task<bool> Delete(int staffId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Staff
+                var existing = await _db.Staff
                     .FirstOrDefaultAsync(s => s.StaffId == staffId);
 
                 if (existing == null)
                     return false;
 
-                db.Staff.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                _db.Staff.Remove(existing);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -69,12 +73,11 @@ namespace Data.DLL
                 return false;
             }
         }
-        public static async Task<List<DTO_StaffDetails>> GetAll()
+        public async Task<List<DTO_StaffDetails>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Staff
+                return await _db.Staff
                     .Select(s => new DTO_StaffDetails
                     {
                         FullName = s.User.FullName,
@@ -97,12 +100,11 @@ namespace Data.DLL
 
 
         // ================ Read By ================
-        public static async Task<DTO_StaffDetails?> GetByID(int staffId)
+        public async Task<DTO_StaffDetails?> GetByID(int staffId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Staff
+                return await _db.Staff
                     .Where(s => s.StaffId == staffId)
                     .Select(s => new DTO_StaffDetails
                     {
@@ -122,12 +124,11 @@ namespace Data.DLL
                 return null;
             }
         }
-        public static async Task<List<DTO_StaffDetails>> GetByCenterId(int centerId)
+        public async Task<List<DTO_StaffDetails>> GetByCenterId(int centerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Staff
+                return await _db.Staff
                     .Where(s => s.CenterId == centerId)
                     .Select(s => new DTO_StaffDetails
                     {

@@ -1,21 +1,33 @@
 using Data;
 using DataLayer;
+
 namespace Bussiness
 {
     public class PasswordResetTokenBLL
     {
-        // ================ Crud ================
-        public async Task<bool> Add(PasswordResetToken _token)
+        private readonly PasswordResetTokenDLL _passwordResetTokenDLL;
+
+        public PasswordResetTokenBLL(
+            PasswordResetTokenDLL passwordResetTokenDLL)
         {
-            int _tokenID = await PasswordResetTokenDLL.Add(_token);
-            return _tokenID > 0;
+            _passwordResetTokenDLL = passwordResetTokenDLL;
         }
-        public async Task< bool> Delete(int id) => await PasswordResetTokenDLL.Delete(id);
-        // ================ Crud ================
+
+        // ================ CRUD ================
+        public async Task<bool> Add(PasswordResetToken token)
+        {
+            int tokenID = await _passwordResetTokenDLL.Add(token);
+            return tokenID > 0;
+        }
+
+        public async Task<bool> Delete(int id)
+            => await _passwordResetTokenDLL.Delete(id);
+        // ================ CRUD ================
 
 
         // ================ Read By ================
-        public async Task<PasswordResetToken?> GetByToken(string token) => await PasswordResetTokenDLL.GetByToken(token);
+        public async Task<PasswordResetToken?> GetByToken(string token)
+            => await _passwordResetTokenDLL.GetByToken(token);
         // ================ Read By ================
     }
 }

@@ -7,19 +7,28 @@ namespace DataLayer
 {
     public class AuditLogDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public AuditLogDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(AuditLog a)
+        public async Task<int> Add(AuditLog a)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.AuditLogs.Add(a);
-                await db.SaveChangesAsync();
+                _db.AuditLogs.Add(a);
+                await _db.SaveChangesAsync();
                 return a.AuditId;
             }
             catch (Exception ex)
             {
-                Data.DLL.EventLog_Helper.WriteEventLog("Add AuditLog Error", ex);
+                Data.DLL.EventLog_Helper.WriteEventLog(
+                    "Add AuditLog Error",
+                    ex);
+
                 return 0;
             }
         }
@@ -27,20 +36,24 @@ namespace DataLayer
 
 
         // ================ Read By ================
-        public static async Task<List<AuditLog>> GetByUserId(int userId)
+        public async Task<List<AuditLog>> GetByUserId(int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.AuditLogs.Where(x => x.UserId == userId).AsNoTracking().ToListAsync();
+                return await _db.AuditLogs
+                    .Where(x => x.UserId == userId)
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                Data.DLL.EventLog_Helper.WriteEventLog("Get AuditLogs By User Error", ex);
+                Data.DLL.EventLog_Helper.WriteEventLog(
+                    "Get AuditLogs By User Error",
+                    ex);
+
                 return new List<AuditLog>();
             }
         }
         // ================ Read By ================
-
     }
 }

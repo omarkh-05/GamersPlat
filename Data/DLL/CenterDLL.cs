@@ -12,14 +12,20 @@ namespace DataLayer
 {
     public class CenterDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public CenterDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(Center center)
+        public async Task<int> Add(Center center)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.Centers.Add(center);
-                await db.SaveChangesAsync();
+                _db.Centers.Add(center);
+                await _db.SaveChangesAsync();
                 return center.CenterId;
             }
             catch (Exception ex)
@@ -28,15 +34,22 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(Center center,int ownerId)
+
+        public async Task<bool> Update(Center center, int ownerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Centers.FirstOrDefaultAsync(c => c.CenterId == center.CenterId && c.OwnerUserId == ownerId);
-                if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(center);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Centers
+                    .FirstOrDefaultAsync(c =>
+                        c.CenterId == center.CenterId &&
+                        c.OwnerUserId == ownerId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Entry(existing).CurrentValues.SetValues(center);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -44,37 +57,45 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> UpdateActiveStatus(int centerId, int ownerId)
+
+        public async Task<bool> UpdateActiveStatus(int centerId, int ownerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-
-                var center = await db.Centers
-                    .FirstOrDefaultAsync(c => c.CenterId == centerId && c.OwnerUserId == ownerId);
+                var center = await _db.Centers
+                    .FirstOrDefaultAsync(c =>
+                        c.CenterId == centerId &&
+                        c.OwnerUserId == ownerId);
 
                 if (center == null)
                     return false;
 
                 center.IsActive = !center.IsActive;
 
-                return await db.SaveChangesAsync() > 0;
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Update Center Active Status Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Update Center Active Status Error", ex);
+
                 return false;
             }
         }
-        public static async Task<bool> Delete(int centerId)
+
+        public async Task<bool> Delete(int centerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Centers.FirstOrDefaultAsync(c => c.CenterId == centerId);
-                if (existing == null) return false;
-                db.Centers.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Centers
+                    .FirstOrDefaultAsync(c => c.CenterId == centerId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Centers.Remove(existing);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -82,12 +103,12 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<DTO_HomePageCentersDetails>> GetAll()
+
+        public async Task<List<DTO_HomePageCentersDetails>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Centers
+                return await _db.Centers
                     .Select(c => new DTO_HomePageCentersDetails
                     {
                         CenterName = c.CenterName,
@@ -98,11 +119,11 @@ namespace DataLayer
                         CloseTime = c.CloseTime,
                         CityName = c.City.Name,
                         Rating = c.Reviews
-                        .Select(r => (decimal?)r.Rating)
-                        .Average() ?? 0,
+                            .Select(r => (decimal?)r.Rating)
+                            .Average() ?? 0,
                     })
-                 .AsNoTracking()
-                .ToListAsync();
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
@@ -110,12 +131,12 @@ namespace DataLayer
                 return new List<DTO_HomePageCentersDetails>();
             }
         }
-        public static async Task<List<string>> GetCenterNames()
+
+        public async Task<List<string>> GetCenterNames()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Centers
+                return await _db.Centers
                     .Where(c => c.IsActive == true)
                     .Select(c => c.CenterName)
                     .AsNoTracking()
@@ -127,20 +148,20 @@ namespace DataLayer
                 return new List<string>();
             }
         }
+
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static async Task<Center?> GetByID(int centerId)
+        public async Task<Center?> GetByID(int centerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-
-                return await db.Centers
+                return await _db.Centers
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(c => c.CenterId == centerId && c.IsActive == true);
-
+                    .FirstOrDefaultAsync(c =>
+                        c.CenterId == centerId &&
+                        c.IsActive == true);
             }
             catch (Exception ex)
             {
@@ -148,14 +169,16 @@ namespace DataLayer
                 return null;
             }
         }
-        public static async Task<DTO_CenterDetails?> GetCenterDetailsById(int centerId)
+
+        public async Task<DTO_CenterDetails?> GetCenterDetailsById(int centerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-
-                return await db.Centers.AsNoTracking()
-                    .Where(c => c.CenterId == centerId && c.IsActive == true)
+                return await _db.Centers
+                    .AsNoTracking()
+                    .Where(c =>
+                        c.CenterId == centerId &&
+                        c.IsActive == true)
                     .Select(c => new DTO_CenterDetails
                     {
                         CenterId = c.CenterId,
@@ -164,11 +187,19 @@ namespace DataLayer
                         Country = c.City.Country.Name,
                         Description = c.CenterDescription,
 
-                        Rating = c.Reviews.Average(r => (double?)r.Rating) ?? 0,
+                        Rating = c.Reviews
+                            .Average(r => (double?)r.Rating) ?? 0,
+
                         ReviewCount = c.Reviews.Count(),
 
-                        Images = c.CenterImage.Select(i => i.ImageUrl).ToList(),
-                        Services = c.Services.Where(s => s.IsActive).Select(s => s.Name).ToList(),
+                        Images = c.CenterImage
+                            .Select(i => i.ImageUrl)
+                            .ToList(),
+
+                        Services = c.Services
+                            .Where(s => s.IsActive)
+                            .Select(s => s.Name)
+                            .ToList(),
 
                         Tournaments = c.Tournaments
                             .Where(t => t.EndDate >= DateTime.UtcNow)
@@ -178,7 +209,8 @@ namespace DataLayer
                                 TournamentName = t.TournamentName,
                                 SlotsTaken = t.TournamentPlayers.Count(),
                                 MaxPlayers = t.MaxPlayers
-                            }).ToList(),
+                            })
+                            .ToList(),
 
                         Sessions = c.Sessions
                             .Where(s => s.SessionStatus == "Open")
@@ -189,8 +221,8 @@ namespace DataLayer
                                 MaxPlayers = s.MaxPlayers,
                                 SessionDate = s.SessionDate,
                                 StartTime = s.StartTime
-                                // Price: not on Sessions table yet — see note below
-                            }).ToList(),
+                            })
+                            .ToList(),
 
                         Offers = c.Offers
                             .Where(o => o.IsActive)
@@ -203,30 +235,36 @@ namespace DataLayer
                                 DiscountValue = o.DiscountValue,
                                 StartDate = o.StartDate,
                                 EndDate = o.EndDate
-                            }).ToList(),
+                            })
+                            .ToList(),
 
                         VipRooms = c.ResourcesTypes
-                            .Where(r => r.RoomType == "VIP" && r.IsActive)
+                            .Where(r =>
+                                r.RoomType == "VIP" &&
+                                r.IsActive)
                             .Select(r => new DTO_ResourceType
                             {
                                 ResourcesTypeId = r.ResourcesTypeId,
                                 DeviceName = r.Device.DeviceName,
                                 HourlyPrice = r.HourlyPrice,
                                 AvailableQuantity = r.TotalQuantity
-                            }).ToList(),
+                            })
+                            .ToList(),
 
                         NormalRooms = c.ResourcesTypes
-                            .Where(r => r.RoomType == "Normal" && r.IsActive)
+                            .Where(r =>
+                                r.RoomType == "Normal" &&
+                                r.IsActive)
                             .Select(r => new DTO_ResourceType
                             {
                                 ResourcesTypeId = r.ResourcesTypeId,
                                 DeviceName = r.Device.DeviceName,
                                 HourlyPrice = r.HourlyPrice,
                                 AvailableQuantity = r.TotalQuantity
-                            }).ToList()
+                            })
+                            .ToList()
                     })
                     .FirstOrDefaultAsync();
-                  
             }
             catch (Exception ex)
             {
@@ -234,61 +272,79 @@ namespace DataLayer
                 return null;
             }
         }
-        public static async Task<List<DTO_CentersListDetails>> GetAllCentersByOwnerId(int ownerId)
+
+        public async Task<List<DTO_CentersListDetails>> GetAllCentersByOwnerId(int ownerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Centers
-                .Where(c => c.OwnerUserId == ownerId)
-                .Select(c => new DTO_CentersListDetails
-                {
-                    CenterName = c.CenterName,
-                    CenterAddress = c.CenterAddress,
-                    CenterDescription = c.CenterDescription,
-                    CenterStatus = c.CenterStatus,
-                    CenterType = c.CenterType,
-                    OpenTime = c.OpenTime,
-                    CloseTime = c.CloseTime,
-                    CityName = c.City.Name,
-                    Rating = c.Reviews
-                        .Select(r => (decimal?)r.Rating)
-                        .Average() ?? 0,
-                    ResourcesCount = c.ResourcesTypes
-                        .Count(r => r.IsActive),
-                    ServicesList = c.Services
-                        .Where(s => s.IsActive)
-                        .Select(s => s.Name)
-                        .ToList()
-                })
-                .ToListAsync();
+                return await _db.Centers
+                    .Where(c => c.OwnerUserId == ownerId)
+                    .Select(c => new DTO_CentersListDetails
+                    {
+                        CenterName = c.CenterName,
+                        CenterAddress = c.CenterAddress,
+                        CenterDescription = c.CenterDescription,
+                        CenterStatus = c.CenterStatus,
+                        CenterType = c.CenterType,
+                        OpenTime = c.OpenTime,
+                        CloseTime = c.CloseTime,
+                        CityName = c.City.Name,
+
+                        Rating = c.Reviews
+                            .Select(r => (decimal?)r.Rating)
+                            .Average() ?? 0,
+
+                        ResourcesCount = c.ResourcesTypes
+                            .Count(r => r.IsActive),
+
+                        ServicesList = c.Services
+                            .Where(s => s.IsActive)
+                            .Select(s => s.Name)
+                            .ToList()
+                    })
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get All Centers By Owner ID Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Get All Centers By Owner ID Error", ex);
+
                 return new List<DTO_CentersListDetails>();
             }
         }
+
         // ================ Read By ================
 
 
         // ================ Other Methods ================
-        public static async Task<bool> ToggleCenterStatus(int centerId,string status,int ownerId)
+        public async Task<bool> ToggleCenterStatus(
+            int centerId,
+            string status,
+            int ownerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var center = await db.Centers.FirstOrDefaultAsync(c => c.CenterId == centerId && c.OwnerUserId == ownerId);
-                if (center == null) return false;
+                var center = await _db.Centers
+                    .FirstOrDefaultAsync(c =>
+                        c.CenterId == centerId &&
+                        c.OwnerUserId == ownerId);
+
+                if (center == null)
+                    return false;
+
                 center.CenterStatus = status;
-                return await db.SaveChangesAsync() > 0;
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Toggle Center Status Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Toggle Center Status Error", ex);
+
                 return false;
             }
         }
+
         // ================ Other Methods ================
     }
 }

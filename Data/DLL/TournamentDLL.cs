@@ -7,14 +7,19 @@ namespace DataLayer
 {
     public class TournamentDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public TournamentDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
         // ================ CRUD ================
-        public static async Task<int> Add(Tournament t)
+        public async Task<int> Add(Tournament t)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.Tournaments.Add(t);
-                await db.SaveChangesAsync();
+                _db.Tournaments.Add(t);
+                await _db.SaveChangesAsync();
                 return t.TournamentId;
             }
             catch (Exception ex)
@@ -23,15 +28,14 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(Tournament t)
+        public async Task<bool> Update(Tournament t)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Tournaments.FirstOrDefaultAsync(x => x.TournamentId == t.TournamentId);
+                var existing = await _db.Tournaments.FirstOrDefaultAsync(x => x.TournamentId == t.TournamentId);
                 if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(t);
-                return await db.SaveChangesAsync() > 0;
+                _db.Entry(existing).CurrentValues.SetValues(t);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,15 +43,14 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int id)
+        public async Task<bool> Delete(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Tournaments.FirstOrDefaultAsync(x => x.TournamentId == id);
+                var existing = await _db.Tournaments.FirstOrDefaultAsync(x => x.TournamentId == id);
                 if (existing == null) return false;
-                db.Tournaments.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                _db.Tournaments.Remove(existing);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -55,12 +58,11 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<Tournament>> GetAll()
+        public async Task<List<Tournament>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Tournaments
+                return await _db.Tournaments
                     .AsNoTracking()
                     .ToListAsync();
             }
@@ -74,12 +76,11 @@ namespace DataLayer
 
 
         // ================ Read By ================
-        public static async Task<Tournament?> GetByID(int id)
+        public async Task<Tournament?> GetByID(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Tournaments
+                return await _db.Tournaments
                     .Include(x => x.Center)
                     .Include(x => x.Game)
                     .AsNoTracking()

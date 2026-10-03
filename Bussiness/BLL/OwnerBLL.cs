@@ -23,8 +23,18 @@ namespace Bussiness.BLL
         readonly StaffBLL _staff;
         readonly StaffRoleBLL _staffRole;
         readonly IAuthService _auth;
+        private readonly OwnerDLL _ownerDLL;
 
-        public OwnerBLL(IUser user, CenterBLL centerBLL, ResourcesTypeBLL resourcesTypeBLL, ServiceBLL servicesBLL, BookingBLL bookingBLL,StaffBLL staffBLL, StaffRoleBLL staffRoleBLL,IAuthService auth)
+        public OwnerBLL(
+            IUser user,
+            CenterBLL centerBLL,
+            ResourcesTypeBLL resourcesTypeBLL,
+            ServiceBLL servicesBLL,
+            BookingBLL bookingBLL,
+            StaffBLL staffBLL,
+            StaffRoleBLL staffRoleBLL,
+            IAuthService auth,
+            OwnerDLL ownerDLL)
         {
             _user = user;
             _center = centerBLL;
@@ -34,6 +44,7 @@ namespace Bussiness.BLL
             _staff = staffBLL;
             _staffRole = staffRoleBLL;
             _auth = auth;
+            _ownerDLL = ownerDLL;
         }
 
         // IOwnerService implementations (thin wrappers to existing methods)
@@ -62,7 +73,7 @@ namespace Bussiness.BLL
             {
                 throw new ArgumentException("Invalid owner ID.");
             }
-            var ownerDashboard = await OwnerDLL.GetOwnerDashboard(ownerId);
+            var ownerDashboard = await _ownerDLL.GetOwnerDashboard(ownerId);
             if(ownerDashboard == null)
             {
                 throw new InvalidOperationException("Owner dashboard not found.");

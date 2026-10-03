@@ -7,14 +7,20 @@ namespace DataLayer
 {
     public class DeviceDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public DeviceDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
+
         // ================ CRUD ================
-        public static async Task<int> Add(Device device)
+        public async Task<int> Add(Device device)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.Devices.Add(device);
-                await db.SaveChangesAsync();
+                _db.Devices.Add(device);
+                await _db.SaveChangesAsync();
                 return device.DeviceId;
             }
             catch (Exception ex)
@@ -23,15 +29,20 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> Update(Device device)
+
+        public async Task<bool> Update(Device device)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Devices.FirstOrDefaultAsync(d => d.DeviceId == device.DeviceId);
-                if (existing == null) return false;
-                db.Entry(existing).CurrentValues.SetValues(device);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Devices
+                    .FirstOrDefaultAsync(d => d.DeviceId == device.DeviceId);
+
+                if (existing == null)
+                    return false;
+
+                _db.Entry(existing).CurrentValues.SetValues(device);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -39,15 +50,20 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<bool> Delete(int id)
+
+        public async Task<bool> Delete(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.Devices.FirstOrDefaultAsync(d => d.DeviceId == id);
-                if (existing == null) return false;
-                db.Devices.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                var existing = await _db.Devices
+                    .FirstOrDefaultAsync(d => d.DeviceId == id);
+
+                if (existing == null)
+                    return false;
+
+                _db.Devices.Remove(existing);
+
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -55,12 +71,14 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<Device>> GetAll()
+
+        public async Task<List<Device>> GetAll()
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Devices.AsNoTracking().ToListAsync();
+                return await _db.Devices
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
@@ -68,16 +86,18 @@ namespace DataLayer
                 return new List<Device>();
             }
         }
+
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public static async Task<Device?> GetByID(int id)
+        public async Task<Device?> GetByID(int id)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.Devices.AsNoTracking().FirstOrDefaultAsync(d => d.DeviceId == id);
+                return await _db.Devices
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.DeviceId == id);
             }
             catch (Exception ex)
             {
@@ -85,6 +105,7 @@ namespace DataLayer
                 return null;
             }
         }
+
         // ================ Read By ================
     }
 }

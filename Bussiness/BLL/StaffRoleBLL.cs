@@ -10,6 +10,12 @@ namespace Bussiness.BLL
 {
     public class StaffRoleBLL
     {
+        private readonly StaffRoleDLL _staffRoleDLL;
+
+        public StaffRoleBLL(StaffRoleDLL staffRoleDLL)
+        {
+            _staffRoleDLL = staffRoleDLL;
+        }
         // ================ Role Management ================
         public async Task<bool> AddStaffRole(DTO_StaffRole role)
         {
@@ -25,7 +31,7 @@ namespace Bussiness.BLL
                 Permissions = role.Permissions
             };
 
-            return await StaffRoleDLL.AddStaffRole(staffRole);
+            return await _staffRoleDLL.AddStaffRole(staffRole);
 
         }
         public async Task<bool> SetRoleToMember(DTO_SetRoleToMember request)
@@ -41,7 +47,7 @@ namespace Bussiness.BLL
                 StaffRoleId = request.StaffRoleId,
             };
 
-            return await StaffRoleDLL.SetRoleToMember(staffRole);
+            return await _staffRoleDLL.SetRoleToMember(staffRole);
         }
         // ================ Role Management ================
     }

@@ -1,25 +1,43 @@
 using Data;
 using DataLayer;
 using Bussiness.Interfaces;
+
 namespace Bussiness
 {
     public class NotificationBLL : INotificationService
     {
+        private readonly NotificationDLL _notificationDLL;
+
+        public NotificationBLL(NotificationDLL notificationDLL)
+        {
+            _notificationDLL = notificationDLL;
+        }
+
         // ================ CRUD ================
+
         public async Task<bool> Add(Notification notification)
         {
-            int notificationID = await NotificationDLL.Add(notification);
+            int notificationID = await _notificationDLL.Add(notification);
             return notificationID > 0;
         }
-        public async Task<bool> Update(Notification notification) => await NotificationDLL.Update(notification);
-        public async Task<bool> Delete(int id) => await NotificationDLL.Delete(id);
-        public async Task<List<Notification>> GetAll() => await NotificationDLL.GetAll();
+
+        public async Task<bool> Update(Notification notification)
+            => await _notificationDLL.Update(notification);
+
+        public async Task<bool> Delete(int id)
+            => await _notificationDLL.Delete(id);
+
+        public async Task<List<Notification>> GetAll()
+            => await _notificationDLL.GetAll();
+
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public async Task<Notification?> GetByID(int id) => await NotificationDLL.GetByID(id);
-        // ================ Read By ================
 
+        public async Task<Notification?> GetByID(int id)
+            => await _notificationDLL.GetByID(id);
+
+        // ================ Read By ================
     }
 }

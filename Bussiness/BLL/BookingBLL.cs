@@ -4,6 +4,7 @@ using Domain.DTOs.Booking;
 using Domain.DTOs.Player;
 using System;
 using Bussiness.Interfaces;
+
 namespace Bussiness
 {
     public class BookingBLL : IBookingService
@@ -11,10 +12,19 @@ namespace Bussiness
         public int _bookingID { get; private set; }
         public int LastId => _bookingID;
         public string? LastError { get; private set; }
+
         private readonly IResourcesTypeService _resourcesTypeBLL;
-        public BookingBLL(IResourcesTypeService resourcesTypeBLL)
+        private readonly OfferDLL _offerDLL;
+        private readonly BookingDLL _bookingDLL;
+
+        public BookingBLL(
+            IResourcesTypeService resourcesTypeBLL,
+            OfferDLL offerDLL,
+            BookingDLL bookingDLL)
         {
             _resourcesTypeBLL = resourcesTypeBLL;
+            _offerDLL = offerDLL;
+            _bookingDLL = bookingDLL;
         }
 
 
@@ -52,6 +62,7 @@ namespace Bussiness
                 // Determine time range (default to 1 hour if end not provided)
                 var start = addBooking.StartTime;
                 var end = addBooking.EndTime ?? start.AddHours(1);
+
                 if (end <= start)
                 {
                     LastError = "End time must be after start time";
@@ -59,7 +70,12 @@ namespace Bussiness
                 }
 
                 // Prevent overlapping bookings for the same resource type/time slot
-                var bookedForSlot = await BookingDLL.GetBookedQuantityForTimeSlot(addBooking.ResourcesTypeId, addBooking.BookingDate, start, end);
+                var bookedForSlot = await _bookingDLL.GetBookedQuantityForTimeSlot(
+                    addBooking.ResourcesTypeId,
+                    addBooking.BookingDate,
+                    start,
+                    end);
+
                 if (bookedForSlot + addBooking.Quantity > rt.TotalQuantity)
                 {
                     LastError = "Insufficient availability for the requested time slot";
@@ -77,27 +93,40 @@ namespace Bussiness
                 string? discountType = null;
                 double? discountValue = null;
                 decimal totalPrice = subtotal;
+
                 if (addBooking.OfferId.HasValue)
                 {
-                    var offer = await DataLayer.OfferDLL.GetByID(addBooking.OfferId.Value);
-                    if (offer != null && offer.IsActive && offer.DiscountValue.HasValue && !string.IsNullOrWhiteSpace(offer.DiscountType))
+                    var offer = await _offerDLL.GetByID(addBooking.OfferId.Value);
+
+                    if (offer != null &&
+                        offer.IsActive &&
+                        offer.DiscountValue.HasValue &&
+                        !string.IsNullOrWhiteSpace(offer.DiscountType))
                     {
                         // Validate offer applicability by date/time if dates are present on the offer
                         var bookingDateTime = addBooking.BookingDate.ToDateTime(start);
+
                         if ((offer.StartDate == default || offer.StartDate <= bookingDateTime) &&
                             (offer.EndDate == default || offer.EndDate >= bookingDateTime))
                         {
                             discountType = offer.DiscountType;
                             discountValue = offer.DiscountValue;
-                            if (offer.DiscountType.Equals("percentage", StringComparison.OrdinalIgnoreCase))
+
+                            if (offer.DiscountType.Equals(
+                                "percentage",
+                                StringComparison.OrdinalIgnoreCase))
                             {
-                                var disc = subtotal * (decimal)(offer.DiscountValue.Value / 100.0);
+                                var disc = subtotal *
+                                    (decimal)(offer.DiscountValue.Value / 100.0);
+
                                 totalPrice = Math.Round(subtotal - disc, 2);
                             }
                             else
                             {
                                 var disc = (decimal)offer.DiscountValue.Value;
-                                totalPrice = Math.Round(Math.Max(0, subtotal - disc), 2);
+                                totalPrice = Math.Round(
+                                    Math.Max(0, subtotal - disc),
+                                    2);
                             }
                         }
                     }
@@ -123,8 +152,11 @@ namespace Bussiness
                     Status = "Pending",
                     CreatedAt = DateTime.UtcNow
                 };
-                int bookingID = await BookingDLL.Add(booking);
+
+                int bookingID = await _bookingDLL.Add(booking);
+
                 _bookingID = bookingID;
+
                 return bookingID > 0;
             }
             catch (Exception ex)
@@ -133,12 +165,13 @@ namespace Bussiness
                 return false;
             }
         }
+
         public async Task<bool> Update(DTO_UpdateBooking updaetBooking)
         {
             // Validate availability when changing booking date/resource/quantity
             try
             {
-                var existing = await BookingDLL.GetByID(updaetBooking.BookingId);
+                var existing = await _bookingDLL.GetByID(updaetBooking.BookingId);
 
                 if (existing == null)
                 {
@@ -149,17 +182,32 @@ namespace Bussiness
                 // Determine time range (default to 1 hour if end not provided)
                 var start = updaetBooking.StartTime;
                 var end = updaetBooking.EndTime ?? start.AddHours(1);
+
                 if (end <= start)
                 {
                     LastError = "End time must be after start time";
                     return false;
                 }
 
-                // Prevent overlapping bookings for the same resource type/time slot (exclude this booking)
-                var bookedForSlot = await BookingDLL.GetBookedQuantityForTimeSlotExcludingBooking(existing.ResourcesTypeId, updaetBooking.BookingDate, start, end, updaetBooking.BookingId);
-                var requestedQuantity = updaetBooking.Quantity > 0 ? updaetBooking.Quantity : existing.Quantity;
+                // Prevent overlapping bookings for the same resource type/time slot
+                // (exclude this booking)
+                var bookedForSlot =
+                    await _bookingDLL.GetBookedQuantityForTimeSlotExcludingBooking(
+                        existing.ResourcesTypeId,
+                        updaetBooking.BookingDate,
+                        start,
+                        end,
+                        updaetBooking.BookingId);
+
+                var requestedQuantity =
+                    updaetBooking.Quantity > 0
+                        ? updaetBooking.Quantity
+                        : existing.Quantity;
+
                 // Ensure resources type info available
-                var rt = existing.ResourcesType ?? await _resourcesTypeBLL.GetByID(existing.ResourcesTypeId);
+                var rt = existing.ResourcesType ??
+                         await _resourcesTypeBLL.GetByID(existing.ResourcesTypeId);
+
                 if (rt == null)
                 {
                     LastError = "Resource type not found for existing booking";
@@ -176,7 +224,9 @@ namespace Bussiness
                 var durationMinutes = (end - start).TotalMinutes;
                 var durationHours = (decimal)durationMinutes / 60m;
                 var unitPrice = rt.HourlyPrice;
-                var subtotal = Math.Round(unitPrice * requestedQuantity * durationHours, 2);
+                var subtotal = Math.Round(
+                    unitPrice * requestedQuantity * durationHours,
+                    2);
 
                 existing.BookingDate = updaetBooking.BookingDate;
                 existing.StartTime = updaetBooking.StartTime;
@@ -189,27 +239,39 @@ namespace Bussiness
 
                 // Recompute total price considering any offer attached
                 decimal totalPrice = subtotal;
+
                 if (existing.OfferId.HasValue)
                 {
-                    var offer = await DataLayer.OfferDLL.GetByID(existing.OfferId.Value);
-                    if (offer != null && offer.IsActive && offer.DiscountValue.HasValue && !string.IsNullOrWhiteSpace(offer.DiscountType))
+                    var offer = await _offerDLL.GetByID(existing.OfferId.Value);
+
+                    if (offer != null &&
+                        offer.IsActive &&
+                        offer.DiscountValue.HasValue &&
+                        !string.IsNullOrWhiteSpace(offer.DiscountType))
                     {
-                        if (offer.DiscountType.Equals("percentage", StringComparison.OrdinalIgnoreCase))
+                        if (offer.DiscountType.Equals(
+                            "percentage",
+                            StringComparison.OrdinalIgnoreCase))
                         {
-                            var disc = subtotal * (decimal)(offer.DiscountValue.Value / 100.0);
+                            var disc = subtotal *
+                                (decimal)(offer.DiscountValue.Value / 100.0);
+
                             totalPrice = Math.Round(subtotal - disc, 2);
                         }
                         else
                         {
                             var disc = (decimal)offer.DiscountValue.Value;
-                            totalPrice = Math.Round(Math.Max(0, subtotal - disc), 2);
+
+                            totalPrice = Math.Round(
+                                Math.Max(0, subtotal - disc),
+                                2);
                         }
                     }
                 }
 
                 existing.TotalPrice = totalPrice;
 
-                return await BookingDLL.Update(existing);
+                return await _bookingDLL.Update(existing);
             }
             catch (Exception ex)
             {
@@ -217,29 +279,52 @@ namespace Bussiness
                 return false;
             }
         }
-        public async Task<bool> Delete(int bookingID) => await BookingDLL.Delete(bookingID);
-        public async Task<bool> Cancel(int bookingID) => await BookingDLL.Cancel(bookingID);
-        public async Task<List<Booking>> GetAll() => await BookingDLL.GetAll();
+
+        public async Task<bool> Delete(int bookingID)
+            => await _bookingDLL.Delete(bookingID);
+
+        public async Task<bool> Cancel(int bookingID)
+            => await _bookingDLL.Cancel(bookingID);
+
+        public async Task<List<Booking>> GetAll()
+            => await _bookingDLL.GetAll();
+
         // ================ CRUD ================
 
 
         // ================ Read By ================
-        public async Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId) => await BookingDLL.GetByUserId(userId);
-        public async Task<Booking?> GetByID(int bookingID) => await BookingDLL.GetByID(bookingID);
+        public async Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId)
+            => await _bookingDLL.GetByUserId(userId);
+
+        public async Task<Booking?> GetByID(int bookingID)
+            => await _bookingDLL.GetByID(bookingID);
+
         // ================ Read By ================
 
 
-        // ================ Owner Booking Managament ================
-        public async Task<bool> Accept_RejectBooking(int bookingId,string status) => await BookingDLL.Accept_RejectBooking(bookingId,status);
-        public async Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId) => await BookingDLL.GetBookingsByOwnerId(ownerId);
-        public async Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId) => await BookingDLL.GetBookingsByCenterId(centerId);
-        // helper to compute booked quantity for availability check
-        public async Task<int> GetBookedQuantity(int centerId, int resourcesTypeId, DateOnly date)
+        // ================ Owner Booking Management ================
+        public async Task<bool> Accept_RejectBooking(int bookingId, string status)
+            => await _bookingDLL.Accept_RejectBooking(bookingId, status);
+
+        public async Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId)
+            => await _bookingDLL.GetBookingsByOwnerId(ownerId);
+
+        public async Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId)
+            => await _bookingDLL.GetBookingsByCenterId(centerId);
+
+        // Helper to compute booked quantity for availability check
+        public async Task<int> GetBookedQuantity(
+            int centerId,
+            int resourcesTypeId,
+            DateOnly date)
         {
-            // BookingDLL provides methods to compute booked quantities by resource and date
-            // Use the non-time-slot variant when only date is provided
-            return await BookingDLL.GetBookedQuantity(resourcesTypeId, date);
+            // BookingDLL provides methods to compute booked quantities by resource and date.
+            // Use the non-time-slot variant when only date is provided.
+            return await _bookingDLL.GetBookedQuantity(
+                resourcesTypeId,
+                date);
         }
-        // ================ Owner Booking Managament ================
+
+        // ================ Owner Booking Management ================
     }
 }

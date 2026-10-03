@@ -8,8 +8,22 @@ namespace DataLayer
 {
     public class AdminDLL
     {
+        private readonly GamersPlatDbContext _db;
+        private readonly ReviewDLL _reviewDLL;
+        private readonly NotificationDLL _notificationDLL;
+
+        public AdminDLL(
+            GamersPlatDbContext db,
+            ReviewDLL reviewDLL,
+            NotificationDLL notificationDLL)
+        {
+            _db = db;
+            _reviewDLL = reviewDLL;
+            _notificationDLL = notificationDLL;
+        }
+
         // ================ Admin Analytics ================
-        public static async Task<DTO_AdminStatistics> GetSystemStatistics()
+        public async Task<DTO_AdminStatistics> GetSystemStatistics()
         {
             return await GetSystemStatistics(null, null);
         }
@@ -17,40 +31,49 @@ namespace DataLayer
 
 
         // ================ Advanced analytics with time filters ================
-        public static async Task<DTO_AdminStatistics> GetSystemStatistics(DateTime? from,DateTime? to)
+        public async Task<DTO_AdminStatistics> GetSystemStatistics(
+            DateTime? from,
+            DateTime? to)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
                 // ============================================================
                 // USERS
                 // ============================================================
-                var usersQuery = db.Users
+                var usersQuery = _db.Users
                     .AsNoTracking();
+
                 var totalUsers = await usersQuery.CountAsync();
+
                 var activeUsers = await usersQuery
                     .CountAsync(u => u.IsActive);
+
                 var last30Days = DateTime.UtcNow.AddDays(-30);
+
                 var newRegistrations = await usersQuery
                     .CountAsync(u => u.CreatedAt >= last30Days);
+
                 var blockedUsers = await usersQuery
                     .CountAsync(u => !u.IsActive);
 
                 // ============================================================
                 // CENTERS
                 // ============================================================
-                var centersQuery = db.Centers
+                var centersQuery = _db.Centers
                     .AsNoTracking();
+
                 var totalCenters = await centersQuery.CountAsync();
+
                 var activeCenters = await centersQuery
                     .CountAsync(c => c.IsActive == true);
+
                 var pendingCenters = await centersQuery
                     .CountAsync(c => c.CenterStatus == "Pending");
 
                 // ============================================================
                 // TOP RATED CENTER
                 // ============================================================
-                var topRatedCenter = await db.Reviews
+                var topRatedCenter = await _db.Reviews
                     .AsNoTracking()
                     .GroupBy(r => new
                     {
@@ -69,20 +92,24 @@ namespace DataLayer
                 // ============================================================
                 // BOOKINGS
                 // ============================================================
-                var bookingsQuery = db.Bookings
+                var bookingsQuery = _db.Bookings
                     .AsNoTracking();
+
                 if (from.HasValue)
                 {
                     bookingsQuery = bookingsQuery
                         .Where(b => b.CreatedAt >= from.Value);
                 }
+
                 if (to.HasValue)
                 {
                     bookingsQuery = bookingsQuery
                         .Where(b => b.CreatedAt <= to.Value);
                 }
+
                 var totalBookings = await bookingsQuery
                     .CountAsync();
+
                 var totalRevenue = await bookingsQuery
                     .Where(b => b.Status != "Cancelled")
                     .SumAsync(b => (decimal?)b.TotalPrice) ?? 0m;
@@ -119,18 +146,21 @@ namespace DataLayer
                 // ============================================================
                 // SESSIONS
                 // ============================================================
-                var sessionsQuery = db.Sessions
+                var sessionsQuery = _db.Sessions
                     .AsNoTracking();
+
                 if (from.HasValue)
                 {
                     sessionsQuery = sessionsQuery
                         .Where(s => s.CreatedAt >= from.Value);
                 }
+
                 if (to.HasValue)
                 {
                     sessionsQuery = sessionsQuery
                         .Where(s => s.CreatedAt <= to.Value);
                 }
+
                 var totalSessions = await sessionsQuery
                     .CountAsync(s => s.SessionStatus == "Completed");
 
@@ -151,6 +181,7 @@ namespace DataLayer
                     })
                     .OrderByDescending(x => x.Count)
                     .FirstOrDefaultAsync();
+
                 var popularDevicePercentage =
                     totalSessions > 0 && popularDevice != null
                         ? (int)Math.Round(
@@ -163,8 +194,10 @@ namespace DataLayer
                 // ============================================================
                 var validBookingsQuery = bookingsQuery
                     .Where(b => b.Status != "Cancelled");
+
                 var validBookingCount = await validBookingsQuery
                     .CountAsync();
+
                 var popularLocation = await validBookingsQuery
                     .GroupBy(b => b.Center.City.Name)
                     .Select(g => new
@@ -186,18 +219,21 @@ namespace DataLayer
                 // REVENUE GROWTH
                 // ============================================================
                 decimal revenueGrowth = 0;
+
                 if (from.HasValue && to.HasValue)
                 {
                     var periodLength = to.Value - from.Value;
                     var previousFrom = from.Value - periodLength;
                     var previousTo = from.Value;
-                    var previousRevenue = await db.Bookings
+
+                    var previousRevenue = await _db.Bookings
                         .AsNoTracking()
                         .Where(b =>
                             b.CreatedAt >= previousFrom &&
                             b.CreatedAt < previousTo &&
                             b.Status != "Cancelled")
                         .SumAsync(b => (decimal?)b.TotalPrice) ?? 0m;
+
                     if (previousRevenue > 0)
                     {
                         revenueGrowth =
@@ -238,7 +274,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get System Statistics Error",ex);
+                EventLog_Helper.WriteEventLog(
+                    "Get System Statistics Error",
+                    ex);
+
                 return new DTO_AdminStatistics();
             }
         }
@@ -246,19 +285,21 @@ namespace DataLayer
 
 
         // ================ Center approval/rejection ================
-        public static async Task<bool> ApproveCenter(int centerId)
+        public async Task<bool> ApproveCenter(int centerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var center = await db.Centers.FirstOrDefaultAsync(c => c.CenterId == centerId);
-                if (center == null) return false;
+                var center = await _db.Centers
+                    .FirstOrDefaultAsync(c => c.CenterId == centerId);
+
+                if (center == null)
+                    return false;
 
                 center.CenterStatus = "Approved";
                 center.IsActive = true;
                 center.UpdatedAt = DateTime.UtcNow;
 
-                var ok = await db.SaveChangesAsync() > 0;
+                var ok = await _db.SaveChangesAsync() > 0;
 
                 try
                 {
@@ -275,35 +316,44 @@ namespace DataLayer
                             ReferenceType = "Center",
                             CreatedAt = DateTime.UtcNow
                         };
-                        await NotificationDLL.Add(n);
+
+                        await _notificationDLL.Add(n);
                     }
                 }
                 catch (Exception nEx)
                 {
-                    EventLog_Helper.WriteEventLog("Send Center Approved Notification Error", nEx);
+                    EventLog_Helper.WriteEventLog(
+                        "Send Center Approved Notification Error",
+                        nEx);
                 }
 
                 return ok;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Approve Center Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Approve Center Error",
+                    ex);
+
                 return false;
             }
         }
-        public static async Task<bool> RejectCenter(int centerId, string reason)
+
+        public async Task<bool> RejectCenter(int centerId, string reason)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var center = await db.Centers.FirstOrDefaultAsync(c => c.CenterId == centerId);
-                if (center == null) return false;
+                var center = await _db.Centers
+                    .FirstOrDefaultAsync(c => c.CenterId == centerId);
+
+                if (center == null)
+                    return false;
 
                 center.CenterStatus = "Rejected";
                 center.IsActive = false;
                 center.UpdatedAt = DateTime.UtcNow;
 
-                var ok = await db.SaveChangesAsync() > 0;
+                var ok = await _db.SaveChangesAsync() > 0;
 
                 try
                 {
@@ -320,21 +370,29 @@ namespace DataLayer
                             ReferenceType = "Center",
                             CreatedAt = DateTime.UtcNow
                         };
-                        await NotificationDLL.Add(n);
+
+                        await _notificationDLL.Add(n);
                     }
                 }
                 catch (Exception nEx)
                 {
-                    EventLog_Helper.WriteEventLog("Send Center Rejected Notification Error", nEx);
+                    EventLog_Helper.WriteEventLog(
+                        "Send Center Rejected Notification Error",
+                        nEx);
                 }
 
-                EventLog_Helper.WriteEventLog($"Center {centerId} rejected by admin.", new Exception(reason));
+                EventLog_Helper.WriteEventLog(
+                    $"Center {centerId} rejected by admin.",
+                    new Exception(reason));
 
                 return ok;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Reject Center Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Reject Center Error",
+                    ex);
+
                 return false;
             }
         }
@@ -342,16 +400,32 @@ namespace DataLayer
 
 
         // ================ Announcements ================
-        public static async Task<bool> SendAnnouncement(string title, string message, string audience)
+        public async Task<bool> SendAnnouncement(
+            string title,
+            string message,
+            string audience)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var usersQuery = db.Users.AsQueryable();
-                if (audience == "Players") usersQuery = usersQuery.Where(u => u.UserRoles.Any(ur => ur.Role.RoleName == "Player"));
-                else if (audience == "Owners") usersQuery = usersQuery.Where(u => u.UserRoles.Any(ur => ur.Role.RoleName == "Owner"));
+                var usersQuery = _db.Users.AsQueryable();
 
-                var users = await usersQuery.Select(u => new { u.UserId }).ToListAsync();
+                if (audience == "Players")
+                {
+                    usersQuery = usersQuery
+                        .Where(u => u.UserRoles.Any(
+                            ur => ur.Role.RoleName == "Player"));
+                }
+                else if (audience == "Owners")
+                {
+                    usersQuery = usersQuery
+                        .Where(u => u.UserRoles.Any(
+                            ur => ur.Role.RoleName == "Owner"));
+                }
+
+                var users = await usersQuery
+                    .Select(u => new { u.UserId })
+                    .ToListAsync();
+
                 foreach (var u in users)
                 {
                     var n = new Notification
@@ -364,13 +438,18 @@ namespace DataLayer
                         ReferenceType = "Announcement",
                         CreatedAt = DateTime.UtcNow
                     };
-                    await NotificationDLL.Add(n);
+
+                    await _notificationDLL.Add(n);
                 }
+
                 return true;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Send Announcement Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Send Announcement Error",
+                    ex);
+
                 return false;
             }
         }
@@ -378,12 +457,21 @@ namespace DataLayer
 
 
         // ================ Reports ================
-        public static async Task<bool> SubmitReport(int reporterUserId, string reportType, int? referenceId, string reason, int? centerId = null)
+        public async Task<bool> SubmitReport(
+            int reporterUserId,
+            string reportType,
+            int? referenceId,
+            string reason,
+            int? centerId = null)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var admins = await db.Users.Where(u => u.UserRoles.Any(ur => ur.Role.RoleName == "Admin")).Select(u => new { u.UserId }).ToListAsync();
+                var admins = await _db.Users
+                    .Where(u => u.UserRoles.Any(
+                        ur => ur.Role.RoleName == "Admin"))
+                    .Select(u => new { u.UserId })
+                    .ToListAsync();
+
                 foreach (var a in admins)
                 {
                     var n = new Notification
@@ -397,50 +485,76 @@ namespace DataLayer
                         ReferenceType = "Report",
                         CreatedAt = DateTime.UtcNow
                     };
-                    await NotificationDLL.Add(n);
+
+                    await _notificationDLL.Add(n);
                 }
+
                 return true;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Submit Report Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Submit Report Error",
+                    ex);
+
                 return false;
             }
         }
-        public static async Task<List<Notification>> GetReports()
+
+        public async Task<List<Notification>> GetReports()
         {
             try
             {
-                var all = await NotificationDLL.GetAll();
-                return all.Where(n => n.ReferenceType == "Report").ToList();
+                var all = await _notificationDLL.GetAll();
+
+                return all
+                    .Where(n => n.ReferenceType == "Report")
+                    .ToList();
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get Reports Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Get Reports Error",
+                    ex);
+
                 return new List<Notification>();
             }
         }
-        public static async Task<bool> ResolveReport(int notificationId, string action, int? relatedId = null)
+
+        public async Task<bool> ResolveReport(
+            int notificationId,
+            string action,
+            int? relatedId = null)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var n = await NotificationDLL.GetByID(notificationId);
-                if (n == null) return false;
+                var n = await _notificationDLL.GetByID(notificationId);
+
+                if (n == null)
+                    return false;
+
                 n.Status = "Resolved";
-                var ok = await NotificationDLL.Update(n);
-                if (!ok) return false;
+
+                var ok = await _notificationDLL.Update(n);
+
+                if (!ok)
+                    return false;
 
                 if (!string.IsNullOrWhiteSpace(action))
                 {
-                    if (action == "DeleteReview" && relatedId.HasValue) await ReviewDLL.Delete(relatedId.Value);
+                    if (action == "DeleteReview" && relatedId.HasValue)
+                    {
+                        await _reviewDLL.Delete(relatedId.Value);
+                    }
                     else if (action == "BlockUser" && relatedId.HasValue)
                     {
-                        var user = await db.Users.FindAsync(relatedId.Value);
+                        var user = await _db.Users
+                            .FindAsync(relatedId.Value);
+
                         if (user != null)
                         {
                             user.IsActive = false;
-                            await db.SaveChangesAsync();
+                            await _db.SaveChangesAsync();
                         }
                     }
                 }
@@ -449,7 +563,10 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Resolve Report Error", ex);
+                EventLog_Helper.WriteEventLog(
+                    "Resolve Report Error",
+                    ex);
+
                 return false;
             }
         }

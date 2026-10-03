@@ -8,14 +8,19 @@ namespace DataLayer
 {
     public class TournamentPlayerDLL
     {
+        private readonly GamersPlatDbContext _db;
+
+        public TournamentPlayerDLL(GamersPlatDbContext db)
+        {
+            _db = db;
+        }
         // ================ CRUD ================
-        public static async Task<int> Add(TournamentPlayer tp)
+        public async Task<int> Add(TournamentPlayer tp)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                db.TournamentPlayers.Add(tp);
-                await db.SaveChangesAsync();
+                _db.TournamentPlayers.Add(tp);
+                await _db.SaveChangesAsync();
                 return tp.Id;
             }
             catch (Exception ex)
@@ -24,15 +29,14 @@ namespace DataLayer
                 return 0;
             }
         }
-        public static async Task<bool> DeleteByTournamentAndUser(int tournamentId, int userId)
+        public async Task<bool> DeleteByTournamentAndUser(int tournamentId, int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                var existing = await db.TournamentPlayers.FirstOrDefaultAsync(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
+                var existing = await _db.TournamentPlayers.FirstOrDefaultAsync(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
                 if (existing == null) return false;
-                db.TournamentPlayers.Remove(existing);
-                return await db.SaveChangesAsync() > 0;
+                _db.TournamentPlayers.Remove(existing);
+                return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
@@ -40,12 +44,11 @@ namespace DataLayer
                 return false;
             }
         }
-        public static async Task<List<DTO_PlayerTournamentInfo>?> GetByPlayerId(int playerId)
+        public async Task<List<DTO_PlayerTournamentInfo>?> GetByPlayerId(int playerId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.TournamentPlayers
+                return await _db.TournamentPlayers
                  .Where(tp => tp.UserId == playerId)
                  .Select(tp => new DTO_PlayerTournamentInfo
                  {
@@ -69,12 +72,11 @@ namespace DataLayer
 
 
         // ================ Read By ================
-        public static async Task<List<TournamentPlayer>> GetByTournamentId(int tournamentId)
+        public async Task<List<TournamentPlayer>> GetByTournamentId(int tournamentId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.TournamentPlayers.Where(x => x.TournamentId == tournamentId).AsNoTracking().ToListAsync();
+                return await _db.TournamentPlayers.Where(x => x.TournamentId == tournamentId).AsNoTracking().ToListAsync();
             }
             catch (Exception ex)
             {
@@ -82,12 +84,11 @@ namespace DataLayer
                 return new List<TournamentPlayer>();
             }
         }
-        public static async Task<TournamentPlayer?> GetByTournamentAndUser(int tournamentId, int userId)
+        public async Task<TournamentPlayer?> GetByTournamentAndUser(int tournamentId, int userId)
         {
             try
             {
-                using var db = new GamersPlatDbContext();
-                return await db.TournamentPlayers.AsNoTracking().FirstOrDefaultAsync(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
+                return await _db.TournamentPlayers.AsNoTracking().FirstOrDefaultAsync(tp => tp.TournamentId == tournamentId && tp.UserId == userId);
             }
             catch (Exception ex)
             {

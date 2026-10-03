@@ -12,6 +12,7 @@ namespace Bussiness.BLL
 {
     public class AdminBLL
     {
+        private readonly AdminDLL _adminDLL;
         private readonly IUser _user;
         private readonly CenterBLL _center;
         private readonly PlayerBLL _player;
@@ -21,7 +22,17 @@ namespace Bussiness.BLL
         private readonly ResourcesTypeBLL _resource;
         private readonly CityBLL _city;
         private readonly CountryBLL _country;
-        public AdminBLL(IUser user, CenterBLL center, PlayerBLL player, OwnerBLL owner, ServiceBLL service, CityBLL city, CountryBLL country, DeviceBLL device, ResourcesTypeBLL resource)
+        public AdminBLL(
+            IUser user,
+            CenterBLL center,
+            PlayerBLL player,
+            OwnerBLL owner,
+            ServiceBLL service,
+            CityBLL city,
+            CountryBLL country,
+            DeviceBLL device,
+            ResourcesTypeBLL resource,
+            AdminDLL adminDLL)
         {
             _user = user;
             _center = center;
@@ -32,13 +43,18 @@ namespace Bussiness.BLL
             _country = country;
             _device = device;
             _resource = resource;
+            _adminDLL = adminDLL;
         }
 
         // ================ Admin Analytics ================
-        public async Task<DTO_AdminStatistics> GetSystemStatistics(DateTime? from = null, DateTime? to = null)
+        public async Task<DTO_AdminStatistics> GetSystemStatistics(
+            DateTime? from = null,
+            DateTime? to = null)
         {
-            if (from.HasValue && to.HasValue && from > to) throw new ArgumentException("From date cannot be later than To date.");
-            return await AdminDLL.GetSystemStatistics(from, to);
+            if (from.HasValue && to.HasValue && from > to)
+                throw new ArgumentException("From date cannot be later than To date.");
+
+            return await _adminDLL.GetSystemStatistics(from, to);
         }
         // ================ Admin Analytics ================
 
@@ -48,13 +64,13 @@ namespace Bussiness.BLL
         public async Task<bool> ApproveCenter(int centerId)
         {
             if (centerId <= 0) throw new ArgumentException("Invalid center ID.");
-            return await AdminDLL.ApproveCenter(centerId);
+            return await _adminDLL.ApproveCenter(centerId);
         }
         public async Task<bool> RejectCenter(int centerId, string reason)
         {
             if (centerId <= 0) throw new ArgumentException("Invalid center ID.");
             if (string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("Rejection reason is required.");
-            return await AdminDLL.RejectCenter(centerId, reason);
+            return await _adminDLL.RejectCenter(centerId, reason);
         }
         // ================ Center Managament ================
 
@@ -89,7 +105,7 @@ namespace Bussiness.BLL
 
         public async Task<bool> AddCountry(Country country) => await _country.Add(country);
         public async Task<bool> UpdateCountry(Country country) => await _country.Update(country);
-        public async Task<bool> DeleteCountry(int countryId) => await _country.Delete(countryId); 
+        public async Task<bool> DeleteCountry(int countryId) => await _country.Delete(countryId);
         // ================ City / Country Management ================
 
 
