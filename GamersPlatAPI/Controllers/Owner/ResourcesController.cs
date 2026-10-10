@@ -2,6 +2,7 @@ using Bussiness;
 using Bussiness.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Domain.DTOs.Owner;
 
 namespace GamersPlatAPI.Controllers.Owner
 {
@@ -19,20 +20,43 @@ namespace GamersPlatAPI.Controllers.Owner
             _center = center;
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Data.ResourcesType rt)
+        public async Task<IActionResult> Create(
+            [FromBody] DTO_CreateResourcesType request)
         {
-            if (rt == null) return BadRequest();
+            var idClaim = User.FindFirst(
+                System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-            var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
+            if (!int.TryParse(idClaim, out var uid))
+                return Unauthorized();
 
-            // ensure owner owns the center
-            var center = await _center.GetByID(rt.CenterId);
-            if (center == null) return NotFound();
-            if (center.OwnerUserId != uid) return Forbid();
-            if (!await _resources.Add(rt)) return StatusCode(500);
-            return CreatedAtAction(nameof(GetById), new { id = _resources.LastId }, rt);
+            var center = await _center.GetByID(request.CenterId);
+
+            if (center == null)
+                return NotFound();
+
+            // Ensure the owner owns the center
+            if (center.OwnerUserId != uid)
+                return Forbid();
+
+            var rt = new Data.ResourcesType
+            {
+                CenterId = request.CenterId,
+                DeviceId = request.DeviceId,
+                HourlyPrice = request.HourlyPrice,
+                TotalQuantity = request.TotalQuantity,
+                RoomType = request.RoomType,
+                IsActive = request.IsActive
+            };
+
+            if (!await _resources.Add(rt))
+                return StatusCode(500);
+
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = _resources.LastId },
+                rt);
         }
 
         [HttpGet("{id:int}")]
@@ -43,23 +67,41 @@ namespace GamersPlatAPI.Controllers.Owner
             return Ok(rt);
         }
 
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Data.ResourcesType rt)
-        {
-            if (rt == null || rt.ResourcesTypeId != id) return BadRequest();
 
-            var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(
+            int id,
+            [FromBody] DTO_UpdateResourcesType request)
+        {
+            var idClaim = User.FindFirst(
+                System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(idClaim, out var uid))
+                return Unauthorized();
 
             var existing = await _resources.GetByID(id);
-            if (existing == null) return NotFound();
 
+            if (existing == null)
+                return NotFound();
+
+            // Ensure the owner owns the center this resource belongs to
             var center = await _center.GetByID(existing.CenterId);
-            if (center == null || center.OwnerUserId != uid) return Forbid();
-            if (!await _resources.Update(rt)) return StatusCode(500);
+
+            if (center == null || center.OwnerUserId != uid)
+                return Forbid();
+
+            // Update only the fields the owner is allowed to change
+            existing.DeviceId = request.DeviceId;
+            existing.HourlyPrice = request.HourlyPrice;
+            existing.TotalQuantity = request.TotalQuantity;
+            existing.RoomType = request.RoomType;
+            existing.IsActive = request.IsActive;
+
+            if (!await _resources.Update(existing))
+                return StatusCode(500);
+
             return NoContent();
         }
-
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {

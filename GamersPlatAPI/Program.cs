@@ -158,6 +158,11 @@ builder.Services.AddSwaggerGen(static options =>
              new string[] {}
          }
      });*/
+    options.AddSecurityRequirement(document =>
+        new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+        });
 });
 //builder.Services.AddSwaggerGen();
 #endregion

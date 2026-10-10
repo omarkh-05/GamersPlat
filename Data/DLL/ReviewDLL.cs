@@ -93,13 +93,14 @@ namespace DataLayer
 
         // ================ Read By ===========
 
+
         public async Task<Review?> GetByID(int reviewId)
         {
             try
             {
                 return await _db.Reviews
-                    .Include(r => r.User.FullName)
-                    .Include(r => r.Center.CenterName)
+                    .Include(r => r.User)
+                    .Include(r => r.Center)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(r => r.ReviewId == reviewId);
             }
@@ -109,6 +110,8 @@ namespace DataLayer
                 return null;
             }
         }
+
+
 
         public async Task<List<Review>?> GetByUserId(int userId)
         {

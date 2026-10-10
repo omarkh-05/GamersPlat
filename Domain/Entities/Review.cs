@@ -20,6 +20,9 @@ public partial class Review
 
     public int Rating { get; set; }
 
+    [StringLength(1000)]
+    public string? Comment { get; set; }
+
     [Column(TypeName = "datetime")]
     public DateTime CreatedAt { get; set; }
 

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using GamersPlatAPI.Controllers.Owner;
+using Domain.DTOs.Owner;
 
 namespace GamersPlatAPI.Controllers
 {
@@ -56,35 +57,107 @@ namespace GamersPlatAPI.Controllers
             return Ok(offers);
         }
 
+
         [Authorize(Roles = "Owner")]
         [HttpPost("offers")]
-        public async Task<IActionResult> CreateOffer([FromBody] Data.Offer offer)
+        public async Task<IActionResult> CreateOffer(
+            [FromBody] CreateOfferDTO request)
         {
-            if (offer == null) return BadRequest();
             var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(id, out var uid)) return Unauthorized();
 
-            var center = await _center.GetByID(offer.CenterId);
-            if (center == null) return NotFound();
-            if (center.OwnerUserId != uid) return Forbid();
-            if (!await _offer.Add(offer)) return StatusCode(500);
-            return CreatedAtAction(nameof(GetCenterOffers), new { centerId = offer.CenterId }, offer);
+            if (!int.TryParse(id, out var uid))
+                return Unauthorized();
+
+            var center = await _center.GetByID(request.CenterId);
+
+            if (center == null)
+                return NotFound();
+
+            if (center.OwnerUserId != uid)
+                return Forbid();
+
+            var offer = new Data.Offer
+            {
+                CenterId = request.CenterId,
+                Title = request.Title,
+                Description = request.Description,
+                DiscountType = request.DiscountType,
+                DiscountValue = request.DiscountValue,
+                MaxUses = request.MaxUses,
+                CurrentUses = 0,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                StartTime = request.StartTime,
+                EndTime = request.EndTime,
+                IsActive = request.IsActive,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            if (!await _offer.Add(offer))
+                return StatusCode(500);
+
+            return CreatedAtAction(
+                nameof(GetCenterOffers),
+                new { centerId = offer.CenterId },
+                new
+                {
+                    offer.OfferId,
+                    offer.CenterId,
+                    offer.Title,
+                    offer.Description,
+                    offer.DiscountType,
+                    offer.DiscountValue,
+                    offer.StartDate,
+                    offer.EndDate,
+                    offer.IsActive
+                });
         }
+
+
 
         [Authorize(Roles = "Owner")]
         [HttpPut("offers/{id:int}")]
-        public async Task<IActionResult> UpdateOffer(int id, [FromBody] Data.Offer offer)
+        public async Task<IActionResult> UpdateOffer(
+            int id,
+            [FromBody] UpdateOfferDTO request)
         {
-            if (offer == null || id != offer.OfferId) return BadRequest();
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
+
+            if (!int.TryParse(idClaim, out var uid))
+                return Unauthorized();
 
             var existing = await _offer.GetByID(id);
-            if (existing == null) return NotFound();
+
+            if (existing == null)
+                return NotFound();
 
             var center = await _center.GetByID(existing.CenterId);
-            if (center == null || center.OwnerUserId != uid) return Forbid();
-            if (!await _offer.Update(offer)) return StatusCode(500);
+
+            if (center == null || center.OwnerUserId != uid)
+                return Forbid();
+
+            var offer = new Data.Offer
+            {
+                OfferId = existing.OfferId,
+                CenterId = existing.CenterId,
+                Title = request.Title,
+                Description = request.Description,
+                DiscountType = request.DiscountType,
+                DiscountValue = request.DiscountValue,
+                MaxUses = request.MaxUses,
+                CurrentUses = existing.CurrentUses,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                StartTime = request.StartTime,
+                EndTime = request.EndTime,
+                IsActive = request.IsActive,
+                CreatedAt = existing.CreatedAt,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            if (!await _offer.Update(offer))
+                return StatusCode(500);
+
             return NoContent();
         }
 

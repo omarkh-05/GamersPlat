@@ -31,13 +31,21 @@ namespace DataLayer
                 return 0;
             }
         }
+
         public async Task<bool> Update(int userId, User updateUserInfoRequest)
         {
             try
             {
                 var existing = await _db.Users.FindAsync(userId);
-                if (existing == null) return false;
-                _db.Entry(existing).CurrentValues.SetValues(updateUserInfoRequest);
+                if (existing == null)
+                    return false;
+
+                existing.FullName = updateUserInfoRequest.FullName;
+                existing.PhoneNumber = updateUserInfoRequest.PhoneNumber;
+                existing.Email = updateUserInfoRequest.Email;
+                existing.CityId = updateUserInfoRequest.CityId;
+                existing.UpdatedAt = DateTime.UtcNow;
+
                 return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
@@ -46,6 +54,8 @@ namespace DataLayer
                 return false;
             }
         }
+
+
         public async Task<bool> Delete(int userId)
         {
             try

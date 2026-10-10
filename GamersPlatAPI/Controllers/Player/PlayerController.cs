@@ -46,18 +46,36 @@ namespace GamersPlatAPI.Controllers
             return Ok(dto);
         }
 
+
         [Authorize]
         [HttpPut("profile")]
-        public async Task<IActionResult> UpdateProfile([FromBody] Data.User model)
+        public async Task<IActionResult> UpdateProfile(
+        [FromBody] Domain.DTOs.Player.DTO_UpdatePlayerProfile request)
         {
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
 
-            if (model == null || model.UserId != userId) return BadRequest();
+            if (!int.TryParse(idClaim, out var userId))
+                return Unauthorized();
 
-            if (!await _user.Update(userId, model)) return StatusCode(500);
+            if (request == null)
+                return BadRequest();
+
+            var updateUser = new Data.User
+            {
+                UserId = userId,
+                FullName = request.FullName,
+                PhoneNumber = request.PhoneNumber,
+                Email = request.Email,
+                CityId = request.CityId
+            };
+
+            if (!await _user.Update(userId, updateUser))
+                return StatusCode(500);
+
             return NoContent();
         }
+
+
 
         [HttpGet("bookings")]
         [Authorize]
