@@ -15,6 +15,7 @@ namespace Bussiness.Interfaces
         Task<List<Booking>> GetAll();
         Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId);
         Task<Booking?> GetByID(int bookingID);
+        Task<DTO_BookingDetails?> GetBookingDetailsByID(int bookingID);
         Task<bool> Accept_RejectBooking(int bookingId, string status);
         Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId);
         Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId);

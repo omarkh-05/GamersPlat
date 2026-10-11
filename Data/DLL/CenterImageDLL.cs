@@ -90,12 +90,12 @@ namespace DataLayer
 
 
         // ================ Read By ================
+
         public async Task<CenterImage?> GetByID(int id)
         {
             try
             {
                 return await _db.CenterImages
-                    .Include(i => i.Center)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(i => i.ImageId == id);
             }
@@ -105,6 +105,8 @@ namespace DataLayer
                 return null;
             }
         }
+
+
         // ================ Read By ================
     }
 }

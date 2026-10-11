@@ -298,6 +298,29 @@ namespace Bussiness
 
         public async Task<Booking?> GetByID(int bookingID)
             => await _bookingDLL.GetByID(bookingID);
+        public async Task<DTO_BookingDetails?> GetBookingDetailsByID(int bookingID)
+        {
+            var booking = await _bookingDLL.GetByID(bookingID);
+
+            if (booking == null)
+                return null;
+
+            return new DTO_BookingDetails
+            {
+                CustomerName = booking.CustomerName,
+                PhoneNumber = booking.PhoneNumber,
+                CenterName = booking.Center?.CenterName,
+                ResourcesType = booking.ResourcesType?.ToString(),
+                BookingDate = booking.BookingDate,
+                StartTime = booking.StartTime,
+                EndTime = booking.EndTime?.ToString("HH:mm:ss") ?? "",
+                Duration = booking.EndTime.HasValue
+                    ? (booking.EndTime.Value.ToTimeSpan() - booking.StartTime.ToTimeSpan()).ToString()
+                    : "",
+                TotalPrice = booking.TotalPrice,
+                Status = booking.Status
+            };
+        }
 
         // ================ Read By ================
 

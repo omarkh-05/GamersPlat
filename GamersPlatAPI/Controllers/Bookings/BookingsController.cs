@@ -98,8 +98,11 @@ namespace GamersPlatAPI.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(int id)
         {
-            var booking = await _booking.GetByID(id);
-            if (booking == null) return NotFound();
+            var booking = await _booking.GetBookingDetailsByID(id);
+
+            if (booking == null)
+                return NotFound();
+
             return Ok(booking);
         }
 
