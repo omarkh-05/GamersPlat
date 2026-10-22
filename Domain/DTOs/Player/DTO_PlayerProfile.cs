@@ -13,7 +13,7 @@ namespace Domain.DTOs.Player
 
         public string? Email { get; set; }
 
-        public int CityId { get; set; }
+        public string CityName { get; set; } = "(choose your city)";
 
         public int? Points { get; set; } = 0;
 

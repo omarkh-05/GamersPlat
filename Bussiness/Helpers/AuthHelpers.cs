@@ -1,11 +1,12 @@
-﻿using Data;
+﻿using Bussiness.Interfaces;
+using Data;
+using Domain.DTOs.Auth;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Bussiness.Interfaces;
 
 namespace Bussiness.Helpers
 {
@@ -17,20 +18,20 @@ namespace Bussiness.Helpers
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
-        public string GenerateAccessToken(User user)
+        public string GenerateAccessToken(DTO_UserAuthInfo user)
         {
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.MobilePhone, user.PhoneNumber)
+                new Claim(ClaimTypes.MobilePhone, user.PhoneNumber ?? string.Empty)
             };
 
-            if (user.UserRoles != null)
+            if (user.Role != null)
             {
-                foreach (var ur in user.UserRoles)
+                foreach (var roleName in user.Role)
                 {
-                    if (ur?.Role?.RoleName != null)
-                        claims.Add(new Claim(ClaimTypes.Role, ur.Role.RoleName));
+                    if (!string.IsNullOrWhiteSpace(roleName))
+                        claims.Add(new Claim(ClaimTypes.Role, roleName));
                 }
             }
 

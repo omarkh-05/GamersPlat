@@ -1,6 +1,7 @@
 using Data;
 using Data.DLL;
 using Data.EF;
+using Domain.DTOs.City;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
@@ -73,18 +74,23 @@ namespace DataLayer
             }
         }
 
-        public async Task<List<City>> GetAll()
+        public async Task<List<DTO_AllCities>> GetAll()
         {
             try
             {
                 return await _db.Cities
                     .AsNoTracking()
+                    .Select(c => new DTO_AllCities
+                    {
+                        CityId = c.CityId,
+                        Name = c.Name
+                    })
                     .ToListAsync();
             }
             catch (Exception ex)
             {
                 EventLog_Helper.WriteEventLog("Get All Cities Error", ex);
-                return new List<City>();
+                return new List<DTO_AllCities>();
             }
         }
 
@@ -106,7 +112,34 @@ namespace DataLayer
                 return null;
             }
         }
-
+        public async Task<int> GetIdByName(string name)
+        {
+            try
+            {
+                return await _db.Cities
+                    .AsNoTracking()
+                    .Where(c=>c.Name == name)
+                    .Select(c => c.CityId)
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get City ID By Name Error", ex);
+                return -1;
+            }
+        }
+        public async Task<bool> CityExist(int id)
+        {
+            try
+            {
+                return await _db.Cities.AnyAsync(c => c.CityId == id);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get City By ID Error", ex);
+                return false;
+            }
+        }
         // ================ Read By ================
     }
 }

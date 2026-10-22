@@ -86,15 +86,8 @@ namespace Bussiness.BLL
             {
                 throw new ArgumentException("Invalid owner ID.");
             }
-            var updateUser = new User
-            {
-                FullName = updateUserInfoRequest.FullName,
-                PhoneNumber = updateUserInfoRequest.PhoneNumber,
-                PasswordHash = updateUserInfoRequest.PasswordHash,
-                Email = updateUserInfoRequest.Email,
-                CityId = updateUserInfoRequest.CityId
-            };
-            bool userUpdated = await _user.Update(ownerId, updateUser);
+           
+            bool userUpdated = await _user.Update(ownerId, updateUserInfoRequest);
             if (!userUpdated)
             {
                 throw new InvalidOperationException("Failed to update user information.");
@@ -321,13 +314,14 @@ namespace Bussiness.BLL
 
 
         // ================ Bookings Management ================
-        public async Task<bool> AddBooking(DTO_AddBooking booking)
+        public async Task<bool> AddBooking(DTO_BookingBase booking, int ownerUserId)
         {
             if(booking == null)
             {
                 throw new ArgumentNullException(nameof(booking), "Booking cannot be null while adding booking");
             }
-            return await _booking.Add(booking);
+            // Owner initiated bookings should be linked to the owner's user account
+            return await _booking.Add(booking, ownerUserId, null, null);
         }
         public async Task<bool> UpdateBooking(DTO_UpdateBooking booking)
         {
@@ -335,7 +329,7 @@ namespace Bussiness.BLL
             {
                 throw new ArgumentNullException(nameof(booking), "Booking cannot be null while updating booking");
             }
-            return await _booking.Update(booking);
+            return await _booking.Update(booking,0);
         }
         public async Task<bool> AcceptBooking(int bookingId,int ownerUserId)
         {
@@ -447,15 +441,7 @@ namespace Bussiness.BLL
             => await _staff.Add(staffMember);
         public async Task<bool> UpdateStaffMember(int userId,DTO_UpdateUserInfoRequest request) 
         {
-            User user = new User
-            {
-                FullName = request.FullName,
-                PhoneNumber = request.PhoneNumber,
-                PasswordHash = request.PasswordHash,
-                Email = request.Email,
-                CityId = request.CityId
-            };
-            return await _user.Update(userId, user);
+            return await _user.Update(userId, request);
         }
         public async Task<bool> DeleteStaffMember(int userId)
         {

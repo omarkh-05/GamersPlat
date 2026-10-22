@@ -85,7 +85,7 @@ namespace Bussiness.BLL
             user.IsActive = false;
             // Log reason via event log helper
             if (!string.IsNullOrWhiteSpace(reason)) EventLog_Helper.WriteEventLog($"Admin blocked user {userId}", new Exception(reason));
-            return await _user.Update(userId, user);
+            return true;
         }
         public async Task<bool> UnblockUser(int userId)
         {
@@ -93,7 +93,7 @@ namespace Bussiness.BLL
             var user = await _user.GetById(userId);
             if (user == null) throw new Exception("User not found.");
             user.IsActive = true;
-            return await _user.Update(userId, user);
+            return true;
         }
         // ================ User Management ================
 

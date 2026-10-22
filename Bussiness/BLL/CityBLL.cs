@@ -1,5 +1,6 @@
 using Data;
 using DataLayer;
+using Domain.DTOs.City;
 
 namespace Bussiness
 {
@@ -25,7 +26,7 @@ namespace Bussiness
         public async Task<bool> Delete(int id)
             => await _cityDLL.Delete(id);
 
-        public async Task<List<City>> GetAll()
+        public async Task<List<DTO_AllCities>> GetAll()
             => await _cityDLL.GetAll();
 
         // ================ CRUD ================
@@ -34,7 +35,9 @@ namespace Bussiness
         // ================ Read By ================
         public async Task<City?> GetByID(int id)
             => await _cityDLL.GetByID(id);
-
+        public async Task<int> GetIdByName(string name) => await _cityDLL.GetIdByName(name);
+        public async Task<bool> CityExist(int id)
+            => await _cityDLL.CityExist(id);
         // ================ Read By ================
     }
 }

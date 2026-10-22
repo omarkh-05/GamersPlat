@@ -61,10 +61,7 @@ namespace Bussiness
 
             return centerID > 0;
         }
-
-        public async Task<bool> Update(
-            DTO_UpdateCenter center,
-            int ownerId)
+        public async Task<bool> Update(DTO_UpdateCenter center, int ownerId)
         {
             if (center == null)
                 throw new ArgumentNullException(
@@ -89,26 +86,12 @@ namespace Bussiness
 
             return true;
         }
-
-        public async Task<bool> UpdateActiveStatus(
-            int centerId,
-            int ownerId)
+        public async Task<bool> UpdateActiveStatus(int centerId, int ownerId)
             => await _centerDLL.UpdateActiveStatus(centerId, ownerId);
-
-        public async Task<bool> ToggleCenterStatus(
-            int centerId,
-            string status,
-            int ownerId)
-            => await _centerDLL.ToggleCenterStatus(
-                centerId,
-                status,
-                ownerId);
-
-        public async Task<bool> Delete(int centerId)
-            => await _centerDLL.Delete(centerId);
-
-        public async Task<List<DTO_HomePageCentersDetails>> GetAll()
-            => await _centerDLL.GetAll();
+        public async Task<bool> ToggleCenterStatus(int centerId, string status, int ownerId)
+            => await _centerDLL.ToggleCenterStatus(centerId, status, ownerId);
+        public async Task<bool> Delete(int centerId) => await _centerDLL.Delete(centerId);
+        public async Task<List<DTO_HomePageCentersDetails>> GetAll() => await _centerDLL.GetAll();
 
         // ================ CRUD ================
 
@@ -121,28 +104,21 @@ namespace Bussiness
 
             return await _centerDLL.GetByID(centerId);
         }
-
-        public async Task<DTO_CenterDetails?> GetCenterDetailsById(
-            int centerId)
+        public async Task<DTO_CenterDetails?> GetCenterDetailsById(int centerId)
         {
             if (centerId <= 0)
                 throw new ArgumentException("Invalid center ID.");
 
             return await _centerDLL.GetCenterDetailsById(centerId);
         }
-
-        public async Task<List<DTO_CentersListDetails>> GetAllCentersByOwnerId(
-            int ownerId)
+        public async Task<List<DTO_CentersListDetails>> GetAllCentersByOwnerId(int ownerId)
         {
             if (ownerId <= 0)
                 throw new ArgumentException("Invalid owner ID.");
 
             return await _centerDLL.GetAllCentersByOwnerId(ownerId);
         }
-
-        public async Task<List<string>> GetCenterNames()
-            => await _centerDLL.GetCenterNames();
-
+        public async Task<List<string>> GetCenterNames() => await _centerDLL.GetCenterNames();
         // ================ Read By ================
     }
 }

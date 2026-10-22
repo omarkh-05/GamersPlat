@@ -31,14 +31,19 @@ namespace DataLayer
                 return 0;
             }
         }
-        public async Task<bool> Update(int userId, User updateUserInfoRequest)
+        public async Task<bool> Update(int userId, DTO_UpdateUserInfoRequest dto)
         {
-            try
-            {
-                var existing = await _db.Users.FindAsync(userId);
-                if (existing == null) return false;
-                _db.Entry(existing).CurrentValues.SetValues(updateUserInfoRequest);
-                return await _db.SaveChangesAsync() > 0;
+            try {
+            var existing = await _db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+            if (existing == null) return false;
+
+            existing.FullName = dto.FullName;
+            existing.PhoneNumber = dto.PhoneNumber;
+            existing.Email = dto.Email;
+            existing.CityId = dto.CityId;
+
+            await _db.SaveChangesAsync();
+            return true;
             }
             catch (Exception ex)
             {
@@ -95,13 +100,26 @@ namespace DataLayer
 
 
         // ================ Read By ================
-        public async Task<User?> GetById(int userId)
+        public async Task<DTO_UserInfoRequest?> GetById(int userId)
         {
             try
             {
                 return await _db.Users
-                    .Include(u => u.UserRoles!)
-                        .ThenInclude(ur => ur.Role)
+                    .Where(u=>u.UserId == userId)
+                    .Select(u => new DTO_UserInfoRequest
+                    {
+                        UserId = u.UserId,
+                        FullName = u.FullName,
+                        Email = u.Email,
+                        PhoneNumber = u.PhoneNumber,
+                        CityName = u.City.Name,
+                        IsActive = u.IsActive,
+                        PhoneVerified = u.PhoneVerified == false ? false : true,
+                        EmailVerified = u.EmailVerified == false ? false : true,
+                        Roles = u.UserRoles
+                    .Select(ur => ur.Role.RoleName)
+                    .ToList()
+                    })
                     .FirstOrDefaultAsync(u => u.UserId == userId);
             }
             catch (Exception ex)
@@ -122,10 +140,10 @@ namespace DataLayer
                             PhoneNumber = u.PhoneNumber,
                             FullName = u.FullName,
                             Email = u.Email,
-                            CityId = u.CityId,
+                            CityName = u.City.Name,
                             Points = u.Points,
                             IsActive = u.IsActive,
-                            Role = u.UserRoles.Select(ur => ur.Role.RoleName).FirstOrDefault() ?? "",
+                            Roles = u.UserRoles.Select(ur => ur.Role.RoleName).ToList() ?? null,
                             PhoneVerified = u.PhoneVerified == false ? false : true,
                             EmailVerified = u.EmailVerified == false ? false : true
                         })
@@ -148,10 +166,10 @@ namespace DataLayer
               PhoneNumber = u.PhoneNumber,
               FullName = u.FullName,
               Email = u.Email,
-              CityId = u.CityId,
+              CityName = u.City.Name,
               Points = u.Points,
               IsActive = u.IsActive,
-              Role = u.UserRoles.Select(ur => ur.Role.RoleName).FirstOrDefault() ?? "",
+              Roles = u.UserRoles.Select(ur => ur.Role.RoleName).ToList() ?? null,
               PhoneVerified = u.PhoneVerified == false ? false : true,
               EmailVerified = u.EmailVerified == false ? false : true
           })
@@ -182,6 +200,7 @@ namespace DataLayer
 
 
         // ================ Validation ============
+        public async Task<bool> ExistsById(int userId) => await _db.Users.AnyAsync(u => u.UserId == userId);
         public async Task<bool> ExistsByEmail(string? email, int excludeId = 0)
         {
             try

@@ -8,7 +8,7 @@ namespace GamersPlatAPI.DTOs
         public string PhoneNumber { get; set; } = null!;
         public int Points { get; set; }
         public bool IsActive { get; set; }
-        public short CityId { get; set; }
+        public string CityName { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public bool EmailVerified { get; set; }
         public bool PhoneVerified { get; set; }

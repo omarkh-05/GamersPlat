@@ -9,6 +9,7 @@ using GamersPlatAPI.Authorization;
 using GamersPlatAPI.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -168,7 +169,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("GamersPlatAPIpolicy", policy =>
     {
-        policy.WithOrigins()
+        policy.WithOrigins("http://localhost:3000")
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials(); // السماح بالوصول مع credentials
@@ -202,8 +203,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = "GamersPlatUsers",
             // The secret key used to validate the JWT signature.
             // This must be the same key used when generating the token.
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
-
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         };
 
         options.Events = new JwtBearerEvents
@@ -240,6 +240,11 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (ctx, ct) =>
+    {
+        ctx.HttpContext.Response.ContentType = "text/plain";
+        await ctx.HttpContext.Response.WriteAsync("Too many attempts. Please try again later.", ct);
+    };
 
     options.AddPolicy("AuthLimiter", httpContext =>
     {
@@ -252,6 +257,44 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(2),
                 QueueLimit = 0
+            });
+    });
+
+    options.AddPolicy("RefreshLimiter", httpContext =>
+    {
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ip,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+
+    options.AddFixedWindowLimiter("guest-booking", limiter =>
+    {
+        limiter.PermitLimit = 5;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+    });
+
+    options.AddPolicy("user-booking", context =>
+    {
+        var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        var key = string.IsNullOrWhiteSpace(userId)? context.Connection.RemoteIpAddress?.ToString()?? "unknown" : $"user:{userId}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: key,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
             });
     });
 });

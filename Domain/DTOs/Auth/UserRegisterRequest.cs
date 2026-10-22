@@ -18,12 +18,12 @@ namespace Domain.DTOs.Auth
         public string? Email { get; set; }
 
         [Required]
-        public short CityId { get; set; }
+        public short CityId { get; set; } = 1;
 
         //[Required]
         //public DateTime DateOfBirth { get; set; }
 
-        [Required, MinLength(6)]
+        [Required, MinLength(8)]
         public string Password { get; set; } = null!;
     }
 }

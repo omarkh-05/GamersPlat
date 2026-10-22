@@ -1,11 +1,11 @@
 using Bussiness.Interfaces;
+using Domain.DTOs.Auth;
 using Domain.DTOs.Booking;
-using System.Net.Mime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
-using System;
-using System.Threading.Tasks;
+using Bussiness.Helpers;
 
 namespace GamersPlatAPI.Controllers
 {
@@ -23,162 +23,123 @@ namespace GamersPlatAPI.Controllers
             _resourcesTypeService = resourcesTypeService ?? throw new ArgumentNullException(nameof(resourcesTypeService));
             _ownerService = ownerService ?? throw new ArgumentNullException(nameof(ownerService));
         }
+        public readonly record struct BookingCreateResult(int StatusCode, string? Message = null, int BookingId = 0)
+        {
+            public bool IsSuccess => StatusCode is >= 200 and < 300;
+
+            public static BookingCreateResult Created(int id) => new(StatusCodes.Status201Created, null, id);
+            public static BookingCreateResult BadRequest(string msg) => new(StatusCodes.Status400BadRequest, msg);
+            public static BookingCreateResult Conflict(string msg) => new(StatusCodes.Status409Conflict, msg);
+            public static BookingCreateResult ServerError(string msg) => new(StatusCodes.Status500InternalServerError, msg);
+        }
+
 
         [Authorize]
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
+        [EnableRateLimiting("user-booking")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
-        [Produces(MediaTypeNames.Application.Json)]
         public async Task<IActionResult> Create([FromBody] DTO_AddBooking dto)
         {
             if (dto == null) return BadRequest();
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
+
+            return await CreateInternal(dto, userId);
+        }
+
+        [HttpPost("guest")]
+        [EnableRateLimiting("guest-booking")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateGuest([FromBody] DTO_AddGuestBooking dto)
+        {
+            var validationError = ValidateRegisterDto.Validate(dto);
+            if (validationError != null)
+                return BadRequest(new { message = validationError });
+
+            var result = await _booking.CreateGuestBookingAsync(dto);
+
+            if (result.Failure == GuestBookingFailure.ExistingAccount)
+                return Conflict(new { message = result.Message });
+
+            if (result.Failure == GuestBookingFailure.RegistrationFailed)
+                return StatusCode(500, new { message = result.Message });
+
+            if (!result.Success)
+            {
+                var statusCode = result.Message?.Contains("availability", StringComparison.OrdinalIgnoreCase) == true ||
+                                 result.Message?.Contains("Insufficient", StringComparison.OrdinalIgnoreCase) == true
+                    ? StatusCodes.Status409Conflict
+                    : result.Message?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true
+                        ? StatusCodes.Status404NotFound
+                        : StatusCodes.Status400BadRequest;
+
+                return StatusCode(statusCode, new { message = result.Message, token = (object?)null, accountCreated = false });
+            }
+
+            return CreatedAtAction(nameof(GetById), new { id = result.BookingId }, new { id = result.BookingId, token = result.Token });
+        }
+
+        [Authorize(Roles = "Admin,Staff")]
+        [HttpPost("admin")]
+        [EnableRateLimiting("user-booking")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateByAdmin([FromBody] DTO_AdminAddBooking dto)
+        {
+            if (dto == null) 
+                return BadRequest();
 
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
-            dto.UserId = userId;
 
-            var rt = await _resourcesTypeService.GetByID(dto.ResourcesTypeId);
-            if (rt == null) return BadRequest(new { message = "ResourcesType not found" });
+                if (string.IsNullOrWhiteSpace(dto.CustomerName) || string.IsNullOrWhiteSpace(dto.PhoneNumber))
+                    return BadRequest(new { message = "credentials required" });
 
-            var ok = await _booking.Add(dto);
-            if (!ok)
-            {
-                var err = _booking.LastError;
-                if (!string.IsNullOrWhiteSpace(err))
-                {
-                    if (err.Contains("availability", StringComparison.OrdinalIgnoreCase) || err.Contains("Insufficient", StringComparison.OrdinalIgnoreCase))
-                        return Conflict(new { message = err });
-                    if (err.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                        return NotFound(new { message = err });
-                    return BadRequest(new { message = err });
-                }
-                return StatusCode(500);
-            }
-
-            return CreatedAtAction(nameof(GetById), new { id = _booking.LastId }, dto);
-        }
-
-        [HttpGet("check-availability")]
-        public async Task<IActionResult> CheckAvailability([FromQuery] int centerId, [FromQuery] int resourcesTypeId, [FromQuery] DateTime date, [FromQuery] int? quantity)
-        {
-            try
-            {
-                var dateOnly = DateOnly.FromDateTime(date);
-
-                var resource = await _resourcesTypeService.GetByID(resourcesTypeId);
-                if (resource == null || resource.CenterId != centerId) return NotFound(new { message = "Resource type not found" });
-
-                // Use booking service to compute booked quantity (service should encapsulate data access)
-                var booked = await _booking.GetBookedQuantity(centerId, resourcesTypeId, dateOnly);
-                var available = resource.TotalQuantity - booked;
-
-                var result = new
-                {
-                    CenterId = centerId,
-                    ResourcesTypeId = resourcesTypeId,
-                    Date = dateOnly,
-                    Available = available,
-                    RequestedQuantity = quantity ?? 0,
-                    CanFulfill = quantity.HasValue ? available >= quantity.Value : (bool?)null
-                };
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error checking availability", detail = ex.Message });
-            }
+            return await CreateInternal(dto, userId, dto.CustomerName, dto.PhoneNumber);
         }
 
         [Authorize]
-        [HttpGet("{id:int}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetById(int id)
-        {
-            var booking = await _booking.GetByID(id);
-            if (booking == null) return NotFound();
-            return Ok(booking);
-        }
-
-        [Authorize]
-        [HttpPut("{id:int}")]
+        [HttpPut("update")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Update(int id, [FromBody] DTO_UpdateBooking dto)
+        public async Task<IActionResult> Update([FromBody] DTO_UpdateBooking dto)
         {
-            if (dto == null || dto.BookingId != id) return BadRequest();
-
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
+            if (!int.TryParse(idClaim, out var userid)) return Unauthorized();
 
-            // fetch existing booking to validate ownership
-            var existing = await _booking.GetByID(id);
-            if (existing == null) return NotFound();
-
-            // allow only booking owner or admin
-            if (existing.UserId.HasValue)
-            {
-                if (existing.UserId.Value != uid && !User.IsInRole("Admin")) return Forbid();
-            }
-
-            var ok = await _booking.Update(dto);
+            var ok = await _booking.Update(dto, userid);
             if (!ok)
             {
-                var err = _booking.LastError;
-                if (!string.IsNullOrWhiteSpace(err))
-                {
-                    if (err.Contains("not found", StringComparison.OrdinalIgnoreCase)) return NotFound(new { message = err });
+                var err = _booking.LastError ?? "Failed to update booking";
+
+                if (err.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                    return NotFound(new { message = err });
+
+                if (err.Contains("not authorized", StringComparison.OrdinalIgnoreCase))
+                    return Forbid();
+
+                if (err.Contains("not available", StringComparison.OrdinalIgnoreCase) ||
+                    err.Contains("quantity", StringComparison.OrdinalIgnoreCase) ||
+                    err.Contains("conflict", StringComparison.OrdinalIgnoreCase))
+                    return Conflict(new { message = err });
+
+                if (err.Contains("Only pending or accepted", StringComparison.OrdinalIgnoreCase))
+                    return Conflict(new { message = err });
+
+                if (!string.IsNullOrWhiteSpace(_booking.LastError))
                     return BadRequest(new { message = err });
-                }
-                return StatusCode(500);
-            }
 
-            return NoContent();
-        }
-
-        [Authorize]
-        [HttpPut("cancel/{id:int}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Cancel(int id)
-        {
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
-
-            var existing = await _booking.GetByID(id);
-            if (existing == null) return NotFound();
-
-            // Only booking owner, owner of center, or admin can cancel
-            if (existing.UserId.HasValue && existing.UserId.Value == uid)
-            {
-                // allowed
-            }
-            else if (User.IsInRole("Owner"))
-            {
-                // owner: ensure they own the center
-                var center = await _resourcesTypeService.GetByID(existing.ResourcesTypeId);
-                if (center == null) return NotFound();
-                if (center.CenterId != existing.CenterId) return Forbid();
-            }
-            else if (!User.IsInRole("Admin"))
-            {
-                return Forbid();
-            }
-
-            var ok = await _booking.Cancel(id);
-            if (!ok)
-            {
-                var err = _booking.LastError;
-                if (!string.IsNullOrWhiteSpace(err)) return BadRequest(new { message = err });
-                return StatusCode(500);
+                return StatusCode(StatusCodes.Status500InternalServerError);
             }
 
             return NoContent();
@@ -197,6 +158,70 @@ namespace GamersPlatAPI.Controllers
             var ok = await _booking.Delete(id);
             if (!ok) return StatusCode(500);
             return NoContent();
+        }
+
+        [Authorize]
+        [HttpPut("cancel")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Cancel(DTO_CancelBooking dto)
+        {
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(idClaim, out var userid)) return Unauthorized();
+
+            var ok = await _booking.Cancel(dto, userid);
+            if (!ok)
+            {
+                var err = _booking.LastError ?? "Failed to cancel booking";
+
+                if (err.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                    return NotFound(new { message = err });
+
+                if (err.Contains("not authorized", StringComparison.OrdinalIgnoreCase))
+                    return Forbid();
+
+                if (err.Contains("cannot be cancelled", StringComparison.OrdinalIgnoreCase) ||
+                    err.Contains("already cancelled", StringComparison.OrdinalIgnoreCase))
+                    return Conflict(new { message = err });
+
+                if (!string.IsNullOrWhiteSpace(_booking.LastError))
+                    return BadRequest(new { message = err });
+
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var booking = await _booking.GetByID(id);
+            if (booking == null) return NotFound();
+
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
+
+            // Allow access to the booking owner or admin/staff only
+            if (booking.UserId.HasValue)
+            {
+                if (booking.UserId.Value != uid && !User.IsInRole("Admin") && !User.IsInRole("Staff")) return Forbid();
+            }
+
+            return Ok(booking);
+        }
+
+        [HttpGet("fully-booked-hours")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetFullyBookedHours([FromQuery] int centerId,[FromQuery] int resourceTypeId,[FromQuery] DateOnly date)
+        {
+            List<DTO_StartEndTime>? fullTimeList = await _booking.GetFullBookedHours(centerId, resourceTypeId, date);
+            return Ok(fullTimeList);
         }
 
         [Authorize]
@@ -281,6 +306,29 @@ namespace GamersPlatAPI.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+
+
+
+        // Internal method to handle booking creation logic
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        private async Task<IActionResult> CreateInternal(DTO_BookingBase dto, int bookingUserId, string? customerName = null, string? phone = null)
+        {
+            var ok = await _booking.Add(dto, bookingUserId, customerName, phone);
+            if (!ok)
+            {
+                var err = _booking.LastError;
+                if (string.IsNullOrWhiteSpace(err)) return StatusCode(500);
+                if (err.Contains("availability", StringComparison.OrdinalIgnoreCase) ||
+                    err.Contains("Insufficient", StringComparison.OrdinalIgnoreCase)) return Conflict(new { message = err });
+                if (err.Contains("not found", StringComparison.OrdinalIgnoreCase)) return NotFound(new { message = err });
+                return BadRequest(new { message = err });
+            }
+            return CreatedAtAction(nameof(GetById), new { id = _booking.LastId }, new { id = _booking.LastId });
         }
     }
 }

@@ -6,9 +6,11 @@ namespace Domain.DTOs.Player
 {
     public class DTO_PlayerBookingsInfo
     {
+        public int BookingId { get; set; }
         public string CenterName { get; set; } = null!;
         public string Resource { get; set; } = null!;
-        public string? GameName { get; set; } = "";
+        public TimeOnly StartTime { get; set; }
+        public TimeOnly? EndTime { get; set; }
         public int? OfferId { get; set; } = 0;
         public int Quantity { get; set; } = 0;
         public decimal TotalPrice { get; set; } = 0;

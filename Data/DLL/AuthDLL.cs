@@ -14,54 +14,38 @@ namespace Data.DLL
         }
 
         // ================ Read By For Auth ================
-        public async Task<DTO_UserAuthInfo?> GetUserAuthByPhone(string phoneNumber)
+        public async Task<DTO_UserAuthInfo?> GetUserAuth(string? phoneNumber = null,int? userId = null)
         {
+            if (string.IsNullOrWhiteSpace(phoneNumber) && userId == null)
+                return null;
             try
             {
-                if (string.IsNullOrWhiteSpace(phoneNumber)) return null;
+                var query = _db.Users.AsQueryable();
 
-                return await _db.Users
-                    .Where(u => u.PhoneNumber == phoneNumber)
+                if (userId.HasValue)
+                    query = query.Where(u => u.UserId == userId.Value);
+                else
+                    query = query.Where(u => u.PhoneNumber == phoneNumber);
+
+                return await query
                     .Select(u => new DTO_UserAuthInfo
                     {
                         UserId = u.UserId,
                         PasswordHash = u.PasswordHash,
                         PhoneNumber = u.PhoneNumber,
                         Email = u.Email,
-                        IsActive = u.IsActive,
+                        FullName = u.FullName,
+                        Role = u.UserRoles.Select(ur => ur.Role.RoleName).ToList(),
+                        IsActive = u.IsActive
                     })
                     .FirstOrDefaultAsync();
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get User Auth By Phone Error", ex);
+                EventLog_Helper.WriteEventLog("Get User Auth Error", ex);
                 return null;
             }
         }
-
-        public async Task<DTO_UserAuthInfo?> GetUserAuthByID(int userId)
-        {
-            try
-            {
-                return await _db.Users
-                    .Where(u => u.UserId == userId)
-                    .Select(u => new DTO_UserAuthInfo
-                    {
-                        UserId = u.UserId,
-                        PasswordHash = u.PasswordHash,
-                        PhoneNumber = u.PhoneNumber,
-                        Email = u.Email,
-                        IsActive = u.IsActive,
-                    })
-                    .FirstOrDefaultAsync();
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Get User Auth By ID Error", ex);
-                return null;
-            }
-        }
-
         // ================ Read By For Auth ================
 
 
@@ -75,7 +59,7 @@ namespace Data.DLL
                 if (existing == null) return false;
 
                 existing.PasswordHash = newPasswordHash;
-                existing.UpdatedAt = DateTime.UtcNow;
+                existing.UpdatedAt = DateTime.Now;
 
                 return await _db.SaveChangesAsync() > 0;
             }

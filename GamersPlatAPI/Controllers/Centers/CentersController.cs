@@ -26,7 +26,7 @@ namespace GamersPlatAPI.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var c = await _center.GetByID(id);
+            var c = await _center.GetCenterDetailsById(id);
             if (c == null) return NotFound();
             return Ok(c);
         }

@@ -110,6 +110,18 @@ namespace DataLayer
                 return null;
             }
         }
+        public async Task<bool> CheckCenterAndResource(int centerId,int resourceId)
+        {
+            try {
+            var resourceExists = await _db.ResourcesTypes.AnyAsync(r => r.ResourcesTypeId == resourceId && r.CenterId == centerId);
+                return resourceExists;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Check Center And Resource Error", ex);
+                return false;
+            }
+        }
         // ================ Read By ===========
     }
 }

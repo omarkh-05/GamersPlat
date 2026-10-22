@@ -1,4 +1,5 @@
 using Bussiness.Interfaces;
+using Data;
 using Domain.DTOs.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,27 +18,38 @@ namespace GamersPlatAPI.Controllers
         {
             _authService = authService;
         }
-
+       
         // ================ User Auth Management ================
+        private CookieOptions RefreshCookieOptions() => new()
+        {
+            HttpOnly = true,
+            Secure = true, // in production it must be true
+            SameSite = SameSiteMode.None, // in production it must be SameSiteMode.Strict - مهم عند cross-origin (127.0.0.1:5500 → localhost:7018)
+            Expires = DateTime.UtcNow.AddDays(7),
+            Path = "/"
+        };
+
         [HttpPost("register/player")]
         [EnableRateLimiting("AuthLimiter")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> PlayerRegister([FromBody] UserRegisterRequest request)
         {
+            if (request == null)
+                return BadRequest("Invalid registration data");
+
             try
             {
-                if (request == null)
-                    return BadRequest("Invalid registration data");
-
-                // فهيك ربطناهم مع بعض DI(builder.Services.AddScoped<IAuthService, AuthBLL>();) عملنا program.cs لما اضغط على الفنكشن راح يوديني على الانتر فيس ولكن الانتر فيس هو راح يعرف اي فنكشن مقصود من كلاس الاوث بزنس لانه في ال program.cs 
                 await _authService.RegisterWithRoleAsync(request, "Player");
-
                 return Ok(new { message = "Player registered successfully" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return StatusCode(500, "Registration failed. Please try again." + ex.Message);
             }
         }
 
@@ -47,129 +59,99 @@ namespace GamersPlatAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> OwnerRegister([FromBody] UserRegisterRequest request)
         {
+            if (request == null)
+                return BadRequest("Invalid registration data");
+
             try
             {
-                if (request == null)
-                    return BadRequest("Invalid registration data");
-
                 await _authService.RegisterWithRoleAsync(request, "Owner");
-
                 return Ok(new { message = "Owner registered successfully" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return StatusCode(500, "Registration failed. Please try again." + ex.Message);
             }
         }
 
         [HttpPost("Login")]
         [EnableRateLimiting("AuthLimiter")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            if (request == null ||
+                string.IsNullOrEmpty(request.PhoneNumber) ||
+                string.IsNullOrEmpty(request.Password))
+                return BadRequest("Phone number and password are required");
+
             try
             {
-                if (string.IsNullOrEmpty(request.PhoneNumber) || string.IsNullOrEmpty(request.Password))
-                    return BadRequest("Phone number and password are required");
-
                 var result = await _authService.LoginAsync(request);
-
-
-                Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
+                Response.Cookies.Append("refreshToken", result.RefreshToken, RefreshCookieOptions());
+                
+                return Ok(new
                 {
-                    HttpOnly = true,
-                    Secure = false, // in production it must be true
-                    SameSite = SameSiteMode.None, // in production it must be SameSiteMode.Strict - مهم عند cross-origin (127.0.0.1:5500 → localhost:7018)
-                    Expires = DateTime.UtcNow.AddDays(7),
-                    Path = "/"
+                    result.AccessToken,
+                    result.UserName,
+                    result.UserRole
                 });
-
-                return Ok(result);
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
-                return NotFound("Invalid credentials" + ex.Message);
+                return Unauthorized("Invalid credentials");
             }
         }
 
         [HttpPost("Refresh")]
-        [EnableRateLimiting("AuthLimiter")]
+        [EnableRateLimiting("RefreshLimiter")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Refresh()
         {
             try
             {
-                // اقرأ refresh token من HttpOnly cookie
-                if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+                if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken) ||
+                    string.IsNullOrEmpty(refreshToken))
                     throw new UnauthorizedAccessException("Refresh token missing");
 
                 var result = await _authService.RefreshAsync(refreshToken);
 
-                // ضع refresh token الجديد في HttpOnly cookie
-                Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = false, // in production it must be true
-                    SameSite = SameSiteMode.None, // in production it must be SameSiteMode.Strict - مهم عند cross-origin (127.0.0.1:5500 → localhost:7018)
-                    Expires = DateTime.UtcNow.AddDays(7),
-                    Path = "/"
-                });
+                // rotation: الجديد بالكوكي، والقديم لازم يكون انلغى بالـ BLL
+                Response.Cookies.Append("refreshToken", result.RefreshToken, RefreshCookieOptions());
 
-                return Ok(new { AccessToken = result.AccessToken });
+                return Ok(new { result.AccessToken, result.UserName, result.UserRole });
             }
             catch (UnauthorizedAccessException ex)
             {
+                // إذا فشل، امسح الكوكي الفاسدة
+                Response.Cookies.Delete("refreshToken", RefreshCookieOptions());
                 return Unauthorized(ex.Message);
             }
         }
 
         [HttpPost("Logout")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Logout()
         {
             try
             {
-                if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
-                    throw new UnauthorizedAccessException("Refresh token missing");
-
-                if (await _authService.LogoutAsync(refreshToken))
+                if (Request.Cookies.TryGetValue("refreshToken", out var refreshToken) && !string.IsNullOrEmpty(refreshToken))
                 {
-                    Response.Cookies.Delete("refreshToken");
+                    await _authService.LogoutAsync(refreshToken);
                 }
-                return Ok("Logged out successfully");
             }
             catch (Exception ex)
             {
-                return BadRequest("Logout Error Try Again" + ex.Message);
+                return StatusCode(500, "Logout failed. Please try again later." + ex.Message);
             }
-        }
 
-        [HttpGet("current-user")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CurrentUser()
-        {
-            try
-            {
-                var phoneNumber = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(phoneNumber))
-                    return Unauthorized("No Token Found"); ;
-
-                var userInfo = await _authService.CheckAuth(phoneNumber);
-                if (userInfo == null)
-                    return Unauthorized("User is not authorized");
-
-                return Ok(userInfo);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "Internal server error");
-            }
+            Response.Cookies.Delete("refreshToken", RefreshCookieOptions());
+            return Ok("Logged out successfully");
         }
         // ================ User Auth Management ================
 
@@ -185,16 +167,16 @@ namespace GamersPlatAPI.Controllers
         {
             try
             {
-                if (request == null || string.IsNullOrWhiteSpace(request.OldPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
-                    return BadRequest("Invalid Data");
+                int userId = GetCurrentUserId();
+                if (userId <= 0) return Unauthorized();
 
-                var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
+                var result = await _authService.ChangePassword(userId, request);
 
-                if (!await _authService.ChangePassword(userId,request))
-                    return StatusCode(500);
-
-                return Ok("Password changed successfully");
+                return StatusCode(result.StatusCode, new
+                {
+                    success = result.Success,
+                    message = result.Message
+                });
             }
             catch (Exception ex)
             {
@@ -296,5 +278,16 @@ namespace GamersPlatAPI.Controllers
         //    return Ok(new { message = "Email verified" });
         //}
         // ================ Verification Management ================
+
+
+
+        // Helper
+        int GetCurrentUserId()
+        {
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(idClaim, out var userId) || userId <= 0)
+                return -1;
+            return userId;
+        }
     }
 }

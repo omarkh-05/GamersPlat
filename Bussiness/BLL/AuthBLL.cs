@@ -19,14 +19,7 @@ namespace Bussiness.BLL
         private readonly IRoles _roles;
         private readonly IUserRole _userRole;
         private readonly PasswordResetTokenBLL _passwordResetTokenBLL;
-        public AuthBLL(
-            IUser user,
-            AuthHelpers authHelpers,
-            RefreshTokenBLL refreshTokenBLL,
-            IRoles roles,
-            IUserRole userRole,
-            PasswordResetTokenBLL passwordResetTokenBLL,
-            AuthDLL authDLL)
+        public AuthBLL(IUser user, AuthHelpers authHelpers, RefreshTokenBLL refreshTokenBLL, IRoles roles, IUserRole userRole, PasswordResetTokenBLL passwordResetTokenBLL, AuthDLL authDLL)
         {
             _authHelpers = authHelpers;
             _refreshTokenBLL = refreshTokenBLL;
@@ -36,9 +29,9 @@ namespace Bussiness.BLL
             _passwordResetTokenBLL = passwordResetTokenBLL;
             _authDLL = authDLL;
         }
-
+        public record ServiceResult(bool Success,string Message, int StatusCode);
         // ================ User Auth Management ================
-        public async Task RegisterWithRoleAsync(UserRegisterRequest request, string roleName)
+        public async Task<int> RegisterWithRoleAsync(UserRegisterRequest request, string roleName)
         {
             if (string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber) ||
@@ -48,7 +41,7 @@ namespace Bussiness.BLL
             if (await _user.ExistsByPhone(request.PhoneNumber))
                 throw new Exception("Phone number already exists");
 
-            var role = await _roles.GetByName(roleName); // "Player" أو "CenterOwner"
+            var role = await _roles.GetByName(roleName);
             if (role == null)
                 throw new Exception("Invalid role");
 
@@ -74,6 +67,8 @@ namespace Bussiness.BLL
 
                 if(!await _userRole.Add(userRole))
                 throw new Exception("Failed to add user role");
+
+            return user.UserId;
         }
         public async Task<TokenResponse> LoginAsync(LoginRequest request)
         {
@@ -81,7 +76,7 @@ namespace Bussiness.BLL
                 string.IsNullOrWhiteSpace(request.Password))
                 throw new Exception("Invalid data");
 
-            var user = await _authDLL.GetUserAuthByPhone(request.PhoneNumber);
+            var user = await _authDLL.GetUserAuth(request.PhoneNumber);
 
             if (user == null || !user.IsActive)
                 throw new UnauthorizedAccessException("Invalid credentials");
@@ -89,11 +84,7 @@ namespace Bussiness.BLL
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 throw new UnauthorizedAccessException("Invalid credentials");
 
-            var fullUser = await _user.GetById(user.UserId);
-            if (fullUser == null || !fullUser.IsActive)
-                throw new UnauthorizedAccessException("Invalid credentials");
-
-            var accessToken = _authHelpers.GenerateAccessToken(fullUser);
+            var accessToken = _authHelpers.GenerateAccessToken(user);
             var refreshToken = _authHelpers.GenerateRefreshToken();
 
             var rt = new RefreshToken
@@ -111,7 +102,9 @@ namespace Bussiness.BLL
             return new TokenResponse
             {
                 AccessToken = accessToken,
-                RefreshToken = refreshToken
+                RefreshToken = refreshToken,
+                UserName = user.FullName ?? "Not User",
+                UserRole = user.Role,
             };
         }
         public async Task<bool> LogoutAsync(string refreshToken)
@@ -149,16 +142,12 @@ namespace Bussiness.BLL
             if (existingToken.ExpiresAt <= DateTime.UtcNow)
                 throw new UnauthorizedAccessException("Refresh token expired");
 
-            var user = await _authDLL.GetUserAuthByID(existingToken.UserId);
+            var user = await _authDLL.GetUserAuth(userId: existingToken.UserId);
 
             if (user == null || !user.IsActive)
                 throw new UnauthorizedAccessException("Invalid refresh request");
 
-            var fullUser = await _user.GetById(user.UserId);
-            if (fullUser == null || !fullUser.IsActive)
-                throw new UnauthorizedAccessException("Invalid refresh request");
-
-            var newAccessToken = _authHelpers.GenerateAccessToken(fullUser);
+            var newAccessToken = _authHelpers.GenerateAccessToken(user);
             var newRefreshToken = _authHelpers.GenerateRefreshToken();
 
             existingToken.IsRevoked = true;
@@ -182,34 +171,60 @@ namespace Bussiness.BLL
             return new TokenResponse
             {
                 AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken
+                RefreshToken = newRefreshToken,
+                UserName = user.FullName??"",
+                UserRole = user.Role,
             };
         }
-        public async Task<DTO_UserInfoRequest?> CheckAuth(string phoneNumber) => await _user.GetUserInfoByPhone(phoneNumber);
+        public async Task<DTO_HomeCurrnetUserInfo?> CheckAuth(string phoneNumber)
+        {
+            var user = await _user.GetUserInfoByPhone(phoneNumber);
+            var currentUserInfo = new DTO_HomeCurrnetUserInfo
+            {
+                FullName = user?.FullName?? "",
+                Role = user?.Roles ?? null
+            };
+
+            return currentUserInfo;
+        }
         // ================ User Auth Management ================
 
 
         // ================ Password Management ================
-        public async Task<bool> ChangePassword(int userId, ChangePasswordRequest request)
+        public async Task<ServiceResult> ChangePassword(int userId,ChangePasswordRequest request)
         {
-            if (userId <= 0 ||
-                string.IsNullOrWhiteSpace(request.OldPassword) ||
-                string.IsNullOrWhiteSpace(request.NewPassword))
-                return false;
+            if (userId <= 0)
+                return new(false, "Invalid user ID.", 400);
 
-            var user = await _authDLL.GetUserAuthByID(userId);
+            if (request == null || string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                return new(false, "Passwords are required.", 400);
+            }
 
-            if (user == null || !user.IsActive)
-                return false;
+            var user = await _authDLL.GetUserAuth(userId: userId);
+            if (user == null)
+                return new(false, "User not found.", 404);
+            if (!user.IsActive)
+                return new(false, "User account is inactive.", 403);
 
-            if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
-                return false;
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            {
+                return new(false, "Current password is incorrect.", 400);
+            }
+
+            if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.PasswordHash))
+            {
+                return new(false, "New password must differ from current password.", 400);
+            }
 
             var newHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
 
-            if (await _authDLL.ChangePassword(userId, newHash)) return true;
-            else
-                throw new Exception("Error updating user");
+            var updated = await _authDLL.ChangePassword(userId, newHash);
+
+            if (!updated)
+                throw new Exception("Failed to update password.");
+
+            return new(true, "Password changed successfully.", 200);
         }
         public async Task<string> RequestResetPassword(RequestResetRequest request)
         {
@@ -239,7 +254,7 @@ namespace Bussiness.BLL
             if (token.ExpiresAt < DateTime.UtcNow)
                 throw new Exception("Token expired");
 
-            var user = await _authDLL.GetUserAuthByID(token.UserId);
+            var user = await _authDLL.GetUserAuth(userId: token.UserId);
             if (user == null)
                 throw new Exception("User not found");
 

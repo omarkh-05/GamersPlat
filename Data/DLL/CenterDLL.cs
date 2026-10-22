@@ -34,7 +34,6 @@ namespace DataLayer
                 return 0;
             }
         }
-
         public async Task<bool> Update(Center center, int ownerId)
         {
             try
@@ -57,7 +56,6 @@ namespace DataLayer
                 return false;
             }
         }
-
         public async Task<bool> UpdateActiveStatus(int centerId, int ownerId)
         {
             try
@@ -82,7 +80,6 @@ namespace DataLayer
                 return false;
             }
         }
-
         public async Task<bool> Delete(int centerId)
         {
             try
@@ -103,24 +100,29 @@ namespace DataLayer
                 return false;
             }
         }
-
         public async Task<List<DTO_HomePageCentersDetails>> GetAll()
         {
             try
             {
                 return await _db.Centers
+                    .Where(c => c.CenterStatus != "pending")
                     .Select(c => new DTO_HomePageCentersDetails
                     {
+                        CenterId = c.CenterId,
                         CenterName = c.CenterName,
-                        CenterAddress = c.CenterAddress,
-                        CenterStatus = c.CenterStatus,
-                        CenterType = c.CenterType,
+                        CenterAddress = c.CenterAddress??"",
+                        CenterStatus = c.CenterStatus??"Busy",
+                        CenterType = c.CenterType??"Gaming Center",
                         OpenTime = c.OpenTime,
                         CloseTime = c.CloseTime,
                         CityName = c.City.Name,
                         Rating = c.Reviews
                             .Select(r => (decimal?)r.Rating)
                             .Average() ?? 0,
+                        MainImage = c.CenterImage
+                            .Where(i => i.IsMain)
+                            .Select(i => i.ImageUrl)
+                            .FirstOrDefault()??"",
                     })
                     .AsNoTracking()
                     .ToListAsync();
@@ -131,7 +133,6 @@ namespace DataLayer
                 return new List<DTO_HomePageCentersDetails>();
             }
         }
-
         public async Task<List<string>> GetCenterNames()
         {
             try
@@ -148,7 +149,6 @@ namespace DataLayer
                 return new List<string>();
             }
         }
-
         // ================ CRUD ================
 
 
@@ -169,30 +169,31 @@ namespace DataLayer
                 return null;
             }
         }
-
         public async Task<DTO_CenterDetails?> GetCenterDetailsById(int centerId)
         {
             try
             {
                 return await _db.Centers
                     .AsNoTracking()
-                    .Where(c =>
-                        c.CenterId == centerId &&
-                        c.IsActive == true)
+                    .Where(c => c.CenterId == centerId && c.IsActive == true)
                     .Select(c => new DTO_CenterDetails
                     {
                         CenterId = c.CenterId,
                         Name = c.CenterName,
                         City = c.City.Name,
-                        Country = c.City.Country.Name,
-                        Description = c.CenterDescription,
+                        Address = c.CenterAddress??"",
+                        Description = c.CenterDescription??"No Description",
+                        Type = c.CenterType??"Gaming Center",
+                        Status = c.CenterStatus??"Busy",
+                        OpenTime = c.OpenTime,
+                        CloseTime = c.CloseTime,
 
-                        Rating = c.Reviews
-                            .Average(r => (double?)r.Rating) ?? 0,
-
-                        ReviewCount = c.Reviews.Count(),
-
-                        Images = c.CenterImage
+                        MainImage = c.CenterImage
+                            .Where(i => i.IsMain)
+                            .Select(i => i.ImageUrl)
+                            .FirstOrDefault() ?? "",
+                        GalleryImages = c.CenterImage
+                            .Where(i => i.IsMain == false )
                             .Select(i => i.ImageUrl)
                             .ToList(),
 
@@ -201,44 +202,50 @@ namespace DataLayer
                             .Select(s => s.Name)
                             .ToList(),
 
+                        /* Rating = c.Reviews
+                             .Average(r => (double?)r.Rating) ?? 0,
+
+                         ReviewCount = c.Reviews.Count(),
+
                         Tournaments = c.Tournaments
-                            .Where(t => t.EndDate >= DateTime.UtcNow)
-                            .Select(t => new DTO_TournamentsInCenterDetails
-                            {
-                                TournamentId = t.TournamentId,
-                                TournamentName = t.TournamentName,
-                                SlotsTaken = t.TournamentPlayers.Count(),
-                                MaxPlayers = t.MaxPlayers
-                            })
-                            .ToList(),
+                             .Where(t => t.EndDate >= DateTime.UtcNow)
+                             .Select(t => new DTO_TournamentsInCenterDetails
+                             {
+                                 TournamentId = t.TournamentId,
+                                 TournamentName = t.TournamentName,
+                                 SlotsTaken = t.TournamentPlayers.Count(),
+                                 MaxPlayers = t.MaxPlayers
+                             })
+                             .ToList(),
 
-                        Sessions = c.Sessions
-                            .Where(s => s.SessionStatus == "Open")
-                            .Select(s => new DTO_SessionInCenterDetails
-                            {
-                                SessionId = s.SessionId,
-                                Joined = s.SessionParticipants.Count(),
-                                MaxPlayers = s.MaxPlayers,
-                                SessionDate = s.SessionDate,
-                                StartTime = s.StartTime
-                            })
-                            .ToList(),
+                         Sessions = c.Sessions
+                             .Where(s => s.SessionStatus == "Open")
+                             .Select(s => new DTO_SessionInCenterDetails
+                             {
+                                 SessionId = s.SessionId,
+                                 Joined = s.SessionParticipants.Count(),
+                                 MaxPlayers = s.MaxPlayers,
+                                 SessionDate = s.SessionDate,
+                                 StartTime = s.StartTime
+                             })
+                             .ToList(),
 
-                        Offers = c.Offers
-                            .Where(o => o.IsActive)
-                            .Select(o => new DTO_OfferInCenterDetails
-                            {
-                                OfferId = o.OfferId,
-                                Title = o.Title,
-                                Description = o.Description,
-                                DiscountType = o.DiscountType ?? "No Discount",
-                                DiscountValue = o.DiscountValue,
-                                StartDate = o.StartDate,
-                                EndDate = o.EndDate
-                            })
-                            .ToList(),
+                         Offers = c.Offers
+                             .Where(o => o.IsActive)
+                             .Select(o => new DTO_OfferInCenterDetails
+                             {
+                                 OfferId = o.OfferId,
+                                 Title = o.Title,
+                                 Description = o.Description,
+                                 DiscountType = o.DiscountType ?? "No Discount",
+                                 DiscountValue = o.DiscountValue,
+                                 StartDate = o.StartDate,
+                                 EndDate = o.EndDate
+                             })
+                             .ToList(),
+                        */
 
-                        VipRooms = c.ResourcesTypes
+                        Vip = c.ResourcesTypes
                             .Where(r =>
                                 r.RoomType == "VIP" &&
                                 r.IsActive)
@@ -251,7 +258,7 @@ namespace DataLayer
                             })
                             .ToList(),
 
-                        NormalRooms = c.ResourcesTypes
+                        Normal = c.ResourcesTypes
                             .Where(r =>
                                 r.RoomType == "Normal" &&
                                 r.IsActive)
@@ -272,7 +279,6 @@ namespace DataLayer
                 return null;
             }
         }
-
         public async Task<List<DTO_CentersListDetails>> GetAllCentersByOwnerId(int ownerId)
         {
             try
@@ -282,10 +288,10 @@ namespace DataLayer
                     .Select(c => new DTO_CentersListDetails
                     {
                         CenterName = c.CenterName,
-                        CenterAddress = c.CenterAddress,
-                        CenterDescription = c.CenterDescription,
-                        CenterStatus = c.CenterStatus,
-                        CenterType = c.CenterType,
+                        CenterAddress = c.CenterAddress ?? "",
+                        CenterStatus = c.CenterStatus ?? "Busy",
+                        CenterType = c.CenterType ?? "Gaming Center",
+                        CenterDescription = c.CenterDescription ?? "No description available",
                         OpenTime = c.OpenTime,
                         CloseTime = c.CloseTime,
                         CityName = c.City.Name,
@@ -312,15 +318,11 @@ namespace DataLayer
                 return new List<DTO_CentersListDetails>();
             }
         }
-
         // ================ Read By ================
 
 
         // ================ Other Methods ================
-        public async Task<bool> ToggleCenterStatus(
-            int centerId,
-            string status,
-            int ownerId)
+        public async Task<bool> ToggleCenterStatus(int centerId, string status, int ownerId)
         {
             try
             {
@@ -344,7 +346,6 @@ namespace DataLayer
                 return false;
             }
         }
-
         // ================ Other Methods ================
     }
 }

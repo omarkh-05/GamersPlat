@@ -28,25 +28,25 @@ namespace GamersPlatAPI.Controllers
             return Ok(users);
         }
 
-        [HttpPut("block/{id:int}")]
-        public async Task<IActionResult> BlockUser(int id)
-        {
-            var user = await _user.GetById(id);
-            if (user == null) return NotFound();
-            user.IsActive = false;
-            if (! await _user.Update(id, user)) return StatusCode(500);
-            return NoContent();
-        }
+        //[HttpPut("block/{id:int}")]
+        //public async Task<IActionResult> BlockUser(int id)
+        //{
+        //    var user = await _user.GetById(id);
+        //    if (user == null) return NotFound();
+        //    user.IsActive = false;
+        //    if (! await _user.Update(id, user)) return StatusCode(500);
+        //    return NoContent();
+        //}
 
-        [HttpPut("unblock/{id:int}")]
-        public async Task<IActionResult> UnblockUser(int id)
-        {
-            var user = await _user.GetById(id);
-            if (user == null) return NotFound();
-            user.IsActive = true;
-            if (! await _user.Update(id, user)) return StatusCode(500);
-            return NoContent();
-        }
+        //[HttpPut("unblock/{id:int}")]
+        //public async Task<IActionResult> UnblockUser(int id)
+        //{
+        //    var user = await _user.GetById(id);
+        //    if (user == null) return NotFound();
+        //    user.IsActive = true;
+        //    if (! await _user.Update(id, user)) return StatusCode(500);
+        //    return NoContent();
+        //}
 
         [HttpGet("centers")]
         public async Task<IActionResult> GetCenters()

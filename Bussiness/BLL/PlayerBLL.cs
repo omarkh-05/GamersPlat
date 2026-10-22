@@ -47,7 +47,7 @@ namespace Bussiness.BLL
                     PhoneNumber = userInfo.PhoneNumber,
                     FullName = userInfo.FullName,
                     Email = userInfo.Email,
-                    CityId = userInfo.CityId,
+                    CityName = userInfo.CityName,
                     Points = userInfo.Points,
                     IsActive = userInfo.IsActive,
                     PhoneVerified = userInfo.PhoneVerified,
@@ -99,17 +99,18 @@ namespace Bussiness.BLL
 
 
         // ================ Player Booking Management ================
-        public async Task<bool> AddBooking(DTO_AddBooking booking)
+        public async Task<bool> AddBooking(DTO_BookingBase booking, int userId)
         {
-            return await _booking.Add(booking) == true;
+            if (booking == null) throw new ArgumentNullException(nameof(booking));
+            return await _booking.Add(booking, userId, null, null) == true;
         }
         public async Task<bool> UpdateBooking(DTO_UpdateBooking booking)
         {
-            return await _booking.Update(booking) == true;
+            return await _booking.Update(booking,0) == true;
         }
-        public async Task<bool> CancelBooking(int bookingID)
+        public async Task<bool> CancelBooking(DTO_CancelBooking booking , int userId)
         {
-            return await _booking.Cancel(bookingID) == true;
+            return await _booking.Cancel(booking,userId) == true;
         }
         // ================ Player Booking Management ================
 
