@@ -48,6 +48,9 @@ namespace DataLayer
                     return false;
 
                 existing.Name = service.Name;
+                existing.Description = service.Description;
+                existing.Icon = service.Icon;
+                existing.ImageUrl = service.ImageUrl;
                 existing.IsActive = service.IsActive;
                 existing.UpdatedAt = DateTime.UtcNow;
 

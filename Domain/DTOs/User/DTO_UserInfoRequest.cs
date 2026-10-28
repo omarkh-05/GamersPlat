@@ -13,6 +13,8 @@ namespace Domain.DTOs.User
 
         public string? Email { get; set; }
 
+        public string? Company { get; set; }
+
         public string CityName { get; set; } = "";
 
         public int Points { get; set; } = 0;

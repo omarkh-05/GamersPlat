@@ -40,6 +40,9 @@ namespace Bussiness
                     : addCenter.CityId,
 
                 CenterAddress = addCenter.CenterAddress,
+                PhoneNumber = addCenter.PhoneNumber,
+                Latitude = addCenter.Latitude,
+                Longitude = addCenter.Longitude,
                 CenterDescription = addCenter.CenterDescription,
                 CenterStatus = "pending",
                 IsActive = false,
@@ -79,6 +82,9 @@ namespace Bussiness
                 CenterName = center.CenterName,
                 CityId = center.CityId,
                 CenterAddress = center.CenterAddress,
+                PhoneNumber = center.PhoneNumber,
+                Latitude = center.Latitude,
+                Longitude = center.Longitude,
                 CenterDescription = center.CenterDescription,
                 CenterStatus = center.CenterStatus,
                 IsActive = center.IsActive,
@@ -87,9 +93,7 @@ namespace Bussiness
                 CloseTime = center.CloseTime
             };
 
-            await _centerDLL.Update(updateCenter, ownerId);
-
-            return true;
+            return await _centerDLL.Update(updateCenter, ownerId);
         }
         public async Task<bool> ActiveCenter(int centerId) => await _centerDLL.ActiveCenter(centerId);
         public async Task<bool> DeactiveCenter(int centerId) => await _centerDLL.DeactiveCenter(centerId);

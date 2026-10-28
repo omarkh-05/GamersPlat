@@ -21,6 +21,15 @@ public partial class Center
     [StringLength(255)]
     public string? CenterAddress { get; set; }
 
+    [StringLength(30)]
+    public string? PhoneNumber { get; set; }
+
+    [Column(TypeName = "decimal(9, 6)")]
+    public decimal? Latitude { get; set; }
+
+    [Column(TypeName = "decimal(9, 6)")]
+    public decimal? Longitude { get; set; }
+
     public string? CenterDescription { get; set; }
 
     [StringLength(50)]

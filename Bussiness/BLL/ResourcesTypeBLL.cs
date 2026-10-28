@@ -34,6 +34,17 @@ namespace Bussiness
         public async Task<bool> DeactiveStatus(int centerId, int resourceId)
             => await _resourcesTypeDLL.DeactiveStatus(centerId, resourceId);
 
+        public async Task<bool> UpdateActiveStatus(int centerId, int resourceId)
+        {
+            var resource = await _resourcesTypeDLL.GetByID(resourceId);
+            if (resource == null || resource.CenterId != centerId)
+                return false;
+
+            return resource.IsActive
+                ? await _resourcesTypeDLL.DeactiveStatus(centerId, resourceId)
+                : await _resourcesTypeDLL.ActiveStatus(centerId, resourceId);
+        }
+
         public async Task<bool> Delete(int id)
             => await _resourcesTypeDLL.Delete(id);
 

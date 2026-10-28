@@ -24,5 +24,7 @@ namespace Domain.DTOs.Owner
         public short ActiveResources { get; set; }
         public short ActiveOffers { get; set; }
         public short ActiveTournaments { get; set; }
+        public Dictionary<string, int> CenterStatusCounts { get; set; } = new();
+        public List<DTO_OwnerActivityPoint> Activity { get; set; } = [];
     }
 }

@@ -26,6 +26,8 @@ public partial class GamersPlatDbContext : DbContext
 
     public virtual DbSet<CenterInvitation> CenterInvitations { get; set; }
 
+    public virtual DbSet<CustomerRequest> CustomerRequests { get; set; }
+
     public virtual DbSet<City> Cities { get; set; }
 
     public virtual DbSet<Country> Countries { get; set; }
@@ -47,6 +49,8 @@ public partial class GamersPlatDbContext : DbContext
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<ResourcesType> ResourcesTypes { get; set; }
+
+    public virtual DbSet<ResourceUnit> ResourceUnits { get; set; }
 
     public virtual DbSet<Review> Reviews { get; set; }
 
@@ -147,6 +151,21 @@ public partial class GamersPlatDbContext : DbContext
                 .HasConstraintName("FK__CenterInv__Cente__778AC167");
 
             entity.HasOne(d => d.UserAccepted).WithMany(p => p.CenterInvitations).HasConstraintName("FK_CenterInvitations_Users");
+        });
+
+        modelBuilder.Entity<CustomerRequest>(entity =>
+        {
+            entity.HasKey(e => e.RequestId);
+            entity.Property(e => e.Status).HasDefaultValue("Pending");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
+
+            entity.HasOne(d => d.Center).WithMany()
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_CustomerRequests_Centers");
+
+            entity.HasOne(d => d.Player).WithMany()
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_CustomerRequests_Users");
         });
 
         modelBuilder.Entity<City>(entity =>
@@ -256,6 +275,15 @@ public partial class GamersPlatDbContext : DbContext
             entity.HasOne(d => d.Device).WithMany(p => p.ResourcesTypes)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_DeviceTypes_Devices");
+        });
+
+        modelBuilder.Entity<ResourceUnit>(entity =>
+        {
+            entity.HasKey(e => e.ResourceUnitId);
+
+            entity.HasOne(d => d.ResourcesType).WithMany(resource => resource.ResourceUnits)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_ResourceUnits_ResourcesTypes");
         });
 
         modelBuilder.Entity<Review>(entity =>

@@ -40,6 +40,7 @@ namespace DataLayer
             existing.FullName = dto.FullName;
             existing.PhoneNumber = dto.PhoneNumber;
             existing.Email = dto.Email;
+            existing.Company = dto.Company;
             existing.CityId = dto.CityId;
             if(adminId > 0 && adminId != existing.UserId)
                 existing.UpdatedBy = adminId;
@@ -115,6 +116,7 @@ namespace DataLayer
                         UserId = u.UserId,
                         FullName = u.FullName,
                         Email = u.Email,
+                            Company = u.Company,
                         PhoneNumber = u.PhoneNumber,
                         CityName = u.City.Name,
                         IsActive = u.IsActive,
@@ -144,6 +146,7 @@ namespace DataLayer
                             PhoneNumber = u.PhoneNumber,
                             FullName = u.FullName,
                             Email = u.Email,
+              Company = u.Company,
                             CityName = u.City.Name,
                             Points = u.Points,
                             IsActive = u.IsActive,
@@ -170,6 +173,7 @@ namespace DataLayer
               PhoneNumber = u.PhoneNumber,
               FullName = u.FullName,
               Email = u.Email,
+              Company = u.Company,
               CityName = u.City.Name,
               Points = u.Points,
               IsActive = u.IsActive,

@@ -6,9 +6,16 @@ namespace Domain.DTOs.Center
 {
     public class DTO_CentersListDetails
     {
+        public int CenterId { get; set; }
+        public bool IsActive { get; set; }
+        public string MainImage { get; set; } = string.Empty;
         public string CenterName { get; set; } = null!;
         public string CityName { get; set; } = null!;
+        public string CountryName { get; set; } = string.Empty;
         public string CenterAddress { get; set; } = null!;
+        public string? PhoneNumber { get; set; }
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
         public string CenterDescription { get; set; } = null!;
         public string CenterStatus { get; set; } = null!;
         public string CenterType { get; set; } = null!;

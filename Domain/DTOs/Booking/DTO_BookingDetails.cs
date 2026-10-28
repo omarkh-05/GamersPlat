@@ -7,6 +7,8 @@ namespace Domain.DTOs.Booking
     public class DTO_BookingDetails
     {
         public int BookingId { get; set; }
+        public int CenterId { get; set; }
+        public int? PlayerId { get; set; }
         public string CustomerName { get; set; } = null!;
         public string PhoneNumber { get; set; } = null!;
         public string? CenterName{ get; set; }
@@ -17,5 +19,6 @@ namespace Domain.DTOs.Booking
         public string? Duration { get; set; } = "";
         public decimal TotalPrice { get; set; }
         public string Status { get; set; } = null!;
+        public string? Notes { get; set; }
     }
 }

@@ -46,7 +46,19 @@ namespace DataLayer
                 if (existing == null)
                     return false;
 
-                _db.Entry(existing).CurrentValues.SetValues(center);
+                existing.CenterName = center.CenterName;
+                existing.CityId = center.CityId;
+                existing.CenterAddress = center.CenterAddress;
+                existing.PhoneNumber = center.PhoneNumber;
+                existing.Latitude = center.Latitude;
+                existing.Longitude = center.Longitude;
+                existing.CenterDescription = center.CenterDescription;
+                existing.CenterStatus = center.CenterStatus;
+                existing.IsActive = center.IsActive;
+                existing.CenterType = center.CenterType;
+                existing.OpenTime = center.OpenTime;
+                existing.CloseTime = center.CloseTime;
+                existing.UpdatedAt = DateTime.UtcNow;
 
                 return await _db.SaveChangesAsync() > 0;
             }
@@ -157,12 +169,18 @@ namespace DataLayer
                         CenterId = c.CenterId,
                         Name = c.CenterName,
                         City = c.City.Name,
+                        Country = c.City.Country.Name,
                         Address = c.CenterAddress??"",
+                        PhoneNumber = c.PhoneNumber,
+                        Latitude = c.Latitude,
+                        Longitude = c.Longitude,
                         Description = c.CenterDescription??"No Description",
                         Type = c.CenterType??"Gaming Center",
                         Status = c.CenterStatus??"Busy",
                         OpenTime = c.OpenTime,
                         CloseTime = c.CloseTime,
+                        Rating = c.Reviews.Select(r => (decimal?)r.Rating).Average() ?? 0m,
+                        ReviewCount = c.Reviews.Count(),
 
                         MainImage = c.CenterImage
                             .Where(i => i.IsMain)
@@ -230,7 +248,11 @@ namespace DataLayer
                                 ResourcesTypeId = r.ResourcesTypeId,
                                 DeviceName = r.Device.DeviceName,
                                 HourlyPrice = r.HourlyPrice,
-                                AvailableQuantity = r.TotalQuantity
+                                AvailableQuantity = r.TotalQuantity,
+                                Description = r.Description,
+                                Unit = r.Unit,
+                                ImageUrl = r.ImageUrl,
+                                IsActive = r.IsActive
                             })
                             .ToList(),
 
@@ -243,7 +265,11 @@ namespace DataLayer
                                 ResourcesTypeId = r.ResourcesTypeId,
                                 DeviceName = r.Device.DeviceName,
                                 HourlyPrice = r.HourlyPrice,
-                                AvailableQuantity = r.TotalQuantity
+                                AvailableQuantity = r.TotalQuantity,
+                                Description = r.Description,
+                                Unit = r.Unit,
+                                ImageUrl = r.ImageUrl,
+                                IsActive = r.IsActive
                             })
                             .ToList()
                     })
@@ -263,8 +289,15 @@ namespace DataLayer
                     .Where(c => c.OwnerUserId == ownerId)
                     .Select(c => new DTO_CentersListDetails
                     {
+                        CenterId = c.CenterId,
+                        IsActive = c.IsActive ?? false,
+                        MainImage = c.CenterImage.Where(i => i.IsMain).Select(i => i.ImageUrl).FirstOrDefault() ?? "",
                         CenterName = c.CenterName,
                         CenterAddress = c.CenterAddress ?? "",
+                        PhoneNumber = c.PhoneNumber,
+                        Latitude = c.Latitude,
+                        Longitude = c.Longitude,
+                        CountryName = c.City.Country.Name,
                         CenterStatus = c.CenterStatus ?? "Busy",
                         CenterType = c.CenterType ?? "Gaming Center",
                         CenterDescription = c.CenterDescription ?? "No description available",

@@ -16,6 +16,9 @@ namespace Domain.DTOs.User
         [EmailAddress, StringLength(150)]
         public string? Email { get; set; }
 
+        [StringLength(150)]
+        public string? Company { get; set; }
+
         public short CityId { get; set; }
     }
 }

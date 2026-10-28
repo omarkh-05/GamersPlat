@@ -10,6 +10,9 @@ namespace Domain.DTOs.Center
         public string CenterName { get; set; } = null!;
         public short CityId { get; set; }
         public string CenterAddress { get; set; } = null!;
+        public string? PhoneNumber { get; set; }
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
         public string CenterDescription { get; set; } = null!;
         public string CenterStatus { get; set; } = null!;
         public bool IsActive { get; set; }

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data;
 
-[Index("Name", Name = "UQ_StaffRoles_Name", IsUnique = true)]
+[Index(nameof(CenterId), nameof(Name), Name = "UQ_StaffRoles_CenterId_Name", IsUnique = true)]
 public partial class StaffRole
 {
     [Key]

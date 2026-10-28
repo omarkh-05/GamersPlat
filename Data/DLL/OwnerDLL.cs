@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data.DLL
 {
-    public class OwnerDLL
+    public partial class OwnerDLL
     {
         private readonly GamersPlatDbContext _db;
 
@@ -14,11 +14,14 @@ namespace Data.DLL
             _db = db;
         }
 
-        public async Task<DTO_OwnerDashboard?> GetOwnerDashboard(int ownerId)
+        public async Task<DTO_OwnerDashboard?> GetOwnerDashboard(int ownerId, DateOnly? from = null, DateOnly? to = null)
         {
             try
             {
-                return await _db.Users
+                if (from.HasValue && to.HasValue && from > to)
+                    throw new ArgumentException("The start date must be on or before the end date.");
+
+                var dashboard = await _db.Users
                     .AsNoTracking()
                     .Where(u => u.UserId == ownerId)
                     .Select(u => new DTO_OwnerDashboard
@@ -36,19 +39,19 @@ namespace Data.DLL
 
                         UpcomingBookings = _db.Bookings
                             .Count(b => b.Center.OwnerUserId == ownerId
-                                     && b.Status == "Upcoming"),
+                                     && (b.Status.ToLower() == "pending" || b.Status.ToLower() == "accepted" || b.Status.ToLower() == "upcoming")),
 
                         CompletedBookings = _db.Bookings
                             .Count(b => b.Center.OwnerUserId == ownerId
-                                     && b.Status == "Completed"),
+                                     && b.Status.ToLower() == "completed"),
 
                         CancelledBookings = _db.Bookings
                             .Count(b => b.Center.OwnerUserId == ownerId
-                                     && b.Status == "Cancelled"),
+                                     && b.Status.ToLower() == "cancelled"),
 
                         TotalRevenue = _db.Bookings
                             .Where(b => b.Center.OwnerUserId == ownerId
-                                     && b.Status == "Completed")
+                                     && b.Status.ToLower() == "completed")
                             .Sum(b => (decimal?)b.TotalPrice) ?? 0m,
 
                         AverageRating = _db.Reviews
@@ -75,6 +78,34 @@ namespace Data.DLL
                                      && t.StartDate > DateTime.Now)
                     })
                     .FirstOrDefaultAsync();
+
+                if (dashboard == null)
+                    return null;
+
+                var endDate = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+                var startDate = from ?? endDate.AddDays(-29);
+
+                dashboard.CenterStatusCounts = await _db.Centers
+                    .AsNoTracking()
+                    .Where(c => c.OwnerUserId == ownerId)
+                    .GroupBy(c => c.CenterStatus ?? "Unknown")
+                    .Select(group => new { Status = group.Key, Count = group.Count() })
+                    .ToDictionaryAsync(group => group.Status, group => group.Count);
+
+                dashboard.Activity = await _db.Bookings
+                    .AsNoTracking()
+                    .Where(b => b.Center.OwnerUserId == ownerId && b.BookingDate >= startDate && b.BookingDate <= endDate)
+                    .GroupBy(b => b.BookingDate)
+                    .Select(group => new DTO_OwnerActivityPoint
+                    {
+                        Date = group.Key,
+                        BookingCount = group.Count(),
+                        Revenue = group.Where(b => b.Status.ToLower() == "completed").Sum(b => (decimal?)b.TotalPrice) ?? 0m
+                    })
+                    .OrderBy(point => point.Date)
+                    .ToListAsync();
+
+                return dashboard;
             }
             catch (Exception ex)
             {

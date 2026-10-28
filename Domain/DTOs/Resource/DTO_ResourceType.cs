@@ -10,6 +10,10 @@ namespace Domain.DTOs.Resource
         public string DeviceName { get; set; } = string.Empty; // "PS5 Pro", "RTX 4080 PC"
         public string Category { get; set; } = string.Empty;   // "Console" | "PC"
         public int AvailableQuantity { get; set; }
+        public string? Description { get; set; }
+        public string? Unit { get; set; }
+        public string? ImageUrl { get; set; }
+        public bool IsActive { get; set; }
         public decimal HourlyPrice { get; set; }
     }
 }

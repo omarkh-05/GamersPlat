@@ -24,6 +24,9 @@ public partial class User
     [StringLength(255)]
     public string? Email { get; set; }
 
+    [StringLength(150)]
+    public string? Company { get; set; }
+
     public int Points { get; set; }
 
     public bool IsActive { get; set; }

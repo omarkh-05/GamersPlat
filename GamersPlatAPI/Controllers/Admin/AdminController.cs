@@ -209,7 +209,7 @@ namespace GamersPlatAPI.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> RejectCenter([FromRoute] int centerId)
         {
-            if (!await _admin.RejectCenter(centerId)) 
+            if (!await _admin.RejectCenter(centerId, "Center Rejected, Call Us To Full Reason")) 
                 return StatusCode(500, new { message = "Error While Rejecting Center" });
             return NoContent();
         }
@@ -309,13 +309,10 @@ namespace GamersPlatAPI.Controllers
 
             if (dto == null) return BadRequest(new { message = "Invalid request" });
 
-            var ok = await _authService.ChangePassword(userId, dto);
-
-            if (ok == null)
-            {
-                    return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error While Changing Password" });
-            }
-            return Ok();
+            var result = await _authService.ChangePassword(userId, dto);
+            if (!result.Success)
+                return StatusCode(result.StatusCode, new { message = result.Message });
+            return Ok(new { message = result.Message });
         }
     }
 }

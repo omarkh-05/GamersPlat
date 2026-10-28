@@ -16,6 +16,15 @@ public partial class Service
     [StringLength(50)]
     public string Name { get; set; } = null!;
 
+    [StringLength(500)]
+    public string? Description { get; set; }
+
+    [StringLength(100)]
+    public string? Icon { get; set; }
+
+    [StringLength(500)]
+    public string? ImageUrl { get; set; }
+
     public bool IsActive { get; set; }
 
     [Column(TypeName = "datetime")]
