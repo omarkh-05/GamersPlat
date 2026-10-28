@@ -12,7 +12,7 @@ namespace Domain.DTOs.Admin
         public int TotalCenters { get; set; }
         public int ActiveCenters { get; set; }
         public int PendingCenters { get; set; }
-        public DTO_TopRatedCenter? TopRatedCenter { get; set; }
+      //  public DTO_TopRatedCenter? TopRatedCenter { get; set; }
 
         // Top Performing Centers
         public List<DTO_TopPerformingCenter> TopPerformingCenters { get; set; } = new();
@@ -32,12 +32,12 @@ namespace Domain.DTOs.Admin
         public decimal RevenueGrowth { get; set; }
     }
 
-    public class DTO_TopRatedCenter
-    {
-        public int CenterId { get; set; }
-        public string CenterName { get; set; } = string.Empty;
-        public decimal Rating { get; set; }
-    }
+    //public class DTO_TopRatedCenter
+    //{
+    //    public int CenterId { get; set; }
+    //    public string CenterName { get; set; } = string.Empty;
+    //    public decimal Rating { get; set; }
+    //}
 
 
     public class DTO_TopPerformingCenter

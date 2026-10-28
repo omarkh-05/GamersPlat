@@ -142,23 +142,10 @@ builder.Services.AddSwaggerGen(static options =>
     //
     // This tells Swagger that endpoints protected by [Authorize]
     // require the Bearer token defined above.
-    /* options.AddSecurityRequirement(new OpenApiSecurityRequirement
-     {
-         {
-             new OpenApiSecurityScheme
-             {
-                 // Reference the previously defined "Bearer" security scheme.
-                 Reference = new BaseOpenApiReference
-                 {
-                     Type = ReferenceType.SecurityScheme,
-                     Id = "Bearer"
-                 }
-             },
-             // No scopes are required for JWT Bearer authentication.
-             // This array is empty because JWT does not use OAuth scopes here.
-             new string[] {}
-         }
-     });*/
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
+    });
 });
 //builder.Services.AddSwaggerGen();
 #endregion
@@ -204,17 +191,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             // The secret key used to validate the JWT signature.
             // This must be the same key used when generating the token.
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+            RoleClaimType = ClaimTypes.Role
         };
 
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
-                var token = context.Request.Cookies["accessToken"];
-
-                if (!string.IsNullOrEmpty(token))
+                if (string.IsNullOrEmpty(context.Token))
                 {
-                    context.Token = token;
+                    var token = context.Request.Cookies["accessToken"];
+
+                    if (!string.IsNullOrEmpty(token))
+                        context.Token = token;
                 }
 
                 return Task.CompletedTask;

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Data;
 
 [Index("RoleName", Name = "UQ_Roles_RoleName", IsUnique = true)]
-[Index("RoleName", Name = "UQ__Roles__8A2B6160890B126E", IsUnique = true)]
+[Index("RoleName", Name = "UQ__Roles__8A2B616072EC48B2", IsUnique = true)]
 public partial class Role
 {
     [Key]

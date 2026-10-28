@@ -12,10 +12,7 @@ namespace DataLayer
         private readonly ReviewDLL _reviewDLL;
         private readonly NotificationDLL _notificationDLL;
 
-        public AdminDLL(
-            GamersPlatDbContext db,
-            ReviewDLL reviewDLL,
-            NotificationDLL notificationDLL)
+        public AdminDLL(GamersPlatDbContext db,ReviewDLL reviewDLL,NotificationDLL notificationDLL)
         {
             _db = db;
             _reviewDLL = reviewDLL;
@@ -23,265 +20,262 @@ namespace DataLayer
         }
 
         // ================ Admin Analytics ================
-        public async Task<DTO_AdminStatistics> GetSystemStatistics()
+        public async Task<DTO_AdminStatistics> GetAdminDashboardStatistics( DateTime? from = null, DateTime? to = null)
         {
-            return await GetSystemStatistics(null, null);
+            return await GetAdminDashboard(from, to);
         }
         // ================ Admin Analytics ================
 
 
         // ================ Advanced analytics with time filters ================
-        public async Task<DTO_AdminStatistics> GetSystemStatistics(
-            DateTime? from,
-            DateTime? to)
+        public async Task<DTO_AdminStatistics> GetAdminDashboard(DateTime? from, DateTime? to)
         {
             try
             {
-                // ============================================================
-                // USERS
-                // ============================================================
-                var usersQuery = _db.Users
-                    .AsNoTracking();
-
-                var totalUsers = await usersQuery.CountAsync();
-
-                var activeUsers = await usersQuery
-                    .CountAsync(u => u.IsActive);
-
                 var last30Days = DateTime.UtcNow.AddDays(-30);
 
-                var newRegistrations = await usersQuery
-                    .CountAsync(u => u.CreatedAt >= last30Days);
-
-                var blockedUsers = await usersQuery
-                    .CountAsync(u => !u.IsActive);
-
-                // ============================================================
-                // CENTERS
-                // ============================================================
-                var centersQuery = _db.Centers
-                    .AsNoTracking();
-
-                var totalCenters = await centersQuery.CountAsync();
-
-                var activeCenters = await centersQuery
-                    .CountAsync(c => c.IsActive == true);
-
-                var pendingCenters = await centersQuery
-                    .CountAsync(c => c.CenterStatus == "Pending");
-
-                // ============================================================
-                // TOP RATED CENTER
-                // ============================================================
-                var topRatedCenter = await _db.Reviews
+                return await _db.Users
                     .AsNoTracking()
-                    .GroupBy(r => new
+                    .Select(u => new DTO_AdminStatistics
                     {
-                        r.CenterId,
-                        r.Center.CenterName
+                        // Users
+                        TotalUsers = _db.Users.Count(),
+                        ActiveUsers = _db.Users.Count(x => x.IsActive),
+                        NewRegistrations = _db.Users.Count(x => x.CreatedAt >= last30Days),
+                        BlockedUsers = _db.Users.Count(x => !x.IsActive),
+
+                        // Centers
+                        TotalCenters = _db.Centers.Count(),
+                        ActiveCenters = _db.Centers.Count(c => c.IsActive == true),
+                        PendingCenters = _db.Centers.Count(c => c.CenterStatus == "Pending"),
+
+                        // Bookings
+                        TotalBookings = _db.Bookings.Count(b =>
+                            (!from.HasValue || b.CreatedAt >= from.Value) &&
+                            (!to.HasValue || b.CreatedAt <= to.Value)),
+
+                        TotalRevenue = _db.Bookings
+                            .Where(b =>
+                                (!from.HasValue || b.CreatedAt >= from.Value) &&
+                                (!to.HasValue || b.CreatedAt <= to.Value) &&
+                                b.Status != "Cancelled")
+                            .Sum(b => (decimal?)b.TotalPrice) ?? 0m,
+
+                        // Top Performing Centers
+                        TopPerformingCenters = _db.Bookings
+                            .Where(b =>
+                                (!from.HasValue || b.CreatedAt >= from.Value) &&
+                                (!to.HasValue || b.CreatedAt <= to.Value) &&
+                                b.Status != "Cancelled")
+                            .GroupBy(b => new
+                            {
+                                b.CenterId,
+                                b.Center.CenterName,
+                                b.Center.IsActive,
+                                CityName = b.Center.City.Name,
+                                OwnerName = b.Center.OwnerUser != null
+                                    ? b.Center.OwnerUser.FullName
+                                    : ""
+                            })
+                            .Select(g => new DTO_TopPerformingCenter
+                            {
+                                CenterId = g.Key.CenterId,
+                                CenterName = g.Key.CenterName,
+                                CityName = g.Key.CityName,
+                                OwnerName = g.Key.OwnerName,
+                                Bookings = g.Count(),
+                                Revenue = g.Sum(b => b.TotalPrice),
+                                IsActive = g.Key.IsActive == true
+                            })
+                            .OrderByDescending(x => x.Bookings)
+                            .Take(3)
+                            .ToList(),
+
+                        // Sessions
+                        TotalSessions = _db.Sessions.Count(s =>
+                            s.SessionStatus == "Completed" &&
+                            (!from.HasValue || s.CreatedAt >= from.Value) &&
+                            (!to.HasValue || s.CreatedAt <= to.Value)),
+
+                        // Popular Device
+                        PopularDevice = _db.Sessions
+                            .Where(s =>
+                                s.SessionStatus == "Completed" &&
+                                (!from.HasValue || s.CreatedAt >= from.Value) &&
+                                (!to.HasValue || s.CreatedAt <= to.Value))
+                            .GroupBy(s => new
+                            {
+                                s.DeviceId,
+                                s.Device.DeviceName
+                            })
+                            .Select(g => new
+                            {
+                                DeviceName = g.Key.DeviceName,
+                                Count = g.Count()
+                            })
+                            .OrderByDescending(x => x.Count)
+                            .Select(x => x.DeviceName)
+                            .FirstOrDefault(),
+
+                        PopularDevicePercentage = _db.Sessions
+                            .Where(s =>
+                                s.SessionStatus == "Completed" &&
+                                (!from.HasValue || s.CreatedAt >= from.Value) &&
+                                (!to.HasValue || s.CreatedAt <= to.Value))
+                            .GroupBy(s => new
+                            {
+                                s.DeviceId,
+                                s.Device.DeviceName
+                            })
+                            .Select(g => new
+                            {
+                                Count = g.Count()
+                            })
+                            .OrderByDescending(x => x.Count)
+                            .Select(x => _db.Sessions.Count(s =>
+                                    s.SessionStatus == "Completed" &&
+                                    (!from.HasValue || s.CreatedAt >= from.Value) &&
+                                    (!to.HasValue || s.CreatedAt <= to.Value)) > 0
+                                ? (int)Math.Round(
+                                    (decimal)x.Count /
+                                    _db.Sessions.Count(s =>
+                                        s.SessionStatus == "Completed" &&
+                                        (!from.HasValue || s.CreatedAt >= from.Value) &&
+                                        (!to.HasValue || s.CreatedAt <= to.Value)) * 100)
+                                : 0)
+                            .FirstOrDefault(),
+
+                        // Popular Location
+                        PopularLocation = _db.Bookings
+                            .Where(b =>
+                                b.Status != "Cancelled" &&
+                                (!from.HasValue || b.CreatedAt >= from.Value) &&
+                                (!to.HasValue || b.CreatedAt <= to.Value))
+                            .GroupBy(b => b.Center.City.Name)
+                            .Select(g => new
+                            {
+                                CityName = g.Key,
+                                Count = g.Count()
+                            })
+                            .OrderByDescending(x => x.Count)
+                            .Select(x => x.CityName)
+                            .FirstOrDefault(),
+
+                        PopularLocationPercentage = _db.Bookings
+                            .Where(b =>
+                                b.Status != "Cancelled" &&
+                                (!from.HasValue || b.CreatedAt >= from.Value) &&
+                                (!to.HasValue || b.CreatedAt <= to.Value))
+                            .GroupBy(b => b.Center.City.Name)
+                            .Select(g => new
+                            {
+                                Count = g.Count()
+                            })
+                            .OrderByDescending(x => x.Count)
+                            .Select(x => _db.Bookings.Count(b =>
+                                    b.Status != "Cancelled" &&
+                                    (!from.HasValue || b.CreatedAt >= from.Value) &&
+                                    (!to.HasValue || b.CreatedAt <= to.Value)) > 0
+                                ? (int)Math.Round(
+                                    (decimal)x.Count /
+                                    _db.Bookings.Count(b =>
+                                        b.Status != "Cancelled" &&
+                                        (!from.HasValue || b.CreatedAt >= from.Value) &&
+                                        (!to.HasValue || b.CreatedAt <= to.Value)) * 100)
+                                : 0)
+                            .FirstOrDefault(),
+
+                        // Revenue Growth
+                        RevenueGrowth = from.HasValue && to.HasValue
+                    ? (
+                        (_db.Bookings
+                            .Where(b =>
+                                b.CreatedAt >= from.Value &&
+                                b.CreatedAt <= to.Value &&
+                                b.Status != "Cancelled")
+                            .Sum(b => (decimal?)b.TotalPrice) ?? 0m
+                      ) -
+                        (_db.Bookings
+                            .Where(b =>
+                                b.CreatedAt >= from.Value - (to.Value - from.Value) &&
+                                b.CreatedAt < from.Value &&
+                                b.Status != "Cancelled")
+                            .Sum(b => (decimal?)b.TotalPrice) ?? 0m)
+                      ) /
+                      ((_db.Bookings
+                          .Where(b =>
+                              b.CreatedAt >= from.Value - (to.Value - from.Value) &&
+                              b.CreatedAt < from.Value &&
+                              b.Status != "Cancelled")
+                          .Sum(b => (decimal?)b.TotalPrice) ?? 0m) == 0
+                          ? 1m
+                          : (_db.Bookings
+                              .Where(b =>
+                                  b.CreatedAt >= from.Value - (to.Value - from.Value) &&
+                                  b.CreatedAt < from.Value &&
+                                  b.Status != "Cancelled")
+                              .Sum(b => (decimal?)b.TotalPrice) ?? 0m)
+                      ) * 100m
+                    : 0m
                     })
-                    .Select(g => new DTO_TopRatedCenter
-                    {
-                        CenterId = g.Key.CenterId,
-                        CenterName = g.Key.CenterName,
-                        Rating = (decimal)g.Average(r => r.Rating)
-                    })
-                    .OrderByDescending(x => x.Rating)
-                    .FirstOrDefaultAsync();
-
-                // ============================================================
-                // BOOKINGS
-                // ============================================================
-                var bookingsQuery = _db.Bookings
-                    .AsNoTracking();
-
-                if (from.HasValue)
-                {
-                    bookingsQuery = bookingsQuery
-                        .Where(b => b.CreatedAt >= from.Value);
-                }
-
-                if (to.HasValue)
-                {
-                    bookingsQuery = bookingsQuery
-                        .Where(b => b.CreatedAt <= to.Value);
-                }
-
-                var totalBookings = await bookingsQuery
-                    .CountAsync();
-
-                var totalRevenue = await bookingsQuery
-                    .Where(b => b.Status != "Cancelled")
-                    .SumAsync(b => (decimal?)b.TotalPrice) ?? 0m;
-
-                // ============================================================
-                // TOP PERFORMING CENTERS
-                // ============================================================
-                var topPerformingCenters = await bookingsQuery
-                    .Where(b => b.Status != "Cancelled")
-                    .GroupBy(b => new
-                    {
-                        b.CenterId,
-                        b.Center.CenterName,
-                        b.Center.IsActive,
-                        CityName = b.Center.City.Name,
-                        OwnerName = b.Center.OwnerUser != null
-                            ? b.Center.OwnerUser.FullName
-                            : ""
-                    })
-                    .Select(g => new DTO_TopPerformingCenter
-                    {
-                        CenterId = g.Key.CenterId,
-                        CenterName = g.Key.CenterName,
-                        CityName = g.Key.CityName,
-                        OwnerName = g.Key.OwnerName,
-                        Bookings = g.Count(),
-                        Revenue = g.Sum(b => b.TotalPrice),
-                        IsActive = g.Key.IsActive == true
-                    })
-                    .OrderByDescending(x => x.Bookings)
-                    .Take(3)
-                    .ToListAsync();
-
-                // ============================================================
-                // SESSIONS
-                // ============================================================
-                var sessionsQuery = _db.Sessions
-                    .AsNoTracking();
-
-                if (from.HasValue)
-                {
-                    sessionsQuery = sessionsQuery
-                        .Where(s => s.CreatedAt >= from.Value);
-                }
-
-                if (to.HasValue)
-                {
-                    sessionsQuery = sessionsQuery
-                        .Where(s => s.CreatedAt <= to.Value);
-                }
-
-                var totalSessions = await sessionsQuery
-                    .CountAsync(s => s.SessionStatus == "Completed");
-
-                // ============================================================
-                // POPULAR DEVICE
-                // ============================================================
-                var popularDevice = await sessionsQuery
-                    .Where(s => s.SessionStatus == "Completed")
-                    .GroupBy(s => new
-                    {
-                        s.DeviceId,
-                        s.Device.DeviceName
-                    })
-                    .Select(g => new
-                    {
-                        DeviceName = g.Key.DeviceName,
-                        Count = g.Count()
-                    })
-                    .OrderByDescending(x => x.Count)
-                    .FirstOrDefaultAsync();
-
-                var popularDevicePercentage =
-                    totalSessions > 0 && popularDevice != null
-                        ? (int)Math.Round(
-                            (decimal)popularDevice.Count /
-                            totalSessions * 100)
-                        : 0;
-
-                // ============================================================
-                // POPULAR LOCATION
-                // ============================================================
-                var validBookingsQuery = bookingsQuery
-                    .Where(b => b.Status != "Cancelled");
-
-                var validBookingCount = await validBookingsQuery
-                    .CountAsync();
-
-                var popularLocation = await validBookingsQuery
-                    .GroupBy(b => b.Center.City.Name)
-                    .Select(g => new
-                    {
-                        CityName = g.Key,
-                        Count = g.Count()
-                    })
-                    .OrderByDescending(x => x.Count)
-                    .FirstOrDefaultAsync();
-
-                var popularLocationPercentage =
-                    validBookingCount > 0 && popularLocation != null
-                        ? (int)Math.Round(
-                            (decimal)popularLocation.Count /
-                            validBookingCount * 100)
-                        : 0;
-
-                // ============================================================
-                // REVENUE GROWTH
-                // ============================================================
-                decimal revenueGrowth = 0;
-
-                if (from.HasValue && to.HasValue)
-                {
-                    var periodLength = to.Value - from.Value;
-                    var previousFrom = from.Value - periodLength;
-                    var previousTo = from.Value;
-
-                    var previousRevenue = await _db.Bookings
-                        .AsNoTracking()
-                        .Where(b =>
-                            b.CreatedAt >= previousFrom &&
-                            b.CreatedAt < previousTo &&
-                            b.Status != "Cancelled")
-                        .SumAsync(b => (decimal?)b.TotalPrice) ?? 0m;
-
-                    if (previousRevenue > 0)
-                    {
-                        revenueGrowth =
-                            ((totalRevenue - previousRevenue) /
-                             previousRevenue) * 100;
-                    }
-                }
-
-                // ============================================================
-                // RESULT
-                // ============================================================
-                return new DTO_AdminStatistics
-                {
-                    TotalUsers = totalUsers,
-                    ActiveUsers = activeUsers,
-                    NewRegistrations = newRegistrations,
-                    BlockedUsers = blockedUsers,
-
-                    TotalCenters = totalCenters,
-                    ActiveCenters = activeCenters,
-                    PendingCenters = pendingCenters,
-                    TopRatedCenter = topRatedCenter,
-
-                    TopPerformingCenters = topPerformingCenters,
-
-                    TotalBookings = totalBookings,
-                    TotalSessions = totalSessions,
-
-                    PopularDevice = popularDevice?.DeviceName,
-                    PopularDevicePercentage = popularDevicePercentage,
-
-                    PopularLocation = popularLocation?.CityName,
-                    PopularLocationPercentage = popularLocationPercentage,
-
-                    TotalRevenue = totalRevenue,
-                    RevenueGrowth = revenueGrowth
-                };
+                    .FirstOrDefaultAsync() ?? new DTO_AdminStatistics();
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Get System Statistics Error",
-                    ex);
-
+                EventLog_Helper.WriteEventLog("Get Admin Dashboard Error", ex);
                 return new DTO_AdminStatistics();
             }
         }
         // ================ Advanced analytics with time filters ================
+
+        // ================ User Management ================
+        public async Task<bool> BlockUser(int userId, int adminId = 0)
+        {
+            try
+            {
+                var existing = await _db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+                if (existing == null) return false;
+
+                existing.IsActive = false;
+
+                if (adminId > 0 && adminId != existing.UserId)
+                {
+                    existing.UpdatedBy = adminId;
+                }
+
+                await _db.SaveChangesAsync();
+                return true;
+            }
+            catch(Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Block User Error",ex);
+                return false;
+            }
+        }
+        public async Task<bool> UnBlockUser(int userId, int adminId = 0)
+        {
+            try
+            {
+                var existing = await _db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+                if (existing == null) return false;
+
+                existing.IsActive = true;
+
+                if (adminId > 0 && adminId != existing.UserId)
+                {
+                    existing.UpdatedBy = adminId;
+                }
+
+                await _db.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("UnBlock User Error", ex);
+                return false;
+            }
+        }
+        // ================ User Management ================
 
 
         // ================ Center approval/rejection ================
@@ -295,9 +289,9 @@ namespace DataLayer
                 if (center == null)
                     return false;
 
-                center.CenterStatus = "Approved";
+                center.CenterStatus = "approved";
                 center.IsActive = true;
-                center.UpdatedAt = DateTime.UtcNow;
+                center.UpdatedAt = DateTime.Now;
 
                 var ok = await _db.SaveChangesAsync() > 0;
 
@@ -314,7 +308,7 @@ namespace DataLayer
                             Type = "Admin",
                             Status = "Unread",
                             ReferenceType = "Center",
-                            CreatedAt = DateTime.UtcNow
+                            CreatedAt = DateTime.Now
                         };
 
                         await _notificationDLL.Add(n);
@@ -322,9 +316,7 @@ namespace DataLayer
                 }
                 catch (Exception nEx)
                 {
-                    EventLog_Helper.WriteEventLog(
-                        "Send Center Approved Notification Error",
-                        nEx);
+                    EventLog_Helper.WriteEventLog("Send Center Approved Notification Error",nEx);
                 }
 
                 return ok;
@@ -338,7 +330,6 @@ namespace DataLayer
                 return false;
             }
         }
-
         public async Task<bool> RejectCenter(int centerId, string reason)
         {
             try
@@ -349,9 +340,9 @@ namespace DataLayer
                 if (center == null)
                     return false;
 
-                center.CenterStatus = "Rejected";
+                center.CenterStatus = "rejected";
                 center.IsActive = false;
-                center.UpdatedAt = DateTime.UtcNow;
+                center.UpdatedAt = DateTime.Now;
 
                 var ok = await _db.SaveChangesAsync() > 0;
 
@@ -376,14 +367,10 @@ namespace DataLayer
                 }
                 catch (Exception nEx)
                 {
-                    EventLog_Helper.WriteEventLog(
-                        "Send Center Rejected Notification Error",
-                        nEx);
+                    EventLog_Helper.WriteEventLog("Send Center Rejected Notification Error",nEx);
                 }
 
-                EventLog_Helper.WriteEventLog(
-                    $"Center {centerId} rejected by admin.",
-                    new Exception(reason));
+                EventLog_Helper.WriteEventLog($"Center {centerId} rejected by admin.", new Exception(reason));
 
                 return ok;
             }
@@ -400,10 +387,7 @@ namespace DataLayer
 
 
         // ================ Announcements ================
-        public async Task<bool> SendAnnouncement(
-            string title,
-            string message,
-            string audience)
+        public async Task<bool> SendAnnouncement( string title, string message, string audience)
         {
             try
             {
@@ -457,12 +441,7 @@ namespace DataLayer
 
 
         // ================ Reports ================
-        public async Task<bool> SubmitReport(
-            int reporterUserId,
-            string reportType,
-            int? referenceId,
-            string reason,
-            int? centerId = null)
+        public async Task<bool> SubmitReport( int reporterUserId, string reportType, int? referenceId, string reason, int? centerId = null)
         {
             try
             {
@@ -500,7 +479,6 @@ namespace DataLayer
                 return false;
             }
         }
-
         public async Task<List<Notification>> GetReports()
         {
             try
@@ -520,11 +498,7 @@ namespace DataLayer
                 return new List<Notification>();
             }
         }
-
-        public async Task<bool> ResolveReport(
-            int notificationId,
-            string action,
-            int? relatedId = null)
+        public async Task<bool> ResolveReport( int notificationId, string action, int? relatedId = null)
         {
             try
             {

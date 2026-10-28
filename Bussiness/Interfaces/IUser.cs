@@ -7,7 +7,7 @@ namespace Bussiness.Interfaces
     public interface IUser
     {
         Task<bool> Add(User user);
-        Task<bool> Update(int userId, DTO_UpdateUserInfoRequest dto);
+        Task<bool> Update(int userId, DTO_UpdateUserInfoRequest dto, int adminId = 0);
         Task<bool> Delete(int userId);
 
         Task<DTO_UserInfoRequest?> GetUserInfoByID(int userId);

@@ -9,6 +9,7 @@ namespace GamersPlatAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "player")]
     public class PlayerController : ControllerBase
     {
         readonly IUser _user;
@@ -20,7 +21,7 @@ namespace GamersPlatAPI.Controllers
             _booking = booking;
         }
 
-        [Authorize]
+        
         [HttpGet("profile")]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -36,7 +37,6 @@ namespace GamersPlatAPI.Controllers
             return Ok(user);
         }
 
-        [Authorize]
         [HttpPut("profile")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -70,7 +70,6 @@ namespace GamersPlatAPI.Controllers
             return NoContent();
         }
 
-        [Authorize]
         [HttpGet("bookings")]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status200OK)]

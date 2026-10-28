@@ -165,20 +165,32 @@ namespace DataLayer
                 return false;
             }
         }
-        public async Task<List<Booking>> GetAll()
+        public async Task<List<DTO_BookingDetails>> GetAll()
         {
             try
             {
                 return await _db.Bookings
-                    .Include(b => b.Center)
-                    .Include(b => b.User)
                     .AsNoTracking()
+                    .Select(b => new DTO_BookingDetails
+                    {
+                        BookingId = b.BookingId,
+                        CenterName = b.Center.CenterName,
+                        CustomerName = b.CustomerName,
+                        PhoneNumber = b.PhoneNumber,
+                        ResourcesType = b.ResourcesType.Device.DeviceName + " - " + b.ResourcesType.RoomType,
+                        BookingDate = b.BookingDate,
+                        StartTime = b.StartTime,
+                        EndTime = b.EndTime,
+                        Duration = b.EndTime < b.StartTime ? (b.EndTime - b.StartTime).ToString() : (b.StartTime - b.EndTime).ToString(),
+                        TotalPrice = b.TotalPrice,
+                        Status = b.Status
+                    })
                     .ToListAsync();
             }
             catch (Exception ex)
             {
                 EventLog_Helper.WriteEventLog("Get All Bookings Error", ex);
-                return new List<Booking>();
+                return new List<DTO_BookingDetails>();
             }
         }
         // ================ CRUD ================
@@ -358,8 +370,8 @@ namespace DataLayer
                             b.ResourcesType.RoomType,
                         StartTime = b.StartTime,
                         EndTime = b.EndTime.HasValue
-                            ? b.EndTime.Value.ToString("HH:mm")
-                            : "Open Time",
+                            ? b.EndTime.Value
+                            : b.StartTime.AddHours(1),
                         Duration = b.EndTime.HasValue
                             ? $"{(b.EndTime.Value - b.StartTime).TotalMinutes} Minutes"
                             : "Open Time",
@@ -397,8 +409,8 @@ namespace DataLayer
                             b.ResourcesType.RoomType,
                         StartTime = b.StartTime,
                         EndTime = b.EndTime.HasValue
-                            ? b.EndTime.Value.ToString("HH:mm")
-                            : "Open Time",
+                            ? b.EndTime.Value
+                            : b.StartTime.AddHours(1),
                         Duration = b.EndTime.HasValue
                             ? $"{(b.EndTime.Value - b.StartTime).TotalMinutes} Minutes"
                             : "Open Time",

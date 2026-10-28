@@ -18,16 +18,63 @@ namespace Data.DLL
         {
             try
             {
-                using var connection = _db.Database.GetDbConnection();
+                return await _db.Users
+                    .AsNoTracking()
+                    .Where(u => u.UserId == ownerId)
+                    .Select(u => new DTO_OwnerDashboard
+                    {
+                        FullName = u.FullName,
 
-                await connection.OpenAsync();
+                        TotalCenters = (short)_db.Centers
+                            .Count(c => c.OwnerUserId == ownerId),
 
-                var result = await connection.QueryFirstOrDefaultAsync<DTO_OwnerDashboard>(
-                    "dbo.sp_GetOwnerDashboard",
-                    new { UserId = ownerId },
-                    commandType: System.Data.CommandType.StoredProcedure);
+                        ActiveCenters = (short)_db.Centers
+                            .Count(c => c.OwnerUserId == ownerId && c.IsActive == true),
 
-                return result;
+                        TotalBookings = _db.Bookings
+                            .Count(b => b.Center.OwnerUserId == ownerId),
+
+                        UpcomingBookings = _db.Bookings
+                            .Count(b => b.Center.OwnerUserId == ownerId
+                                     && b.Status == "Upcoming"),
+
+                        CompletedBookings = _db.Bookings
+                            .Count(b => b.Center.OwnerUserId == ownerId
+                                     && b.Status == "Completed"),
+
+                        CancelledBookings = _db.Bookings
+                            .Count(b => b.Center.OwnerUserId == ownerId
+                                     && b.Status == "Cancelled"),
+
+                        TotalRevenue = _db.Bookings
+                            .Where(b => b.Center.OwnerUserId == ownerId
+                                     && b.Status == "Completed")
+                            .Sum(b => (decimal?)b.TotalPrice) ?? 0m,
+
+                        AverageRating = _db.Reviews
+                            .Where(r => r.Center.OwnerUserId == ownerId)
+                            .Average(r => (decimal?)r.Rating) ?? 0m,
+
+                        TotalReviews = _db.Reviews
+                            .Count(r => r.Center.OwnerUserId == ownerId),
+
+                        ActiveServices = (short)_db.Services
+                            .Count(s => s.Center.OwnerUserId == ownerId
+                                     && s.IsActive),
+
+                        ActiveResources = (short)_db.ResourcesTypes
+                            .Count(r => r.Center.OwnerUserId == ownerId
+                                     && r.IsActive),
+
+                        ActiveOffers = (short)_db.Offers
+                            .Count(o => o.Center.OwnerUserId == ownerId
+                                     && o.IsActive),
+
+                        ActiveTournaments = (short)_db.Tournaments
+                            .Count(t => t.Center.OwnerUserId == ownerId
+                                     && t.StartDate > DateTime.Now)
+                    })
+                    .FirstOrDefaultAsync();
             }
             catch (Exception ex)
             {

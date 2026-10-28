@@ -41,6 +41,9 @@ public partial class Center
     [Column(TypeName = "datetime")]
     public DateTime CreatedAt { get; set; }
 
+    [ForeignKey("CreatedByUser")]
+    public int CreatedBy { get; set; }
+
     [InverseProperty("Center")]
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
@@ -87,4 +90,8 @@ public partial class Center
 
     [InverseProperty("Center")]
     public virtual ICollection<Tournament> Tournaments { get; set; } = new List<Tournament>();
+
+    [ForeignKey("CreatedBy")]
+    [InverseProperty("CreatedCenters")]
+    public virtual User CreatedByUser { get; set; } = null!;
 }

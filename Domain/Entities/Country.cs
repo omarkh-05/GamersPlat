@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Data;
 
 [Index("Name", Name = "UQ_Countries_Name", IsUnique = true)]
-[Index("Name", Name = "UQ__Countrie__E056F2015A203A28", IsUnique = true)]
+[Index("Name", Name = "UQ__Countrie__737584F6BDBF0F11", IsUnique = true)]
 public partial class Country
 {
     [Key]

@@ -22,7 +22,7 @@ namespace Bussiness
             var userId = await _userDLL.Add(user);
             return userId > 0;
         }
-        public async Task<bool> Update(int userId, DTO_UpdateUserInfoRequest dto)
+        public async Task<bool> Update(int userId, DTO_UpdateUserInfoRequest dto, int adminId=0)
         {
               LastError = null;
 
@@ -73,7 +73,7 @@ namespace Bussiness
                     return false;
                 }
 
-                bool updated = await _userDLL.Update(userId, dto);
+                bool updated = await _userDLL.Update(userId, dto, adminId);
                 if (!updated)
                 {
                     LastError = "An unexpected error occurred while updating the profile";

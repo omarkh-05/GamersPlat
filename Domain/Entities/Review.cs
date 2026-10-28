@@ -23,6 +23,9 @@ public partial class Review
     [Column(TypeName = "datetime")]
     public DateTime CreatedAt { get; set; }
 
+    [StringLength(1000)]
+    public string? Comment { get; set; }
+
     [ForeignKey("BookingId")]
     [InverseProperty("Reviews")]
     public virtual Booking Booking { get; set; } = null!;

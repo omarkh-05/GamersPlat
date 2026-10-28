@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data;
 
-[Index("CenterId", "DeviceId", Name = "UQ__DeviceTy__F8D8EF08BA9EF532", IsUnique = true)]
 public partial class ResourcesType
 {
     [Key]

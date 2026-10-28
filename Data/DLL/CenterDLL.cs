@@ -56,30 +56,6 @@ namespace DataLayer
                 return false;
             }
         }
-        public async Task<bool> UpdateActiveStatus(int centerId, int ownerId)
-        {
-            try
-            {
-                var center = await _db.Centers
-                    .FirstOrDefaultAsync(c =>
-                        c.CenterId == centerId &&
-                        c.OwnerUserId == ownerId);
-
-                if (center == null)
-                    return false;
-
-                center.IsActive = !center.IsActive;
-
-                return await _db.SaveChangesAsync() > 0;
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog(
-                    "Update Center Active Status Error", ex);
-
-                return false;
-            }
-        }
         public async Task<bool> Delete(int centerId)
         {
             try
@@ -122,7 +98,7 @@ namespace DataLayer
                         MainImage = c.CenterImage
                             .Where(i => i.IsMain)
                             .Select(i => i.ImageUrl)
-                            .FirstOrDefault()??"",
+                            .FirstOrDefault() ?? "",
                     })
                     .AsNoTracking()
                     .ToListAsync();
@@ -343,6 +319,44 @@ namespace DataLayer
                 EventLog_Helper.WriteEventLog(
                     "Toggle Center Status Error", ex);
 
+                return false;
+            }
+        }
+        public async Task<bool> ActiveCenter(int centerId)
+        {
+            try
+            {
+                var center = await _db.Centers
+                    .FirstOrDefaultAsync(c =>
+                        c.CenterId == centerId);
+                if (center == null)
+                    return false;
+                center.IsActive = true;
+                center.CenterStatus = "active";
+                return await _db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Active Center Error", ex);
+                return false;
+            }
+        }
+        public async Task<bool> DeactiveCenter(int centerId)
+        {
+            try
+            {
+                var center = await _db.Centers
+                    .FirstOrDefaultAsync(c =>
+                        c.CenterId == centerId);
+                if (center == null)
+                    return false;
+                center.IsActive = false;
+                center.CenterStatus = "inactive";
+                return await _db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Deactive Center Error", ex);
                 return false;
             }
         }

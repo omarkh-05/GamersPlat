@@ -31,7 +31,7 @@ namespace DataLayer
                 return 0;
             }
         }
-        public async Task<bool> Update(int userId, DTO_UpdateUserInfoRequest dto)
+        public async Task<bool> Update(int userId, DTO_UpdateUserInfoRequest dto, int adminId = 0)
         {
             try {
             var existing = await _db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
@@ -41,8 +41,12 @@ namespace DataLayer
             existing.PhoneNumber = dto.PhoneNumber;
             existing.Email = dto.Email;
             existing.CityId = dto.CityId;
+            if(adminId > 0 && adminId != existing.UserId)
+                existing.UpdatedBy = adminId;
+            else
+                existing.UpdatedBy = userId;
 
-            await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync();
             return true;
             }
             catch (Exception ex)

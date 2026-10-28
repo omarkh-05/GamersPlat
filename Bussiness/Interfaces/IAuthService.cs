@@ -14,7 +14,6 @@ namespace Bussiness.Interfaces
         Task<int> RegisterWithRoleAsync(UserRegisterRequest request, string roleName);
         Task<TokenResponse> RefreshAsync(string refreshToken);
         Task<bool> LogoutAsync(string refreshToken);
-        Task<DTO_HomeCurrnetUserInfo?> CheckAuth(string phoneNumber);
         Task<ServiceResult> ChangePassword(int userId, ChangePasswordRequest request);
         Task<string> RequestResetPassword(RequestResetRequest request);
         Task<bool> ResetPassword(ResetPasswordRequest request);

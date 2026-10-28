@@ -1,5 +1,4 @@
 using Bussiness.Interfaces;
-using Data;
 using Domain.DTOs.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +39,7 @@ namespace GamersPlatAPI.Controllers
 
             try
             {
-                await _authService.RegisterWithRoleAsync(request, "Player");
+                await _authService.RegisterWithRoleAsync(request, "player");
                 return Ok(new { message = "Player registered successfully" });
             }
             catch (InvalidOperationException ex)
@@ -64,7 +63,7 @@ namespace GamersPlatAPI.Controllers
 
             try
             {
-                await _authService.RegisterWithRoleAsync(request, "Owner");
+                await _authService.RegisterWithRoleAsync(request, "owner");
                 return Ok(new { message = "Owner registered successfully" });
             }
             catch (InvalidOperationException ex)

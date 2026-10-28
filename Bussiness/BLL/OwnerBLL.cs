@@ -104,7 +104,7 @@ namespace Bussiness.BLL
             {
                 throw new ArgumentNullException(nameof(addCenter), "Center cannot be null While Creating Center");
             }
-            return await _center.Add(addCenter);
+            return await _center.Add(addCenter, 1);
         }
         public async Task<bool> UpdateCenter(DTO_UpdateCenter updateCenter, int ownerUserId)
         {
@@ -129,7 +129,7 @@ namespace Bussiness.BLL
             if (center.OwnerUserId != ownerUserId)
                 throw new UnauthorizedAccessException("You are not the owner of this center.");
 
-            return await _center.UpdateActiveStatus(centerId, ownerUserId);
+            return await _center.ActiveCenter(centerId);
         }
         public async Task<bool> ToggleCenterStatus(int centerId, int ownerUserId, string status)
         {
@@ -207,7 +207,7 @@ namespace Bussiness.BLL
 
             return await _resourcesType.Update(newResource);
         }
-        public async Task<bool> Active_DeactiveResource(int resourceId,int centerId,int ownerUserId)
+        public async Task<bool> ActiveResource(int resourceId,int centerId,int ownerUserId)
         {
             if (resourceId <= 0)
             {
@@ -219,7 +219,21 @@ namespace Bussiness.BLL
             if (center.OwnerUserId != ownerUserId)
                 throw new UnauthorizedAccessException("You are not the owner of this center.");
 
-            return await _resourcesType.UpdateActiveStatus(centerId, resourceId);
+            return await _resourcesType.ActiveStatus(centerId, resourceId);
+        }
+        public async Task<bool> DeactiveResource(int resourceId, int centerId, int ownerUserId)
+        {
+            if (resourceId <= 0)
+            {
+                throw new ArgumentException("Invalid resource ID.");
+            }
+            var center = await _center.GetByID(centerId);
+            if (center == null)
+                throw new KeyNotFoundException("Center not found.");
+            if (center.OwnerUserId != ownerUserId)
+                throw new UnauthorizedAccessException("You are not the owner of this center.");
+
+            return await _resourcesType.DeactiveStatus(centerId, resourceId);
         }
         // ================ Resource Management ================
 
@@ -294,7 +308,22 @@ namespace Bussiness.BLL
 
             return await _services.Delete(serviceId, centerId);
         }
-        public async Task<bool> Active_DeactiveService(int serviceId,int centerId,int ownerUserId)
+        public async Task<bool> ActiveService(int serviceId,int centerId,int ownerUserId)
+        {
+            if (serviceId <= 0)
+                throw new ArgumentException("Invalid service ID.");
+
+            var center = await _center.GetByID(centerId);
+
+            if (center == null)
+                throw new KeyNotFoundException("Center not found.");
+
+            if (center.OwnerUserId != ownerUserId)
+                throw new UnauthorizedAccessException("You are not the owner of this center.");
+
+            return await _services.ActiveStatus(serviceId, centerId);
+        }
+        public async Task<bool> DeactiveService(int serviceId, int centerId, int ownerUserId)
         {
             if (serviceId <= 0)
                 throw new ArgumentException("Invalid service ID.");
@@ -308,7 +337,7 @@ namespace Bussiness.BLL
                 throw new UnauthorizedAccessException(
                     "You are not the owner of this center.");
 
-            return await _services.UpdateActiveStatus(serviceId, centerId);
+            return await _services.DeactiveStatus(serviceId, centerId);
         }
         // ================ Services Management ================
 
@@ -403,7 +432,7 @@ namespace Bussiness.BLL
                 ResourcesType = booking.ResourcesType.Device.DeviceName,
                 BookingDate = booking.BookingDate,
                 StartTime = booking.StartTime,
-                EndTime = booking.EndTime.HasValue ? booking.EndTime.Value.ToString("HH:mm") : "Open Time",
+                EndTime = booking.EndTime.HasValue ? booking.EndTime.Value:booking.StartTime.AddHours(1),
                 Duration = booking.EndTime.HasValue ? $"{(booking.EndTime.Value - booking.StartTime).TotalMinutes} Minutes" : "Open Time",
                 TotalPrice = booking.TotalPrice,
                 Status = booking.Status

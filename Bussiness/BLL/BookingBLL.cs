@@ -314,7 +314,7 @@ namespace Bussiness
                 return false;
             }
         }
-        public async Task<List<Booking>> GetAll() => await _bookingDLL.GetAll();
+        public async Task<List<DTO_BookingDetails>> GetAll() => await _bookingDLL.GetAll();
         // ================ CRUD ================
         
         

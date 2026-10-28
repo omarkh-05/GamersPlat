@@ -43,7 +43,7 @@ namespace DataLayer
                 return false;
             }
         }
-        public async Task<bool> UpdateActiveStatus(int centerId,int resourceId)
+        public async Task<bool> ActiveStatus(int centerId,int resourceId)
         {
             try
             {
@@ -57,7 +57,31 @@ namespace DataLayer
                 if (resource == null)
                     return false;
 
-                resource.IsActive = !resource.IsActive;
+                resource.IsActive = true;
+
+                return await _db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Update ResourcesType Active Status Error", ex);
+                return false;
+            }
+        }
+        public async Task<bool> DeactiveStatus(int centerId, int resourceId)
+        {
+            try
+            {
+
+                var resource = await _db.ResourcesTypes
+             .FirstOrDefaultAsync(r =>
+                 r.ResourcesTypeId == resourceId &&
+                 r.CenterId == centerId);
+
+
+                if (resource == null)
+                    return false;
+
+                resource.IsActive = false;
 
                 return await _db.SaveChangesAsync() > 0;
             }

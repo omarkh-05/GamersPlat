@@ -70,12 +70,15 @@ public partial class GamersPlatDbContext : DbContext
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Server=.;Database=GamersPlatDB_Dev;User Id=sa;Password=123456;TrustServerCertificate=True");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AuditLog>(entity =>
         {
-            entity.HasKey(e => e.AuditId).HasName("PK__AuditLog__A17F23983077B4EE");
+            entity.HasKey(e => e.AuditId).HasName("PK__AuditLog__A17F23981428172B");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
 
@@ -120,7 +123,7 @@ public partial class GamersPlatDbContext : DbContext
             entity.HasOne(d => d.OwnerUser).WithMany(p => p.Centers).HasConstraintName("FK__Centers__OwnerUs__68487DD7");
         });
 
-        modelBuilder.Entity<CenterImage>(static entity =>
+        modelBuilder.Entity<CenterImage>(entity =>
         {
             entity.HasKey(e => e.ImageId).HasName("PK__CenterIm__7516F70C23F048F9");
 
@@ -157,7 +160,7 @@ public partial class GamersPlatDbContext : DbContext
 
         modelBuilder.Entity<Country>(entity =>
         {
-            entity.HasKey(e => e.CountryId).HasName("PK__Countrie__10D1609F5B834872");
+            entity.HasKey(e => e.CountryId).HasName("PK__Countrie__10D1609FDC2C2450");
         });
 
         modelBuilder.Entity<Device>(entity =>
@@ -276,7 +279,7 @@ public partial class GamersPlatDbContext : DbContext
 
         modelBuilder.Entity<Role>(entity =>
         {
-            entity.HasKey(e => e.RoleId).HasName("PK__Roles__8AFACE1AA810D58A");
+            entity.HasKey(e => e.RoleId).HasName("PK__Roles__8AFACE1AF5CF4347");
         });
 
         modelBuilder.Entity<Service>(entity =>
@@ -332,7 +335,7 @@ public partial class GamersPlatDbContext : DbContext
 
         modelBuilder.Entity<Staff>(entity =>
         {
-            entity.HasKey(e => e.StaffId).HasName("PK__Staff__96D4AB172969DA4E");
+            entity.HasKey(e => e.StaffId).HasName("PK__Staff__96D4AB17D94330AB");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
@@ -413,11 +416,11 @@ public partial class GamersPlatDbContext : DbContext
 
         modelBuilder.Entity<UserRole>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__UserRole__3214EC075BD6836E");
+            entity.HasKey(e => e.Id).HasName("PK__UserRole__3214EC07C0C5F314");
 
             entity.HasOne(d => d.Role).WithMany(p => p.UserRoles)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__UserRoles__RoleI__5CD6CB2B");
+                .HasConstraintName("FK__UserRoles__RoleI__4B7734FF");
 
             entity.HasOne(d => d.User).WithMany(p => p.UserRoles)
                 .OnDelete(DeleteBehavior.ClientSetNull)

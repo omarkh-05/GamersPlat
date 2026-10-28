@@ -60,19 +60,19 @@ namespace GamersPlatAPI.Controllers
         //    return Ok(report);
         //}
 
-        [Authorize(Roles = "Admin")]
-        [HttpGet("revenue")]
-        public async Task<IActionResult> RevenueReport([FromQuery] DateTime? from, [FromQuery] DateTime? to)
-        {
-            var all = await _booking.GetAll();
-            var filtered = all.AsQueryable();
-            if (from.HasValue) filtered = filtered.Where(b => b.CreatedAt >= from.Value);
-            if (to.HasValue) filtered = filtered.Where(b => b.CreatedAt <= to.Value);
+        //[Authorize(Roles = "Admin")]
+        //[HttpGet("revenue")]
+        //public async Task<IActionResult> RevenueReport([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        //{
+        //    var all = await _booking.GetAll();
+        //    var filtered = all.AsQueryable();
+        //    if (from.HasValue) filtered = filtered.Where(b => b.CreatedAt >= from.Value);
+        //    if (to.HasValue) filtered = filtered.Where(b => b.CreatedAt <= to.Value);
 
-            var totalRevenue = filtered.Sum(b => b.TotalPrice);
-            var byCenter = filtered.GroupBy(b => b.CenterId).Select(g => new { CenterId = g.Key, Revenue = g.Sum(x => x.TotalPrice), Bookings = g.Count() }).ToList();
+        //    var totalRevenue = filtered.Sum(b => b.TotalPrice);
+        //    var byCenter = filtered.GroupBy(b => b.CenterId).Select(g => new { CenterId = g.Key, Revenue = g.Sum(x => x.TotalPrice), Bookings = g.Count() }).ToList();
 
-            return Ok(new { TotalRevenue = totalRevenue, ByCenter = byCenter });
-        }
+        //    return Ok(new { TotalRevenue = totalRevenue, ByCenter = byCenter });
+        //}
     }
 }

@@ -22,17 +22,7 @@ namespace Bussiness.BLL
         private readonly ResourcesTypeBLL _resource;
         private readonly CityBLL _city;
         private readonly CountryBLL _country;
-        public AdminBLL(
-            IUser user,
-            CenterBLL center,
-            PlayerBLL player,
-            OwnerBLL owner,
-            ServiceBLL service,
-            CityBLL city,
-            CountryBLL country,
-            DeviceBLL device,
-            ResourcesTypeBLL resource,
-            AdminDLL adminDLL)
+        public AdminBLL(IUser user,CenterBLL center,PlayerBLL player,OwnerBLL owner,ServiceBLL service,CityBLL city,CountryBLL country,DeviceBLL device,ResourcesTypeBLL resource,AdminDLL adminDLL)
         {
             _user = user;
             _center = center;
@@ -47,16 +37,37 @@ namespace Bussiness.BLL
         }
 
         // ================ Admin Analytics ================
-        public async Task<DTO_AdminStatistics> GetSystemStatistics(
-            DateTime? from = null,
-            DateTime? to = null)
+        public async Task<DTO_AdminStatistics> GetAdminDashboardStatistics( DateTime? from = null, DateTime? to = null)
         {
             if (from.HasValue && to.HasValue && from > to)
                 throw new ArgumentException("From date cannot be later than To date.");
 
-            return await _adminDLL.GetSystemStatistics(from, to);
+            return await _adminDLL.GetAdminDashboardStatistics(from, to);
         }
         // ================ Admin Analytics ================
+
+
+        // ================ User Management ================
+        public async Task<List<DTO_UserListResponse>> GetUsers() => await _user.GetAll();
+        public async Task<bool> BlockUser(int userId, int adminId = 0, string? reason = null)
+        {
+            if (userId <= 0) throw new ArgumentException("Invalid user ID.");
+            var user = await _user.GetById(userId);
+            if (user == null) throw new Exception("User not found.");
+
+            bool blockUser = await _adminDLL.BlockUser(userId, adminId);
+            return blockUser;
+        }
+        public async Task<bool> UnblockUser(int userId, int adminId = 0)
+        {
+            if (userId <= 0) throw new ArgumentException("Invalid user ID.");
+            var user = await _user.GetById(userId);
+            if (user == null) throw new Exception("User not found.");
+
+            bool blockUser = await _adminDLL.UnBlockUser(userId, adminId);
+            return blockUser;
+        }
+        // ================ User Management ================
 
 
         // ================ Center Managament ================
@@ -66,36 +77,13 @@ namespace Bussiness.BLL
             if (centerId <= 0) throw new ArgumentException("Invalid center ID.");
             return await _adminDLL.ApproveCenter(centerId);
         }
-        public async Task<bool> RejectCenter(int centerId, string reason)
+        public async Task<bool> RejectCenter(int centerId,string reason = "")
         {
             if (centerId <= 0) throw new ArgumentException("Invalid center ID.");
-            if (string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("Rejection reason is required.");
-            return await _adminDLL.RejectCenter(centerId, reason);
+            reason = "Center Rejected, Call Us To Full Reason";
+            return await _adminDLL.RejectCenter(centerId,reason);
         }
         // ================ Center Managament ================
-
-
-        // ================ User Management ================
-        public async Task<List<DTO_UserListResponse>> GetUsers() => await _user.GetAll();
-        public async Task<bool> BlockUser(int userId, string? reason = null)
-        {
-            if (userId <= 0) throw new ArgumentException("Invalid user ID.");
-            var user = await _user.GetById(userId);
-            if (user == null) throw new Exception("User not found.");
-            user.IsActive = false;
-            // Log reason via event log helper
-            if (!string.IsNullOrWhiteSpace(reason)) EventLog_Helper.WriteEventLog($"Admin blocked user {userId}", new Exception(reason));
-            return true;
-        }
-        public async Task<bool> UnblockUser(int userId)
-        {
-            if (userId <= 0) throw new ArgumentException("Invalid user ID.");
-            var user = await _user.GetById(userId);
-            if (user == null) throw new Exception("User not found.");
-            user.IsActive = true;
-            return true;
-        }
-        // ================ User Management ================
 
 
         // ================ City / Country Management ================

@@ -23,7 +23,7 @@ namespace Bussiness.Helpers
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.MobilePhone, user.PhoneNumber ?? string.Empty)
+                new Claim(ClaimTypes.MobilePhone, user.PhoneNumber ?? string.Empty),
             };
 
             if (user.Role != null)

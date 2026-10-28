@@ -29,8 +29,10 @@ namespace Bussiness
         public async Task<bool> Update(ResourcesType rt)
             => await _resourcesTypeDLL.Update(rt);
 
-        public async Task<bool> UpdateActiveStatus(int centerId, int resourceId)
-            => await _resourcesTypeDLL.UpdateActiveStatus(centerId, resourceId);
+        public async Task<bool> ActiveStatus(int centerId, int resourceId)
+            => await _resourcesTypeDLL.ActiveStatus(centerId, resourceId);
+        public async Task<bool> DeactiveStatus(int centerId, int resourceId)
+            => await _resourcesTypeDLL.DeactiveStatus(centerId, resourceId);
 
         public async Task<bool> Delete(int id)
             => await _resourcesTypeDLL.Delete(id);

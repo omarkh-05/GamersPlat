@@ -24,7 +24,7 @@ namespace Bussiness.Interfaces
         Task<bool> Update(DTO_UpdateBooking updateBooking, int userId);
         Task<bool> Delete(int bookingID);
         Task<bool> Cancel(DTO_CancelBooking cancelBooking, int userId);
-        Task<List<Booking>> GetAll();
+        Task<List<DTO_BookingDetails>> GetAll();
         Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId);
         Task<Booking?> GetByID(int bookingID);
         Task<bool> Accept_RejectBooking(int bookingId, string status);

@@ -87,26 +87,44 @@ namespace DataLayer
             }
         }
 
-        public async Task<bool> UpdateActiveStatus(int serviceId, int centerId)
+        public async Task<bool> ActiveStatus(int serviceId, int centerId)
         {
             try
             {
                 var service = await _db.Services
-                    .FirstOrDefaultAsync(s =>
-                        s.ServiceId == serviceId &&
-                        s.CenterId == centerId);
+                    .FirstOrDefaultAsync(s => s.ServiceId == serviceId && s.CenterId == centerId);
 
                 if (service == null)
                     return false;
 
-                service.IsActive = !service.IsActive;
+                service.IsActive = true;
 
                 return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Update Service Active Status Error", ex);
+                EventLog_Helper.WriteEventLog("Active Service Active Status Error", ex);
+
+                return false;
+            }
+        }
+        public async Task<bool> DeactiveStatus(int serviceId, int centerId)
+        {
+            try
+            {
+                var service = await _db.Services
+                    .FirstOrDefaultAsync(s => s.ServiceId == serviceId && s.CenterId == centerId);
+
+                if (service == null)
+                    return false;
+
+                service.IsActive = false;
+
+                return await _db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Active Service Active Status Error", ex);
 
                 return false;
             }

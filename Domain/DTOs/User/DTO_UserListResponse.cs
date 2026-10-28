@@ -15,7 +15,6 @@ namespace Domain.DTOs.User
         public bool IsActive { get; set; }
         public bool PhoneVerified { get; set; }
         public bool EmailVerified { get; set; }
-
-        public List<string> Roles { get; set; } = new();
+        public List<string> Roles { get; set; } = new List<string>();
     }
 }

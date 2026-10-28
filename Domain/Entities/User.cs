@@ -6,9 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data;
 
-[Index("Email", Name = "UQ_Users_Email", IsUnique = true)]
 [Index("PhoneNumber", Name = "UQ_Users_PhoneNumber", IsUnique = true)]
-[Index("Email", Name = "UQ__Users__A9D105343662952E", IsUnique = true)]
 public partial class User
 {
     [Key]
@@ -45,6 +43,8 @@ public partial class User
     [Column(TypeName = "datetime")]
     public DateTime CreatedAt { get; set; }
 
+    public int? UpdatedBy { get; set; }
+
     [InverseProperty("User")]
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
@@ -63,6 +63,9 @@ public partial class User
 
     [InverseProperty("User")]
     public virtual ICollection<EmailVerificationToken> EmailVerificationTokens { get; set; } = new List<EmailVerificationToken>();
+
+    [InverseProperty("UpdatedByNavigation")]
+    public virtual ICollection<User> InverseUpdatedByNavigation { get; set; } = new List<User>();
 
     [InverseProperty("User")]
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
@@ -94,6 +97,12 @@ public partial class User
     [InverseProperty("WinnerUser")]
     public virtual ICollection<Tournament> Tournaments { get; set; } = new List<Tournament>();
 
+    [ForeignKey("UpdatedBy")]
+    [InverseProperty("InverseUpdatedByNavigation")]
+    public virtual User? UpdatedByNavigation { get; set; }
+
     [InverseProperty("User")]
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    [InverseProperty("CreatedByUser")]
+    public virtual ICollection<Center> CreatedCenters { get; set; } = new List<Center>();
 }

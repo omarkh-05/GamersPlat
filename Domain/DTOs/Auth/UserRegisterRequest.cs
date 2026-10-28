@@ -20,10 +20,9 @@ namespace Domain.DTOs.Auth
         [Required]
         public short CityId { get; set; } = 1;
 
-        //[Required]
-        //public DateTime DateOfBirth { get; set; }
-
         [Required, MinLength(8)]
         public string Password { get; set; } = null!;
+
+        public string? Role { get; set; } = "player";
     }
 }

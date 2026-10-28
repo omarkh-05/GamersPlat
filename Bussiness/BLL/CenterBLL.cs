@@ -5,6 +5,7 @@ using Domain.DTOs.Center;
 namespace Bussiness
 {
     using Bussiness.Interfaces;
+    using Data.DLL;
 
     public class CenterBLL : ICenterService
     {
@@ -19,12 +20,12 @@ namespace Bussiness
         }
 
         // ================ CRUD ================
-        public async Task<bool> Add(DTO_CreateCenter addCenter)
+        public async Task<bool> Add(DTO_CreateCenter addCenter ,int adminId)
         {
+            try
+            {
             if (addCenter == null)
-                throw new ArgumentNullException(
-                    nameof(addCenter),
-                    "Center data cannot be null.");
+                throw new ArgumentNullException(nameof(addCenter),"Center data cannot be null.");
 
             var createCenter = new Center
             {
@@ -40,9 +41,10 @@ namespace Bussiness
 
                 CenterAddress = addCenter.CenterAddress,
                 CenterDescription = addCenter.CenterDescription,
-                CenterStatus = addCenter.CenterStatus,
-                IsActive = addCenter.IsActive,
+                CenterStatus = "pending",
+                IsActive = false,
                 CenterType = addCenter.CenterType,
+                CreatedBy = adminId <= 0 ? throw new ArgumentException("Invalid admin ID.") : adminId != addCenter.OwnerUserId ? adminId : addCenter.OwnerUserId,
 
                 OpenTime = addCenter.OpenTime <= TimeOnly.MinValue
                     ? throw new ArgumentException("Invalid open time.")
@@ -52,21 +54,24 @@ namespace Bussiness
                     ? throw new ArgumentException("Invalid close time.")
                     : addCenter.CloseTime,
 
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             int centerID = await _centerDLL.Add(createCenter);
-
             _centerID = centerID;
+            }
+            catch(Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Error While Creating Center", ex);
+            }
 
-            return centerID > 0;
+
+            return _centerID > 0;
         }
         public async Task<bool> Update(DTO_UpdateCenter center, int ownerId)
         {
             if (center == null)
-                throw new ArgumentNullException(
-                    nameof(center),
-                    "Center data cannot be null.");
+                throw new ArgumentNullException(nameof(center),"Center data cannot be null.");
 
             Center updateCenter = new Center
             {
@@ -86,13 +91,11 @@ namespace Bussiness
 
             return true;
         }
-        public async Task<bool> UpdateActiveStatus(int centerId, int ownerId)
-            => await _centerDLL.UpdateActiveStatus(centerId, ownerId);
-        public async Task<bool> ToggleCenterStatus(int centerId, string status, int ownerId)
-            => await _centerDLL.ToggleCenterStatus(centerId, status, ownerId);
+        public async Task<bool> ActiveCenter(int centerId) => await _centerDLL.ActiveCenter(centerId);
+        public async Task<bool> DeactiveCenter(int centerId) => await _centerDLL.DeactiveCenter(centerId);
+        public async Task<bool> ToggleCenterStatus(int centerId, string status, int ownerId) => await _centerDLL.ToggleCenterStatus(centerId, status, ownerId);
         public async Task<bool> Delete(int centerId) => await _centerDLL.Delete(centerId);
         public async Task<List<DTO_HomePageCentersDetails>> GetAll() => await _centerDLL.GetAll();
-
         // ================ CRUD ================
 
 
