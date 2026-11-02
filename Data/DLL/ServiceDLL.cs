@@ -1,6 +1,7 @@
 using Data;
 using Data.DLL;
 using Data.EF;
+using Domain.DTOs.Service;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
@@ -169,7 +170,30 @@ namespace DataLayer
                 return null;
             }
         }
+        public async Task<List<DTO_ServicesInfo>?> GetAllByCenterId(int centerId)
+        {
+            try
+            {
+                return await _db.Services
+                    .Include(s => s.Center)
+                    .AsNoTracking()
+                    .Where(s => s.CenterId == centerId)
+                    .Select(s => new DTO_ServicesInfo
+                    {
+                        ServiceId = s.ServiceId,
+                        CenterId = s.CenterId,
+                        Name = s.Name,
+                        IsActive = s.IsActive
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Service By ID Error", ex);
 
+                return null;
+            }
+        }
         // ================ Read By ===============
     }
 }

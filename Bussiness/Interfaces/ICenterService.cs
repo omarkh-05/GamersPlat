@@ -16,6 +16,7 @@ namespace Bussiness.Interfaces
         Task<List<DTO_HomePageCentersDetails>> GetAll();
         Task<Center?> GetByID(int centerId);
         Task<DTO_CenterDetails?> GetCenterDetailsById(int centerId);
+        Task<DTO_CenterOverview?> GetCenterOverView(int centerId);
         Task<List<DTO_CentersListDetails>> GetAllCentersByOwnerId(int ownerId);
         Task<List<string>> GetCenterNames();
     }

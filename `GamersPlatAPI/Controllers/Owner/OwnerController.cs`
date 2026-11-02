@@ -1,0 +1,16 @@
+[HttpPost("center")]
+[ProducesResponseType(StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public async Task<IActionResult> CreateCenter([FromBody] DTO_CreateCenter addCenter)
+{
+	var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+	if (!int.TryParse(idClaim, out var userId))
+		return Unauthorized();
+
+	bool isAdded = await _center.Add(addCenter, userId);
+
+	if (isAdded)
+		return Created();
+
+	return BadRequest(new { message = "Error While Creating Center" });
+}

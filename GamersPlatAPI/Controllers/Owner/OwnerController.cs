@@ -1,7 +1,13 @@
 using Bussiness;
 using Bussiness.Interfaces;
 using Data;
-using GamersPlatAPI.Controllers.Owner;
+using Domain.DTOs.Auth;
+using Domain.DTOs.Center;
+using Domain.DTOs.Owner;
+using Domain.DTOs.Resource;
+using Domain.DTOs.Service;
+using Domain.DTOs.Staff;
+using Domain.DTOs.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -14,180 +20,427 @@ namespace GamersPlatAPI.Controllers
     public class OwnerController : ControllerBase
     {
         private readonly ICenterService _center;
-        private readonly IOfferService _offer;
-
-        public OwnerController(ICenterService center, IOfferService offer)
+        private readonly IOwnerService _owner;
+        public OwnerController(ICenterService center, IOwnerService owner)
         {
             _center = center;
-            _offer = offer;
-        }
-        
-        [HttpPost("centers")]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<IActionResult> CreateCenter([FromBody] Data.Center center)
-        {
-            if (center == null) return BadRequest();
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(id, out var uid)) center.OwnerUserId = uid;
-            var bll = new CenterBLL();
-            if (!await bll.Add(center)) return StatusCode(500);
-            return CreatedAtAction("GetCenter", new { id = bll._centerID }, center);
+            _owner = owner;
         }
 
+        // Dashboard Overview
+        [HttpGet("overview")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetDashboardOverview()
+        {
+            if (!TryGetOwnerId(out var ownerId))
+                return Unauthorized();
+
+            return await Run(() => _owner.GetOwnerDashboard(ownerId),res => Ok(res));
+        }
+        // Dashboard Overview
+
+
+        // Center Managament
         [HttpGet("centers")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> GetMyCenters()
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetOwnerCenters()
         {
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(id, out var uid)) return Unauthorized();
-            var all = await new _center.GetAll();
-            var mine = all.Where(c => c.OwnerUserId == uid).ToList();
-            return Ok(mine);
+            if (!TryGetOwnerId(out var ownerId))
+                return Unauthorized();
+            return await Run(() => _owner.GetAllCentersForOwner(ownerId), res => Ok(res));
         }
 
-        [HttpGet("offers/{centerId:int}")]
+        [HttpPost("center")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> CreateCenter([FromBody] DTO_CreateCenter addCenter)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _center.Add(addCenter, ownerId), result => Created());
+        }
+
+        [HttpPut("centers/{centerId:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateCenter(int centerId, [FromBody] DTO_UpdateCenter request)
+        {
+            if (request == null) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.UpdateCenter(request, ownerId), result => Ok(result));
+        }
+
+        [HttpPut("centers/{centerId:int}/active")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> ActiveCenter([FromRoute] int centerId)
+        {
+            return await Run(() => _center.ActiveCenter(centerId), result => Ok());
+        }
+
+        [HttpPut("centers/{centerId:int}/inactive")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> InactiveCenter([FromRoute] int centerId)
+        {
+            return await Run(() => _center.DeactiveCenter(centerId), result => Ok());
+        }
+        // Center Managament
+
+
+        // Center Workspace
+        [HttpGet("centers/{centerId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetCenterOffers(int centerId)
+        public async Task<IActionResult> GetCenterOverView(int centerId)
         {
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(id, out var uid)) return Unauthorized();
-
-            var center = await _center.GetByID(centerId);
-            if (center == null) return NotFound();
-            if (center.OwnerUserId != uid) return Forbid();
-            var offers = await _offer.GetByCenterId(centerId);
-            return Ok(offers);
+            return await Run(() => _owner.GetCenterOverView(centerId), res => Ok(res));
+        }
+         
+        [HttpGet("centers/{centerId:int}/resources")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetCenterResources([FromRoute] int centerId)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.GetAllResourceByCenterId(centerId, ownerId), result => Ok(result));
         }
 
-        [HttpPost("offers")]
+        [HttpPost("centers/{centerId:int}/resources")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> CreateOffer([FromBody] Data.Offer offer)
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AddResourceToCenter(int centerId, [FromBody] DTO_AddResource request)
         {
-            if (offer == null) return BadRequest();
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(id, out var uid)) return Unauthorized();
-
-            var center = await _center.GetByID(offer.CenterId);
-            if (center == null) return NotFound();
-            if (center.OwnerUserId != uid) return Forbid();
-            if (!await _offer.Add(offer)) return StatusCode(500);
-            return CreatedAtAction(nameof(GetCenterOffers), new { centerId = offer.CenterId }, offer);
+            if (request == null) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.AddResource(request, ownerId), result => CreatedAtAction(nameof(GetCenterResources), new { centerId }, result));
         }
-
-        [HttpPut("offers/{id:int}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        
+        [HttpPut("centers/{centerId:int}/resources/{resourceId:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateOffer(int id, [FromBody] Data.Offer offer)
+        public async Task<IActionResult> UpdateResource(int centerId, int resourceId, [FromBody] DTO_UpdateResource request)
         {
-            if (offer == null || id != offer.OfferId) return BadRequest();
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
-
-            var existing = await _offer.GetByID(id);
-            if (existing == null) return NotFound();
-
-            var center = await _center.GetByID(existing.CenterId);
-            if (center == null || center.OwnerUserId != uid) return Forbid();
-            if (!await _offer.Update(offer)) return StatusCode(500);
-            return NoContent();
+            if (request == null) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.UpdateResource(request, ownerId), result => Ok(result));
         }
 
-        [HttpDelete("offers/{id:int}")]
+        [HttpDelete("centers/{centerId:int}/resources/{resourceId:int}/active")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteOffer(int id)
+        public async Task<IActionResult> ActiveResource(int centerId, int resourceId)
         {
-            var existing = await _offer.GetByID(id);
-            if (existing == null) return NotFound();
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
-
-            var center = await _center.GetByID(existing.CenterId);
-            if (center == null || center.OwnerUserId != uid) return Forbid();
-            if (!await _offer.Delete(id)) return StatusCode(500);
-            return NoContent();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.ActiveResource(centerId, resourceId, ownerId), _ => NoContent());
+        }
+        [HttpDelete("centers/{centerId:int}/resources/{resourceId:int}/deactive")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeactiveResource(int centerId, int resourceId)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.DeactiveResource(centerId, resourceId, ownerId), _ => NoContent());
         }
 
+        [HttpGet("centers/{centerId:int}/services")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetCenterServices(int centerId)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.GetAllServicesByCenterId(centerId, ownerId), result => Ok(result));
+        }
+
+        [HttpPost("centers/{centerId:int}/services")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AddServiceToCenter(int centerId, [FromBody] DTO_AddService request)
+        {
+            if (request == null) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.AddService(request, ownerId), result => CreatedAtAction(nameof(GetCenterServices), new { centerId }, result));
+        }
+
+        [HttpPut("centers/{centerId:int}/services/{serviceId:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateService(int centerId, int serviceId, [FromBody] DTO_UpdateService request)
+        {
+            if (request == null) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.UpdateService(request, ownerId), result => Ok(result));
+        }
+
+        [HttpDelete("centers/{centerId:int}/services/{serviceId:int}/active")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ActiveService(int centerId, int serviceId)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.ActiveService(centerId, serviceId, ownerId), _ => NoContent());
+        }
+        [HttpDelete("centers/{centerId:int}/services/{serviceId:int}/deactive")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeactiveService(int centerId, int serviceId)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.DeactiveService(centerId, serviceId, ownerId), _ => NoContent());
+        }
+
+        [HttpGet("bookings/{centerId:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetAllBookingsForCenter(int centerId)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.GetAllUBookings_ByCenterId(centerId, ownerId), result => Ok(result));
+        }
+        // Center Workspace
+
+
+        // Bookings Management
         [HttpGet("bookings")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetOwnerBookings()
+        public async Task<IActionResult> GetAllOwnerBookings()
         {
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(id, out var uid)) return Unauthorized();
-
-            var centers = (await new CenterBLL().GetAll()).Where(c => c.OwnerUserId == uid).Select(c => c.CenterId).ToList();
-            var allBookings = await new BookingBLL(new ResourcesTypeBLL()).GetAll();
-            var mine = allBookings.Where(b => centers.Contains(b.CenterId)).ToList();
-            return Ok(mine);
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.GetAllBookings(ownerId), result => Ok(result));
         }
 
-        [HttpPut("bookings/status/{id:int}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [HttpPatch("bookings/{bookingId:int}/accept")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateBookingStatus(int id, [FromBody] UpdateBookingStatusRequest req)
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> AcceptBookingStatus(int bookingId)
         {
-            if (req == null || string.IsNullOrWhiteSpace(req.Status)) return BadRequest();
-
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
-
-            var booking = await new BookingBLL(new ResourcesTypeBLL()).GetByID(id);
-            if (booking == null) return NotFound();
-
-            // ensure owner owns the center
-            var center = await new CenterBLL().GetByID(booking.CenterId);
-            if (center == null || center.OwnerUserId != uid) return Forbid();
-
-            booking.Status = req.Status;
-            if (req.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) booking.CancelledAt = DateTime.UtcNow;
-
-            var bll = new BookingBLL(new ResourcesTypeBLL());
-            if (!await bll.Update(booking)) return StatusCode(500);
-            return NoContent();
+            if (bookingId <= 0) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.AcceptBooking(bookingId, ownerId), result => Ok(result));
         }
 
-        [HttpGet("dashboard")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [HttpPatch("bookings/{bookingId:int}/reject")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Dashboard()
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> RejectBookingStatus(int bookingId)
         {
-            var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(id, out var uid)) return Unauthorized();
+            if (bookingId <= 0) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.RejectBooking(bookingId, ownerId), result => Ok(result));
+        }
+        // Bookings Management
 
-            var centers = (await new .GetAll()).Where(c => c.OwnerUserId == uid).ToList();
-            var centerIds = centers.Select(c => c.CenterId).ToList();
 
-            var bookings = (await new BookingBLL(new ResourcesTypeBLL()).GetAll()).Where(b => centerIds.Contains(b.CenterId)).ToList();
-            var tournaments = (await new TournamentBLL().GetAll()).Where(t => centerIds.Contains(t.CenterId)).ToList();
+        // Staff Management
+        [HttpGet("employees")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetAllOwnerEmployees()
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.GetAllStaffByOwnerId(ownerId), result => Ok(result));
+        }
 
-            decimal revenue = bookings.Sum(b => b.TotalPrice);
-            int devicesCount = tournaments.Select(t => t.DeviceId).Distinct().Count();
+        [HttpGet("employees/{centerId:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetAllCenterEmployees([FromRoute] int centerId)
+        {
+            if (centerId <= 0) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.GetAllStaffByCenterId(centerId), result => Ok(result));
+        }
 
-            var dashboard = new GamersPlatAPI.DTOs.OwnerDashboardDTO
+        [HttpPost("employees")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> CreateOwnerEmployee([FromBody] DTO_AddStaffMember request)
+        {
+            if (request == null) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.AddStaffMember(request), result => CreatedAtAction(nameof(GetAllCenterEmployees), result));
+        }
+
+        [HttpPut("employees/{employeeId:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> UpdateOwnerEmployee(int employeeId, [FromBody] DTO_UpdateStaffMember request)
+        {
+            if (request == null) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.UpdateStaffMember(employeeId, request), result => Ok(result));
+        }
+        // Staff Management
+
+
+        // Owner Profile
+        [HttpGet("profile")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetOwnerProfile()
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.GetOwnerInfo(ownerId), result => Ok(result));
+        }
+
+        [HttpPut("profile")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> UpdateOwnerProfile([FromBody] DTO_UpdateUserInfoRequest request)
+        {
+            if (request == null) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(async () =>
             {
-                OwnerUserId = uid,
-                CentersCount = centers.Count,
-                BookingsCount = bookings.Count,
-                RevenueTotal = revenue,
-                DevicesCount = devicesCount,
-                TournamentsCount = tournaments.Count
-            };
+                await _owner.UpdateOwnerInfo(ownerId, request);
+                return await _owner.GetOwnerInfo(ownerId);
+            }, result => Ok(result));
+        }
 
-            return Ok(dashboard);
+        [HttpPut("profile/password")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> ChangeOwnerPassword([FromBody] ChangePasswordRequest request)
+        {
+            if (request == null) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.ChangeOwnerPassword(ownerId, request), _ => NoContent());
+        }
+        // Owner Profile
+
+        /*[HttpGet("requests")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public Task<IActionResult> GetOwnerRequests([FromQuery] string? type, [FromQuery] string? status)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Task.FromResult<IActionResult>(Unauthorized());
+            return Run(() => _owner.GetOwnerRequests(ownerId, type, status), result => Ok(result));
+        }
+
+        [HttpGet("requests/{requestId:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public Task<IActionResult> GetOwnerRequest(int requestId)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Task.FromResult<IActionResult>(Unauthorized());
+            return Run(() => _owner.GetOwnerRequest(requestId, ownerId), result => Ok(result));
+        }
+
+        [HttpPatch("requests/{requestId:int}/status")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public Task<IActionResult> PatchRequestStatus(int requestId, [FromBody] DTO_OwnerRequestStatusUpdate request)
+        {
+            if (request == null) return Task.FromResult<IActionResult>(BadRequest());
+            if (!TryGetOwnerId(out var ownerId)) return Task.FromResult<IActionResult>(Unauthorized());
+            return Run(() => _owner.UpdateOwnerRequestStatus(requestId, request, ownerId), result => Ok(result));
+        }*/
+
+
+        // Helpers
+        private bool TryGetOwnerId(out int ownerId)
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return int.TryParse(claim, out ownerId) && ownerId > 0;
+        }
+        private async Task<IActionResult> Run<T>(Func<Task<T>> action,Func<T, IActionResult> success)
+        {
+            try
+            {
+                var result = await action();
+
+                if (result is null)
+                    return NotFound();
+
+                return success(result);
+            }
+            catch (ArgumentException exception)
+            {
+                return BadRequest(new { message = exception.Message });
+            }
+            catch (KeyNotFoundException exception)
+            {
+                return NotFound(new { message = exception.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (InvalidOperationException exception)
+            {
+                return Conflict(new { message = exception.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new {message = "An unexpected error occurred."});
+            }
         }
     }
 }

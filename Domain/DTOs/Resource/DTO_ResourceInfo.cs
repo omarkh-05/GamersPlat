@@ -8,7 +8,6 @@ namespace Domain.DTOs.Resource
 {
     public class DTO_ResourceInfo
     {
-        [Key]
         public int ResourcesTypeId { get; set; }
 
         public int CenterId { get; set; }

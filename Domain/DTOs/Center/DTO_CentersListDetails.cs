@@ -12,9 +12,11 @@ namespace Domain.DTOs.Center
         public string CenterDescription { get; set; } = null!;
         public string CenterStatus { get; set; } = null!;
         public string CenterType { get; set; } = null!;
+        public string? CenterImage { get; set; }
+        public string CenterPhone { get; set; } = null!;
         public TimeOnly? OpenTime { get; set; }
         public TimeOnly? CloseTime { get; set; }
-        public decimal Rating { get; set; }
+        public decimal EmployeeCount { get; set; }
         public decimal ResourcesCount { get; set; }
         public List<string> ServicesList { get; set; } = new List<string>();
     }

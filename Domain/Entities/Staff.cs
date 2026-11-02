@@ -20,6 +20,8 @@ public partial class Staff
 
     public DateTime CreatedAt { get; set; }
 
+    public string Status { get; set; } = null!;
+
     public bool IsActive { get; set; }
 
     [ForeignKey("CenterId")]

@@ -268,13 +268,13 @@ namespace DataLayer
                         CenterStatus = c.CenterStatus ?? "Busy",
                         CenterType = c.CenterType ?? "Gaming Center",
                         CenterDescription = c.CenterDescription ?? "No description available",
+                        CenterPhone = c.CenterPhone ?? "No phone number available",
+                        CenterImage = c.CenterImage.FirstOrDefault(i => i.IsMain).ImageUrl ?? "No image available",
                         OpenTime = c.OpenTime,
                         CloseTime = c.CloseTime,
                         CityName = c.City.Name,
 
-                        Rating = c.Reviews
-                            .Select(r => (decimal?)r.Rating)
-                            .Average() ?? 0,
+                        EmployeeCount = c.Staff.Count(e => e.IsActive),
 
                         ResourcesCount = c.ResourcesTypes
                             .Count(r => r.IsActive),
@@ -292,6 +292,43 @@ namespace DataLayer
                     "Get All Centers By Owner ID Error", ex);
 
                 return new List<DTO_CentersListDetails>();
+            }
+        }
+        public async Task<DTO_CenterOverview?> GetCenterOverView(int centerId)
+        {
+            try
+            {
+                return await _db.Centers
+                    .AsNoTracking()
+                    .Where(c => c.CenterId == centerId)
+                    .Select(c => new DTO_CenterOverview
+                    {
+                        CenterName = c.CenterName,
+                        CityName = c.City.Name,
+                        CenterStatus = c.CenterStatus,
+                        CenterAddress = c.CenterAddress,
+
+                        ImageUrl = c.CenterImage
+                            .Where(i => i.IsMain == true)
+                            .Select(i => i.ImageUrl)
+                            .FirstOrDefault(),
+
+                        ResourceCount = c.ResourcesTypes.Count(),
+
+                        Units = c.ResourcesTypes
+                            .Sum(r => (int?)r.TotalQuantity) ?? 0,
+
+                        BookingsCount = c.Bookings.Count(),
+
+                        Revenue = c.Bookings
+                            .Sum(b => (decimal?)b.TotalPrice) ?? 0m
+                    })
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Center Overview Error", ex);
+                return null;
             }
         }
         // ================ Read By ================

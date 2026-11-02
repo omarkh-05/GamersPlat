@@ -45,6 +45,8 @@ namespace Bussiness
             => await _resourcesTypeDLL.GetAll();
         public async Task<ResourcesType?> GetByID(int id)
             => await _resourcesTypeDLL.GetByID(id);
+        public async Task<List<DTO_ResourceInfo>> GetAllByCenterId(int centerId)
+            => await _resourcesTypeDLL.GetAllByCenterId(centerId);
         public async Task<DTO_ResourceInfo?> GetResourceInfo(int resourcesTypeId)
         { 
             var resInfo = await _resourcesTypeDLL.GetByID(resourcesTypeId);

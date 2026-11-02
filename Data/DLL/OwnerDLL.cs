@@ -58,6 +58,9 @@ namespace Data.DLL
                         TotalReviews = _db.Reviews
                             .Count(r => r.Center.OwnerUserId == ownerId),
 
+                        TotalEmployees = _db.Staff
+                            .Count(e => e.Center.OwnerUserId == ownerId),
+
                         ActiveServices = (short)_db.Services
                             .Count(s => s.Center.OwnerUserId == ownerId
                                      && s.IsActive),

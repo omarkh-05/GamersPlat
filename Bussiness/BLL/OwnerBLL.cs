@@ -12,6 +12,8 @@ using Domain.DTOs.User;
 namespace Bussiness.BLL
 {
     using Bussiness.Interfaces;
+    using DataLayer;
+    using Domain.DTOs.Auth;
 
     public class OwnerBLL : IOwnerService
     {
@@ -46,13 +48,6 @@ namespace Bussiness.BLL
             _auth = auth;
             _ownerDLL = ownerDLL;
         }
-
-        // IOwnerService implementations (thin wrappers to existing methods)
-        async Task<bool> IOwnerService.AcceptBooking(int bookingId, int ownerUserId) => await AcceptBooking(bookingId, ownerUserId);
-        async Task<bool> IOwnerService.RejectBooking(int bookingId, int ownerUserId) => await RejectBooking(bookingId, ownerUserId);
-        async Task<List<DTO_BookingDetails>> IOwnerService.GetAllBookings(int ownerUserId) => await GetAllBookings(ownerUserId);
-        async Task<DTO_BookingDetails> IOwnerService.ViewBookingDetails(int bookingId, int ownerUserId) => await ViewBookingDetails(bookingId, ownerUserId);
-
         // ================ Owner Management ================
         public async Task<DTO_UserInfoRequest?> GetOwnerInfo(int ownerId)
         {
@@ -94,6 +89,19 @@ namespace Bussiness.BLL
             }
             return userUpdated;
         }
+        public async Task<bool?> ChangeOwnerPassword(int ownerId, ChangePasswordRequest changePasswordRequest)
+        {
+            if (ownerId <= 0)
+            {
+                throw new ArgumentException("Invalid owner ID.");
+            }
+            var passwordChanged = await _auth.ChangePassword(ownerId, changePasswordRequest);
+            if (passwordChanged == null)
+            {
+                throw new InvalidOperationException("Failed to change password.");
+            }
+            return true;
+        }
         // ================ Owner Management ================
 
 
@@ -121,7 +129,7 @@ namespace Bussiness.BLL
 
             return await _center.Update(updateCenter, ownerUserId);
         }
-        public async Task<bool> Active_DeactiveCenter(int centerId, int ownerUserId)
+        public async Task<bool> ActiveCenter(int centerId, int ownerUserId)
         {
             var center = await _center.GetByID(centerId);
             if (center == null)
@@ -130,6 +138,16 @@ namespace Bussiness.BLL
                 throw new UnauthorizedAccessException("You are not the owner of this center.");
 
             return await _center.ActiveCenter(centerId);
+        }
+        public async Task<bool> DeactiveCenter(int centerId, int ownerUserId)
+        {
+            var center = await _center.GetByID(centerId);
+            if (center == null)
+                throw new KeyNotFoundException("Center not found.");
+            if (center.OwnerUserId != ownerUserId)
+                throw new UnauthorizedAccessException("You are not the owner of this center.");
+
+            return await _center.DeactiveCenter(centerId);
         }
         public async Task<bool> ToggleCenterStatus(int centerId, int ownerUserId, string status)
         {
@@ -154,6 +172,13 @@ namespace Bussiness.BLL
                 throw new InvalidOperationException("No centers found for this owner.");
             }
             return centers;
+        }
+        public async Task<DTO_CenterOverview?> GetCenterOverView(int centerId)
+        {
+            if (centerId <= 0)
+                throw new ArgumentException("Invalid center ID.");
+
+            return await _center.GetCenterOverView(centerId);
         }
         // ================ Center Management ================
 
@@ -235,6 +260,24 @@ namespace Bussiness.BLL
 
             return await _resourcesType.DeactiveStatus(centerId, resourceId);
         }
+        public async Task<List<DTO_ResourceInfo>> GetAllResourceByCenterId(int centerId, int ownerUserId)
+        {
+            if (centerId <= 0)
+            {
+                throw new ArgumentException("Invalid center ID.");
+            }
+            var center = await _center.GetByID(centerId);
+            if (center == null)
+                throw new KeyNotFoundException("Center not found.");
+            if (center.OwnerUserId != ownerUserId)
+                throw new UnauthorizedAccessException("You are not the owner of this center.");
+            var resources = await _resourcesType.GetAllByCenterId(centerId);
+            if (resources == null || resources.Count == 0)
+            {
+                throw new InvalidOperationException("No resources found for this center.");
+            }
+            return resources;
+        }
         // ================ Resource Management ================
 
 
@@ -292,21 +335,23 @@ namespace Bussiness.BLL
 
             return await _services.Update(updatedService);
         }
-        public async Task<bool> DeleteService( int serviceId, int centerId, int ownerUserId)
+        public async Task<List<DTO_ServicesInfo>> GetAllServicesByCenterId(int centerId, int ownerUserId)
         {
-            if (serviceId <= 0)
-                throw new ArgumentException("Invalid service ID.");
-
-            var center = await _center.GetByID(centerId);
-
+            if (centerId <= 0)
+            {
+                throw new ArgumentException("Invalid center ID.");
+            }
+            var center = await _services.GetByID(centerId);
             if (center == null)
                 throw new KeyNotFoundException("Center not found.");
-
-            if (center.OwnerUserId != ownerUserId)
-                throw new UnauthorizedAccessException(
-                    "You are not the owner of this center.");
-
-            return await _services.Delete(serviceId, centerId);
+            if (center.CenterId != centerId)
+                throw new UnauthorizedAccessException("You are not the owner of this center.");
+            var resources = await _services.GetAllByCenterId(centerId);
+            if (resources == null || resources.Count == 0)
+            {
+                throw new InvalidOperationException("No services found for this center.");
+            }
+            return resources;
         }
         public async Task<bool> ActiveService(int serviceId,int centerId,int ownerUserId)
         {
@@ -464,19 +509,30 @@ namespace Bussiness.BLL
         }
         // ================ Bookings Management ================
 
-        
+
         // ================ Staffs Management ================
         public async Task<bool> AddStaffMember(DTO_AddStaffMember staffMember)
-            => await _staff.Add(staffMember);
-        public async Task<bool> UpdateStaffMember(int userId,DTO_UpdateUserInfoRequest request) 
         {
-            return await _user.Update(userId, request);
+            if (staffMember == null)
+            {
+                throw new ArgumentNullException(nameof(staffMember), "Staff member cannot be null while adding staff member");
+            }
+           var result = await _staff.Add(staffMember);
+            if(result)
+            {
+                return true;
+            }
+            return false;
+        }
+        public async Task<bool> UpdateStaffMember(int userId,DTO_UpdateStaffMember request)
+        {
+            return true;
         }
         public async Task<bool> DeleteStaffMember(int userId)
         {
             return await _staff.Delete(userId);
         }
-        public async Task<bool> AddStaffRole_ByCenterId(DTO_StaffRole role)
+        public async Task<bool> AddStaffRoleByCenterId(DTO_StaffRole role)
         {
             return await _staffRole.AddStaffRole(role);
         }
@@ -484,11 +540,11 @@ namespace Bussiness.BLL
         {
             return await _staffRole.SetRoleToMember(request);
         }
-        public async Task<List<DTO_StaffDetails>> GetAllStaff()
+        public async Task<List<DTO_StaffDetails>> GetAllStaffByOwnerId(int ownerId)
         {
             return await _staff.GetAll();
         }
-        public async Task<List<DTO_StaffDetails>> GetAllStaff_ByCenterId(int centerId)
+        public async Task<List<DTO_StaffDetails>> GetAllStaffByCenterId(int centerId)
         {
             return await _staff.GetAllStaff_ByCenterId(centerId);
         }

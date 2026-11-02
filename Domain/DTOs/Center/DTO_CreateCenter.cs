@@ -12,7 +12,6 @@ namespace Domain.DTOs.Center
         public string CenterAddress { get; set; } = null!;
         public string CenterDescription { get; set; } = null!;
         public string CenterStatus { get; set; } = null!;
-        public bool IsActive { get; set; }
         public string CenterType { get; set; } = null!;
         public TimeOnly OpenTime { get; set; }
         public TimeOnly CloseTime { get; set; }

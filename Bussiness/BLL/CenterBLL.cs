@@ -114,6 +114,13 @@ namespace Bussiness
 
             return await _centerDLL.GetCenterDetailsById(centerId);
         }
+        public async Task<DTO_CenterOverview?> GetCenterOverView(int centerId)
+        {
+            if (centerId <= 0)
+                throw new ArgumentException("Invalid center ID.");
+
+            return await _centerDLL.GetCenterOverView(centerId);
+        }
         public async Task<List<DTO_CentersListDetails>> GetAllCentersByOwnerId(int ownerId)
         {
             if (ownerId <= 0)

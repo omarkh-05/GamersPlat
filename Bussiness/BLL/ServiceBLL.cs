@@ -1,5 +1,6 @@
 using Data;
 using DataLayer;
+using Domain.DTOs.Service;
 
 namespace Bussiness
 {
@@ -40,6 +41,8 @@ namespace Bussiness
         // ================ Read By ================
         public async Task<Service?> GetByID(int serviceId)
             => await _serviceDLL.GetByID(serviceId);
+        public async Task<List<DTO_ServicesInfo>?> GetAllByCenterId(int centerId)
+            => await _serviceDLL.GetAllByCenterId(centerId);
 
         // ================ Read By ================
     }

@@ -1,6 +1,7 @@
 using Data;
 using Data.DLL;
 using Data.EF;
+using Domain.DTOs.Resource;
 using Microsoft.EntityFrameworkCore;
 
 namespace DataLayer
@@ -132,6 +133,31 @@ namespace DataLayer
             {
                 EventLog_Helper.WriteEventLog("Get ResourcesType By ID Error", ex);
                 return null;
+            }
+        }
+        public async Task<List<DTO_ResourceInfo>> GetAllByCenterId(int centerId)
+        {
+            try
+            {
+                return await _db.ResourcesTypes
+                    .AsNoTracking()
+                    .Where(r => r.CenterId == centerId)
+                    .Select(r => new DTO_ResourceInfo
+                    {
+                        ResourcesTypeId = r.ResourcesTypeId,
+                        CenterId = r.CenterId,
+                        DeviceId = r.DeviceId,
+                        HourlyPrice = r.HourlyPrice,
+                        TotalQuantity = r.TotalQuantity,
+                        RoomType = r.RoomType,
+                        IsActive = r.IsActive
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get ResourcesType By Center ID Error", ex);
+                return new List<DTO_ResourceInfo>();
             }
         }
         public async Task<bool> CheckCenterAndResource(int centerId,int resourceId)

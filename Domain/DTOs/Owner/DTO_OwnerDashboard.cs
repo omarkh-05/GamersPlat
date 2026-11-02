@@ -18,6 +18,7 @@ namespace Domain.DTOs.Owner
         public decimal TotalRevenue { get; set; }
 
         public decimal AverageRating { get; set; }
+        public int TotalEmployees { get; set; }
         public int TotalReviews { get; set; }
 
         public short ActiveServices { get; set; }

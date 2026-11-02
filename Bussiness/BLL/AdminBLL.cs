@@ -104,7 +104,8 @@ namespace Bussiness.BLL
 
         public async Task<bool> AddResourcesType(ResourcesType rt) => await _resource.Add(rt);
         public async Task<bool> UpdateResourcesType(ResourcesType rt) => await _resource.Update(rt);
-        public async Task<bool> ToggleResourcesTypeActive(int centerId, int resourceId) => await _resource.UpdateActiveStatus(centerId, resourceId);
+        public async Task<bool> ActiveResourcesType(int centerId, int resourceId) => await _resource.ActiveStatus(centerId, resourceId);
+        public async Task<bool> DeactiveResourcesType(int centerId, int resourceId) => await _resource.DeactiveStatus(centerId, resourceId);
         public async Task<bool> DeleteResourcesType(int id) => await _resource.Delete(id);
         // ================ Device / Resource Types ================
 
@@ -112,7 +113,8 @@ namespace Bussiness.BLL
         // ================ Services Management ================
         public async Task<bool> AddService(Service service) => await _service.Add(service);
         public async Task<bool> UpdateService(Service service) => await _service.Update(service);
-        public async Task<bool> ToggleServiceActive(int serviceId, int centerId) => await _service.UpdateActiveStatus(serviceId, centerId);
+        public async Task<bool> ActiveService(int serviceId, int centerId) => await _service.ActiveStatus(serviceId, centerId);
+        public async Task<bool> DeactiveService(int serviceId, int centerId) => await _service.DeactiveStatus(serviceId, centerId);
         public async Task<bool> DeleteService(int serviceId, int centerId) => await _service.Delete(serviceId, centerId);
         public async Task<List<Service>> GetAllServices() => await _service.GetAll();
         public async Task<Service?> GetServiceById(int id) => await _service.GetByID(id);

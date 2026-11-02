@@ -26,6 +26,10 @@ public partial class Center
     [StringLength(50)]
     public string? CenterStatus { get; set; }
 
+    public string? CenterPhone { get; set; }
+
+    public bool? IsApproved { get; set; }
+
     public bool? IsActive { get; set; }
 
     [StringLength(50)]

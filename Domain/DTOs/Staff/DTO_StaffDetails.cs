@@ -11,6 +11,7 @@ namespace Domain.DTOs.Staff
         public string CenterName { get; set; } = string.Empty;
         public string StaffRoleName { get; set; } = string.Empty;
         public int Permissions { get; set; }
+        public string Status { get; set; } = string.Empty;
         public bool IsActive { get; set; }
     }
 }
