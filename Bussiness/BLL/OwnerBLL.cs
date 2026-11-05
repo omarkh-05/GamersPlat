@@ -19,22 +19,20 @@ namespace Bussiness.BLL
     {
         readonly IUser _user;
         readonly CenterBLL _center;
-        readonly ResourcesTypeBLL _resourcesType;
-        readonly ServiceBLL _services;
+        readonly CenterResourcesBLL _resourcesType;
+        readonly CenterServiceBLL _services;
         readonly BookingBLL _booking;
         readonly StaffBLL _staff;
-        readonly StaffRoleBLL _staffRole;
         readonly IAuthService _auth;
         private readonly OwnerDLL _ownerDLL;
 
         public OwnerBLL(
             IUser user,
             CenterBLL centerBLL,
-            ResourcesTypeBLL resourcesTypeBLL,
-            ServiceBLL servicesBLL,
+            CenterResourcesBLL resourcesTypeBLL,
+            CenterServiceBLL servicesBLL,
             BookingBLL bookingBLL,
             StaffBLL staffBLL,
-            StaffRoleBLL staffRoleBLL,
             IAuthService auth,
             OwnerDLL ownerDLL)
         {
@@ -44,7 +42,6 @@ namespace Bussiness.BLL
             _services = servicesBLL;
             _booking = bookingBLL;
             _staff = staffBLL;
-            _staffRole = staffRoleBLL;
             _auth = auth;
             _ownerDLL = ownerDLL;
         }
@@ -196,10 +193,10 @@ namespace Bussiness.BLL
             if (center.OwnerUserId != ownerUserId)
                 throw new UnauthorizedAccessException("You are not the owner of this center.");
 
-            var newResource = new ResourcesType
+            var newResource = new CenterResource
             {
                 CenterId = resource.CenterId,
-                DeviceId = resource.DeviceId,
+                ResourcesTypeId = resource.ResourceId,
                 HourlyPrice = resource.HourlyPrice,
                 TotalQuantity = resource.TotalQuantity,
                 RoomType = resource.RoomType,
@@ -220,13 +217,13 @@ namespace Bussiness.BLL
             if (center.OwnerUserId != ownerUserId)
                 throw new UnauthorizedAccessException("You are not the owner of this center.");
 
-            var newResource = new ResourcesType
+            var newResource = new CenterResource
             {
                 CenterId = resource.CenterId,
-                DeviceId = resource.DeviceId,
+                ResourcesTypeId = resource.ResourceId,
                 HourlyPrice = resource.HourlyPrice,
                 TotalQuantity = resource.TotalQuantity,
-                RoomType = resource.RoomType,
+                RoomType = resource.RoomType??"normal",
                 IsActive = resource.IsActive
             };
 
@@ -300,13 +297,12 @@ namespace Bussiness.BLL
 
             var newService = new Service
             {
-                CenterId = service.CenterId,
                 Name = service.Name,
                 IsActive = service.IsActive,
                 CreatedAt = DateTime.UtcNow
             };
 
-            return await _services.Add(newService);
+            return await _services.Add(newService, service.CenterId);
         }
         public async Task<bool> UpdateService(DTO_UpdateService service,int ownerUserId)
         {
@@ -314,25 +310,23 @@ namespace Bussiness.BLL
             {
                 throw new ArgumentNullException(nameof(service),"Service cannot be null while updating service");
             }
-
+       
             var center = await _center.GetByID(service.CenterId);
-
+       
             if (center == null)
                 throw new KeyNotFoundException("Center not found.");
-
+       
             if (center.OwnerUserId != ownerUserId)
-                throw new UnauthorizedAccessException(
-                    "You are not the owner of this center.");
-
+                throw new UnauthorizedAccessException("You are not the owner of this center.");
+       
             var updatedService = new Service
             {
                 ServiceId = service.ServiceId,
-                CenterId = service.CenterId,
                 Name = service.Name,
                 IsActive = service.IsActive,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.Now
             };
-
+       
             return await _services.Update(updatedService);
         }
         public async Task<List<DTO_ServicesInfo>> GetAllServicesByCenterId(int centerId, int ownerUserId)
@@ -341,10 +335,10 @@ namespace Bussiness.BLL
             {
                 throw new ArgumentException("Invalid center ID.");
             }
-            var center = await _services.GetByID(centerId);
+            var center = await _center.GetByID(centerId);
             if (center == null)
                 throw new KeyNotFoundException("Center not found.");
-            if (center.CenterId != centerId)
+            if (center.OwnerUserId != ownerUserId)
                 throw new UnauthorizedAccessException("You are not the owner of this center.");
             var resources = await _services.GetAllByCenterId(centerId);
             if (resources == null || resources.Count == 0)
@@ -474,11 +468,11 @@ namespace Bussiness.BLL
                 CustomerName = booking.CustomerName,
                 CenterName = booking.Center.CenterName,
                 PhoneNumber = booking.PhoneNumber,
-                ResourcesType = booking.ResourcesType.Device.DeviceName,
+                ResourcesType = booking.CenterResource.ResourcesType.ResourceName,
                 BookingDate = booking.BookingDate,
                 StartTime = booking.StartTime,
-                EndTime = booking.EndTime.HasValue ? booking.EndTime.Value:booking.StartTime.AddHours(1),
-                Duration = booking.EndTime.HasValue ? $"{(booking.EndTime.Value - booking.StartTime).TotalMinutes} Minutes" : "Open Time",
+                EndTime = booking.EndTime ,
+                Duration = $"{(booking.EndTime - booking.StartTime).TotalMinutes} Minutes" ,
                 TotalPrice = booking.TotalPrice,
                 Status = booking.Status
             };
@@ -531,14 +525,6 @@ namespace Bussiness.BLL
         public async Task<bool> DeleteStaffMember(int userId)
         {
             return await _staff.Delete(userId);
-        }
-        public async Task<bool> AddStaffRoleByCenterId(DTO_StaffRole role)
-        {
-            return await _staffRole.AddStaffRole(role);
-        }
-        public async Task<bool> SetRoleToMember(DTO_SetRoleToMember request)
-        {
-            return await _staffRole.SetRoleToMember(request);
         }
         public async Task<List<DTO_StaffDetails>> GetAllStaffByOwnerId(int ownerId)
         {

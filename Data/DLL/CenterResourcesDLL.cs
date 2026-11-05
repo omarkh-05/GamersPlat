@@ -6,34 +6,34 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DataLayer
 {
-    public class ResourcesTypeDLL
+    public class CenterResourcesDLL
     {
         private readonly GamersPlatDbContext _db;
 
-        public ResourcesTypeDLL(GamersPlatDbContext db)
+        public CenterResourcesDLL(GamersPlatDbContext db)
         {
             _db = db;
         }
         // ================ CRUD ===========
-        public async Task<int> Add(ResourcesType rt)
+        public async Task<int> Add(CenterResource rt)
         {
             try
             {
-                _db.ResourcesTypes.Add(rt);
+                _db.CenterResources.Add(rt);
                 await _db.SaveChangesAsync();
                 return rt.ResourcesTypeId;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Add ResourcesType Error", ex);
+                EventLog_Helper.WriteEventLog("Add Center Resource Error", ex);
                 return 0;
             }
         }
-        public async Task<bool> Update(ResourcesType rt)
+        public async Task<bool> Update(CenterResource rt)
         {
             try
             { 
-                var existing = await _db.ResourcesTypes.FirstOrDefaultAsync(r => r.ResourcesTypeId == rt.ResourcesTypeId && r.CenterId == rt.CenterId);
+                var existing = await _db.CenterResources.FirstOrDefaultAsync(r => r.ResourcesTypeId == rt.ResourcesTypeId && r.CenterId == rt.CenterId);
                 if (existing == null) return false;
                 _db.Entry(existing).CurrentValues.SetValues(rt);
                 return await _db.SaveChangesAsync() > 0;
@@ -49,7 +49,7 @@ namespace DataLayer
             try
             {
 
-                var resource = await _db.ResourcesTypes
+                var resource = await _db.CenterResources
              .FirstOrDefaultAsync(r =>
                  r.ResourcesTypeId == resourceId &&
                  r.CenterId == centerId);
@@ -73,7 +73,7 @@ namespace DataLayer
             try
             {
 
-                var resource = await _db.ResourcesTypes
+                var resource = await _db.CenterResources
              .FirstOrDefaultAsync(r =>
                  r.ResourcesTypeId == resourceId &&
                  r.CenterId == centerId);
@@ -96,38 +96,38 @@ namespace DataLayer
         {
             try
             {
-                var existing = await _db.ResourcesTypes.FirstOrDefaultAsync(r => r.ResourcesTypeId == id);
+                var existing = await _db.CenterResources.FirstOrDefaultAsync(r => r.ResourcesTypeId == id);
                 if (existing == null) return false;
-                _db.ResourcesTypes.Remove(existing);
+                _db.CenterResources.Remove(existing);
                 return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Delete ResourcesType Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Center Resource Error", ex);
                 return false;
             }
         }
-        public async Task<List<ResourcesType>> GetAll()
+        public async Task<List<CenterResource>> GetAll()
         {
             try
             {
-                return await _db.ResourcesTypes.AsNoTracking().ToListAsync();
+                return await _db.CenterResources.AsNoTracking().ToListAsync();
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Get All ResourcesTypes Error", ex);
-                return new List<ResourcesType>();
+                EventLog_Helper.WriteEventLog("Get All Center Resources Error", ex);
+                return new List<CenterResource>();
             }
         }
         // ================ CRUD ===========
 
 
         // ================ Read By ===========
-        public async Task<ResourcesType?> GetByID(int id)
+        public async Task<CenterResource?> GetByID(int id)
         {
             try
             {
-                return await _db.ResourcesTypes.AsNoTracking().FirstOrDefaultAsync(r => r.ResourcesTypeId == id);
+                return await _db.CenterResources.AsNoTracking().FirstOrDefaultAsync(r => r.ResourcesTypeId == id);
             }
             catch (Exception ex)
             {
@@ -139,14 +139,14 @@ namespace DataLayer
         {
             try
             {
-                return await _db.ResourcesTypes
+                return await _db.CenterResources
                     .AsNoTracking()
                     .Where(r => r.CenterId == centerId)
                     .Select(r => new DTO_ResourceInfo
                     {
                         ResourcesTypeId = r.ResourcesTypeId,
                         CenterId = r.CenterId,
-                        DeviceId = r.DeviceId,
+                        ResourceId = r.ResourcesTypeId,
                         HourlyPrice = r.HourlyPrice,
                         TotalQuantity = r.TotalQuantity,
                         RoomType = r.RoomType,
@@ -163,7 +163,7 @@ namespace DataLayer
         public async Task<bool> CheckCenterAndResource(int centerId,int resourceId)
         {
             try {
-            var resourceExists = await _db.ResourcesTypes.AnyAsync(r => r.ResourcesTypeId == resourceId && r.CenterId == centerId);
+            var resourceExists = await _db.CenterResources.AnyAsync(r => r.ResourcesTypeId == resourceId && r.CenterId == centerId);
                 return resourceExists;
             }
             catch (Exception ex)

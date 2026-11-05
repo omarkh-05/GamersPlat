@@ -13,7 +13,7 @@ namespace Domain.DTOs.Booking
         public string? ResourcesType { get; set; }
         public DateOnly BookingDate { get; set; }
         public TimeOnly StartTime { get; set; }
-        public TimeOnly? EndTime { get; set; } = TimeOnly.MinValue;
+        public TimeOnly EndTime { get; set; }
         public string? Duration { get; set; } = "";
         public decimal TotalPrice { get; set; }
         public string Status { get; set; } = null!;

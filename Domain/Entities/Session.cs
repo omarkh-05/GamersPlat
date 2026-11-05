@@ -41,10 +41,6 @@ public partial class Session
     [InverseProperty("Sessions")]
     public virtual User CreatedByUser { get; set; } = null!;
 
-    [ForeignKey("DeviceId")]
-    [InverseProperty("Sessions")]
-    public virtual Device Device { get; set; } = null!;
-
     [ForeignKey("GameId")]
     [InverseProperty("Sessions")]
     public virtual Game Game { get; set; } = null!;

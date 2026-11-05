@@ -8,7 +8,7 @@ namespace Domain.DTOs.Resource
     {
         public int CenterId { get; set; }
 
-        public byte DeviceId { get; set; }
+        public int ResourceId { get; set; }
 
         public decimal HourlyPrice { get; set; }
 

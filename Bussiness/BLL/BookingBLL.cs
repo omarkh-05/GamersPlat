@@ -72,7 +72,7 @@ namespace Bussiness
                 var booking = new Booking
                 {
                     UserId = userId,
-                    ResourcesTypeId = dto.ResourcesTypeId,
+                    CenterResourceId = dto.ResourcesTypeId,
                     BookingDate = dto.BookingDate,
                     StartTime = start,
                     EndTime = end,
@@ -186,7 +186,7 @@ namespace Bussiness
                 }
 
                 // Only booking owner can update
-                if (!existing.UserId.HasValue || existing.UserId.Value != userId)
+                if (existing.UserId < 1 || existing.UserId != userId)
                 {
                     LastError = "You are not authorized to update this booking";
                     return false;
@@ -201,7 +201,7 @@ namespace Bussiness
                 if (!ValidateBookingTime(dto.BookingDate, dto.StartTime, dto.EndTime, out var start, out var end))
                     return false;
 
-                var rt = await GetValidResourceType(existing.ResourcesTypeId, existing.CenterId);
+                var rt = await GetValidResourceType(existing.CenterResourceId, existing.CenterId);
 
                 if (rt == null)
                 {
@@ -280,7 +280,7 @@ namespace Bussiness
                     return false;
                 }
                 // Only booking owner can cancel
-                if (!existing.UserId.HasValue || existing.UserId.Value != userId)
+                if (existing.UserId < 1 || existing.UserId != userId)
                 {
                     LastError = "You are not authorized to cancel this booking";
                     return false;

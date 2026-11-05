@@ -41,7 +41,7 @@ namespace Bussiness.BLL
             if (await _user.ExistsByPhone(request.PhoneNumber))
                 throw new Exception("Phone number already exists");
 
-            var role = await _roles.GetByName(roleName);
+            var role = await _roles.GetByName(roleName.ToLower());
             if (role == null)
                 throw new Exception("Invalid role");
 

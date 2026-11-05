@@ -61,7 +61,7 @@ namespace DataLayer
                     }
                 }
 
-                var booked = await GetBookedQuantityForTimeSlot(booking.ResourcesTypeId, booking.BookingDate, booking.StartTime, booking.EndTime!.Value);
+                var booked = await GetBookedQuantityForTimeSlot(booking.CenterResourceId, booking.BookingDate, booking.StartTime, booking.EndTime!);
 
                 if (booked + booking.Quantity > totalQuantity)
                 {
@@ -102,7 +102,7 @@ namespace DataLayer
                     tx = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
                 }
 
-                var booked = await GetBookedQuantityForTimeSlotExcludingBooking(existing.ResourcesTypeId, existing.BookingDate, existing.StartTime, existing.EndTime!.Value, existing.BookingId);
+                var booked = await GetBookedQuantityForTimeSlotExcludingBooking(existing.CenterResourceId, existing.BookingDate, existing.StartTime, existing.EndTime!, existing.BookingId);
 
                 if (booked + existing.Quantity > totalQuantity)
                 {
@@ -177,7 +177,7 @@ namespace DataLayer
                         CenterName = b.Center.CenterName,
                         CustomerName = b.CustomerName,
                         PhoneNumber = b.PhoneNumber,
-                        ResourcesType = b.ResourcesType.Device.DeviceName + " - " + b.ResourcesType.RoomType,
+                        ResourcesType = b.CenterResource.ResourcesType.ResourceName + " - " + b.CenterResource.RoomType,
                         BookingDate = b.BookingDate,
                         StartTime = b.StartTime,
                         EndTime = b.EndTime,
@@ -235,7 +235,7 @@ namespace DataLayer
                     {
                         BookingId = b.BookingId,
                         CenterName = b.Center.CenterName,
-                        Resource = b.ResourcesType.Device.DeviceName,
+                        Resource = b.CenterResource.ResourcesType.ResourceName,
                         StartTime = b.StartTime,
                         EndTime = b.EndTime,
                         OfferId = b.OfferId,
@@ -262,7 +262,7 @@ namespace DataLayer
                 };
             var fullyBooked = await _db.Bookings
                 .Where(b =>
-                    b.ResourcesTypeId == resourcesTypeId &&
+                    b.CenterResourceId == resourcesTypeId &&
                     b.CenterId == centerId &&
                     b.BookingDate == date &&
                     activeStatuses.Contains(b.Status))
@@ -270,9 +270,9 @@ namespace DataLayer
                 {
                     b.StartTime,
                     b.EndTime,
-                    b.ResourcesTypeId,
+                    b.CenterResourceId,
                     b.BookingDate,
-                    b.ResourcesType.TotalQuantity
+                    b.CenterResource.TotalQuantity
                 })
                 .Where(g => g.Count() >= g.Key.TotalQuantity)
                 .Select(g => new DTO_StartEndTime
@@ -297,11 +297,11 @@ namespace DataLayer
                 var end = endTime ?? startTime.AddHours(1);
                 return await _db.Bookings
                     .Where(b =>
-                        b.ResourcesTypeId == resourcesTypeId &&
+                        b.CenterResourceId == resourcesTypeId &&
                         b.BookingDate == date &&
                         activeStatuses.Contains(b.Status) &&
                         (b.StartTime < end &&
-                        (b.EndTime ?? b.StartTime.AddHours(1)) > startTime))
+                        (b.EndTime) > startTime))
                     .SumAsync(b => (int?)b.Quantity) ?? 0;
         }
         public async Task<int> GetBookedQuantityForTimeSlotExcludingBooking(int resourcesTypeId, DateOnly date, TimeOnly startTime, TimeOnly? endTime, int excludeBookingId)
@@ -312,12 +312,12 @@ namespace DataLayer
 
                 return await _db.Bookings
                     .Where(b =>
-                        b.ResourcesTypeId == resourcesTypeId &&
+                        b.CenterResourceId == resourcesTypeId &&
                         b.BookingDate == date &&
                         b.Status != nameof(BookingStatus.accepted) &&
                         b.BookingId != excludeBookingId &&
                         (b.StartTime < reqEnd &&
-                         (b.EndTime ?? b.StartTime.AddHours(1)) > startTime))
+                         (b.EndTime) > startTime))
                     .SumAsync(b => (int?)b.Quantity) ?? 0;
             }
             catch (Exception ex)
@@ -365,16 +365,12 @@ namespace DataLayer
                         PhoneNumber = b.PhoneNumber,
                         CenterName = b.Center.CenterName,
                         ResourcesType =
-                            b.ResourcesType.Device.DeviceName +
+                            b.CenterResource.ResourcesType.ResourceName +
                             " - " +
-                            b.ResourcesType.RoomType,
+                            b.CenterResource.RoomType,
                         StartTime = b.StartTime,
-                        EndTime = b.EndTime.HasValue
-                            ? b.EndTime.Value
-                            : b.StartTime.AddHours(1),
-                        Duration = b.EndTime.HasValue
-                            ? $"{(b.EndTime.Value - b.StartTime).TotalMinutes} Minutes"
-                            : "Open Time",
+                        EndTime = b.EndTime,
+                        Duration =$"{(b.EndTime - b.StartTime).TotalMinutes} Minutes",
                         BookingDate = b.BookingDate,
                         TotalPrice = b.TotalPrice,
                         Status = b.Status,
@@ -383,10 +379,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Get Bookings By Owner Error",
-                    ex);
-
+                EventLog_Helper.WriteEventLog("Get Bookings By Owner Error",ex);
                 return new List<DTO_BookingDetails>();
             }
         }
@@ -404,16 +397,12 @@ namespace DataLayer
                         PhoneNumber = b.PhoneNumber,
                         CenterName = b.Center.CenterName,
                         ResourcesType =
-                            b.ResourcesType.Device.DeviceName +
+                            b.CenterResource.ResourcesType.ResourceName +
                             " - " +
-                            b.ResourcesType.RoomType,
+                            b.CenterResource.RoomType,
                         StartTime = b.StartTime,
-                        EndTime = b.EndTime.HasValue
-                            ? b.EndTime.Value
-                            : b.StartTime.AddHours(1),
-                        Duration = b.EndTime.HasValue
-                            ? $"{(b.EndTime.Value - b.StartTime).TotalMinutes} Minutes"
-                            : "Open Time",
+                        EndTime = b.EndTime,
+                        Duration =  $"{(b.EndTime - b.StartTime).TotalMinutes} Minutes",
                         BookingDate = b.BookingDate,
                         TotalPrice = b.TotalPrice,
                         Status = b.Status,
@@ -437,13 +426,12 @@ namespace DataLayer
         {
             var activeStatuses = new[]{nameof(BookingStatus.pending), nameof(BookingStatus.accepted) };
             var start = booking.StartTime;
-            var end = booking.EndTime ?? start.AddHours(1);
+            var end = booking.EndTime;
             return await _db.Bookings.AnyAsync(b =>
                 b.UserId == booking.UserId &&
                 b.BookingDate == booking.BookingDate &&
                 activeStatuses.Contains(b.Status) &&
-                b.StartTime < end &&
-                (b.EndTime ?? b.StartTime.AddHours(1)) > start);
+                b.StartTime < end && b.EndTime > start);
         }
         private async Task<int> CountActiveBookings(int? userId)
         {

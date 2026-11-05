@@ -91,7 +91,7 @@ namespace DataLayer
                             .Take(3)
                             .ToList(),
 
-                        // Sessions
+                       /* // Sessions
                         TotalSessions = _db.Sessions.Count(s =>
                             s.SessionStatus == "Completed" &&
                             (!from.HasValue || s.CreatedAt >= from.Value) &&
@@ -184,6 +184,7 @@ namespace DataLayer
                                         (!to.HasValue || b.CreatedAt <= to.Value)) * 100)
                                 : 0)
                             .FirstOrDefault(),
+                       */
 
                         // Revenue Growth
                         RevenueGrowth = from.HasValue && to.HasValue
@@ -297,11 +298,11 @@ namespace DataLayer
 
                 try
                 {
-                    if (center.OwnerUserId.HasValue)
+                    if (center.OwnerUserId > 0)
                     {
                         var n = new Notification
                         {
-                            UserId = center.OwnerUserId.Value,
+                            UserId = center.OwnerUserId,
                             CenterId = center.CenterId,
                             Title = "Center Approved",
                             Message = $"Your center '{center.CenterName}' has been approved by admin.",
@@ -323,9 +324,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Approve Center Error",
-                    ex);
+                EventLog_Helper.WriteEventLog("Approve Center Error",ex);
 
                 return false;
             }
@@ -348,11 +347,11 @@ namespace DataLayer
 
                 try
                 {
-                    if (center.OwnerUserId.HasValue)
+                    if (center.OwnerUserId > 0)
                     {
                         var n = new Notification
                         {
-                            UserId = center.OwnerUserId.Value,
+                            UserId = center.OwnerUserId,
                             CenterId = center.CenterId,
                             Title = "Center Rejected",
                             Message = $"Your center '{center.CenterName}' was rejected. Reason: {reason}",
@@ -376,10 +375,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Reject Center Error",
-                    ex);
-
+                EventLog_Helper.WriteEventLog("Reject Center Error", ex);
                 return false;
             }
         }
@@ -446,8 +442,7 @@ namespace DataLayer
             try
             {
                 var admins = await _db.Users
-                    .Where(u => u.UserRoles.Any(
-                        ur => ur.Role.RoleName == "Admin"))
+                    .Where(u => u.UserRoles.Any(ur => ur.Role.RoleName == "admin"))
                     .Select(u => new { u.UserId })
                     .ToListAsync();
 
@@ -472,10 +467,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Submit Report Error",
-                    ex);
-
+                EventLog_Helper.WriteEventLog("Submit Report Error",ex);
                 return false;
             }
         }

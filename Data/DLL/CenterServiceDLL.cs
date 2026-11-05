@@ -7,30 +7,51 @@ using System.Diagnostics;
 
 namespace DataLayer
 {
-    public class ServiceDLL
+    public class CenterServiceDLL
     {
         private readonly GamersPlatDbContext _db;
 
-        public ServiceDLL(GamersPlatDbContext db)
+        public CenterServiceDLL(GamersPlatDbContext db)
         {
             _db = db;
         }
 
         // ================ CRUD ===============
-        public async Task<int> Add(Service service)
+        public async Task<int> Add(Service service, int centerId)
         {
             try
             {
-                _db.Services.Add(service);
+                var isActiveForCenter = service.IsActive;
+                var existingService = await _db.Services
+                    .FirstOrDefaultAsync(s => s.Name == service.Name);
+
+                if (existingService == null)
+                {
+                    service.IsActive = true;
+                    _db.Services.Add(service);
+                }
+
+                var existingCenterService = await _db.CenterServices
+                    .AnyAsync(cs => cs.CenterId == centerId && cs.ServiceId == existingService.ServiceId);
+
+                if (existingCenterService)
+                    return 0;
+
+                _db.CenterServices.Add(new CenterService
+                {
+                    CenterId = centerId,
+                    Service = existingService,
+                    IsActive = isActiveForCenter,
+                    CreatedAt = DateTime.UtcNow
+                });
 
                 await _db.SaveChangesAsync();
 
-                return service.ServiceId;
+                return existingService.ServiceId;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Add Service Error", ex);
+                EventLog_Helper.WriteEventLog( "Add Service Error", ex);
 
                 return 0;
             }
@@ -40,17 +61,16 @@ namespace DataLayer
         {
             try
             {
-                var existing = await _db.Services
-                    .FirstOrDefaultAsync(s =>
-                        s.ServiceId == service.ServiceId &&
-                        s.CenterId == service.CenterId);
+                var existing = await _db.CenterServices
+                    .Include(cs => cs.Service)
+                    .FirstOrDefaultAsync(cs => cs.ServiceId == service.ServiceId && cs.CenterId == service.ServiceId);
 
                 if (existing == null)
                     return false;
 
-                existing.Name = service.Name;
+                existing.Service.Name = service.Name;
+                existing.Service.UpdatedAt = DateTime.UtcNow;
                 existing.IsActive = service.IsActive;
-                existing.UpdatedAt = DateTime.UtcNow;
 
                 return await _db.SaveChangesAsync() > 0;
             }
@@ -67,15 +87,18 @@ namespace DataLayer
         {
             try
             {
-                var existing = await _db.Services
-                    .FirstOrDefaultAsync(s =>
-                        s.ServiceId == serviceId &&
-                        s.CenterId == centerId);
+                if (serviceId <= 0 || serviceId > byte.MaxValue)
+                    return false;
+
+                var existing = await _db.CenterServices
+                    .FirstOrDefaultAsync(cs =>
+                        cs.ServiceId == (byte)serviceId &&
+                        cs.CenterId == centerId);
 
                 if (existing == null)
                     return false;
 
-                _db.Services.Remove(existing);
+                _db.CenterServices.Remove(existing);
 
                 return await _db.SaveChangesAsync() > 0;
             }
@@ -92,8 +115,11 @@ namespace DataLayer
         {
             try
             {
-                var service = await _db.Services
-                    .FirstOrDefaultAsync(s => s.ServiceId == serviceId && s.CenterId == centerId);
+                if (serviceId <= 0 || serviceId > byte.MaxValue)
+                    return false;
+
+                var service = await _db.CenterServices
+                    .FirstOrDefaultAsync(cs => cs.ServiceId == (byte)serviceId && cs.CenterId == centerId);
 
                 if (service == null)
                     return false;
@@ -113,8 +139,11 @@ namespace DataLayer
         {
             try
             {
-                var service = await _db.Services
-                    .FirstOrDefaultAsync(s => s.ServiceId == serviceId && s.CenterId == centerId);
+                if (serviceId <= 0 || serviceId > byte.MaxValue)
+                    return false;
+
+                var service = await _db.CenterServices
+                    .FirstOrDefaultAsync(cs => cs.ServiceId == (byte)serviceId && cs.CenterId == centerId);
 
                 if (service == null)
                     return false;
@@ -136,7 +165,6 @@ namespace DataLayer
             try
             {
                 return await _db.Services
-                    .Include(s => s.Center)
                     .AsNoTracking()
                     .ToListAsync();
             }
@@ -158,7 +186,6 @@ namespace DataLayer
             try
             {
                 return await _db.Services
-                    .Include(s => s.Center)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
             }
@@ -174,16 +201,16 @@ namespace DataLayer
         {
             try
             {
-                return await _db.Services
-                    .Include(s => s.Center)
+                return await _db.CenterServices
+                    .Include(cs => cs.Service)
                     .AsNoTracking()
-                    .Where(s => s.CenterId == centerId)
-                    .Select(s => new DTO_ServicesInfo
+                    .Where(cs => cs.CenterId == centerId)
+                    .Select(cs => new DTO_ServicesInfo
                     {
-                        ServiceId = s.ServiceId,
-                        CenterId = s.CenterId,
-                        Name = s.Name,
-                        IsActive = s.IsActive
+                        ServiceId = cs.ServiceId,
+                        CenterId = cs.CenterId,
+                        Name = cs.Service.Name,
+                        IsActive = cs.IsActive
                     })
                     .ToListAsync();
             }

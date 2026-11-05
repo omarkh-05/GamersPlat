@@ -12,7 +12,7 @@ namespace Domain.DTOs.Resource
 
         public int CenterId { get; set; }
 
-        public byte DeviceId { get; set; }
+        public int ResourceId { get; set; }
 
         [Column(TypeName = "decimal(10, 2)")]
         public decimal HourlyPrice { get; set; }

@@ -8,6 +8,7 @@ namespace DataLayer
 {
     public class SessionDLL
     {
+        
         private readonly GamersPlatDbContext _db;
 
         public SessionDLL(GamersPlatDbContext db)
@@ -84,7 +85,7 @@ namespace DataLayer
             {
                 return await _db.Sessions
                     .Include(s => s.CreatedByUser)
-                    .Include(s => s.Device)
+                    .Include(s => s.Center)
                     .Include(s => s.Game)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.SessionId == sessionId);
@@ -96,5 +97,6 @@ namespace DataLayer
             }
         }
         // ================ Read By ===========
+        
     }
 }

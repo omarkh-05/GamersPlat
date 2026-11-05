@@ -44,10 +44,6 @@ public partial class Tournament
     [InverseProperty("Tournaments")]
     public virtual Center Center { get; set; } = null!;
 
-    [ForeignKey("DeviceId")]
-    [InverseProperty("Tournaments")]
-    public virtual Device Device { get; set; } = null!;
-
     [ForeignKey("GameId")]
     [InverseProperty("Tournaments")]
     public virtual Game? Game { get; set; }

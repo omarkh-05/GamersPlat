@@ -55,7 +55,6 @@ namespace DataLayer
                      CenterName = tp.Tournament.Center.CenterName,
                      TournamentName = tp.Tournament.TournamentName,
                      GameName = tp.Tournament.Game.GameName,
-                     DeviceName = tp.Tournament.Device.DeviceName,
                      WinnerUserId = tp.Tournament.WinnerUser.FullName,
                      RewardPoints = tp.Tournament.RewardPoints,
                      JoinedAt = tp.JoinedAt

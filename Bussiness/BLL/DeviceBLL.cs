@@ -5,6 +5,7 @@ namespace Bussiness
 {
     public class DeviceBLL
     {
+        /*
         private readonly DeviceDLL _deviceDLL;
 
         public DeviceBLL(DeviceDLL deviceDLL)
@@ -36,5 +37,6 @@ namespace Bussiness
             => await _deviceDLL.GetByID(id);
 
         // ================ Read By ================
+        */
     }
 }

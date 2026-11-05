@@ -42,16 +42,15 @@ builder.Services.AddScoped<OfferBLL>();
 builder.Services.AddScoped<TournamentBLL>();
 builder.Services.AddScoped<TournamentPlayerBLL>();
 builder.Services.AddScoped<ReviewBLL>();
-builder.Services.AddScoped<ResourcesTypeBLL>();
+builder.Services.AddScoped<CenterResourcesBLL>();
 builder.Services.AddScoped<OwnerBLL>();
 builder.Services.AddScoped<DeviceBLL>();
 builder.Services.AddScoped<SessionBLL>();
 builder.Services.AddScoped<SessionParticipantBLL>();
-builder.Services.AddScoped<ServiceBLL>();
+builder.Services.AddScoped<CenterServiceBLL>();
 builder.Services.AddScoped<GameBLL>();
 builder.Services.AddScoped<PlayerBLL>();
 builder.Services.AddScoped<StaffBLL>();
-builder.Services.AddScoped<StaffRoleBLL>();
 builder.Services.AddScoped<AuthHelpers>();
 builder.Services.AddScoped<RefreshTokenBLL>();
 builder.Services.AddScoped<PasswordResetTokenBLL>();
@@ -66,13 +65,12 @@ builder.Services.AddScoped<TournamentPlayerDLL>();
 builder.Services.AddScoped<SessionDLL>();
 builder.Services.AddScoped<SessionParticipantDLL>();
 builder.Services.AddScoped<StaffDLL>();
-builder.Services.AddScoped<StaffRoleDLL>();
 builder.Services.AddScoped<OfferDLL>();
-builder.Services.AddScoped<ResourcesTypeDLL>();
+builder.Services.AddScoped<CenterResourcesDLL>();
 builder.Services.AddScoped<ReviewDLL>();
 builder.Services.AddScoped<NotificationDLL>();
 builder.Services.AddScoped<AdminDLL>();
-builder.Services.AddScoped<ServiceDLL>();
+builder.Services.AddScoped<CenterServiceDLL>();
 builder.Services.AddScoped<DeviceDLL>();
 builder.Services.AddScoped<CenterDLL>();
 builder.Services.AddScoped<CityDLL>();
@@ -95,7 +93,7 @@ builder.Services.AddScoped<PointTransactionBLL>();
 builder.Services.AddScoped<BookingDLL>();
 // Interface -> implementation registrations
 builder.Services.AddScoped<ICenterService, CenterBLL>();
-builder.Services.AddScoped<IResourcesTypeService, ResourcesTypeBLL>();
+builder.Services.AddScoped<IResourcesTypeService, CenterResourcesBLL>();
 builder.Services.AddScoped<ITournamentService, TournamentBLL>();
 builder.Services.AddScoped<ITournamentPlayerService, TournamentPlayerBLL>();
 builder.Services.AddScoped<IOfferService, OfferBLL>();
@@ -299,7 +297,7 @@ using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<GamersPlatDbContext>();
 
-        var roles = new[] { "Admin", "Owner", "Player" };
+        var roles = new[] { "admin", "owner", "player", "staff" };
 
         foreach (var rn in roles)
         {

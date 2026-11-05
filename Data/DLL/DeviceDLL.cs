@@ -7,6 +7,7 @@ namespace DataLayer
 {
     public class DeviceDLL
     {
+       /*
         private readonly GamersPlatDbContext _db;
 
         public DeviceDLL(GamersPlatDbContext db)
@@ -106,6 +107,7 @@ namespace DataLayer
             }
         }
 
-        // ================ Read By ================
+        // ================ Read By ================ 
+        */
     }
 }

@@ -95,7 +95,7 @@ namespace DataLayer
                         Rating = c.Reviews
                             .Select(r => (decimal?)r.Rating)
                             .Average() ?? 0,
-                        MainImage = c.CenterImage
+                        MainImage = c.CenterImages
                             .Where(i => i.IsMain)
                             .Select(i => i.ImageUrl)
                             .FirstOrDefault() ?? "",
@@ -164,18 +164,18 @@ namespace DataLayer
                         OpenTime = c.OpenTime,
                         CloseTime = c.CloseTime,
 
-                        MainImage = c.CenterImage
+                        MainImage = c.CenterImages
                             .Where(i => i.IsMain)
                             .Select(i => i.ImageUrl)
                             .FirstOrDefault() ?? "",
-                        GalleryImages = c.CenterImage
+                        GalleryImages = c.CenterImages
                             .Where(i => i.IsMain == false )
                             .Select(i => i.ImageUrl)
                             .ToList(),
 
-                        Services = c.Services
+                        Services = c.CenterServices
                             .Where(s => s.IsActive)
-                            .Select(s => s.Name)
+                            .Select(s => s.Service.Name)
                             .ToList(),
 
                         /* Rating = c.Reviews
@@ -221,27 +221,27 @@ namespace DataLayer
                              .ToList(),
                         */
 
-                        Vip = c.ResourcesTypes
+                        Vip = c.CenterResources
                             .Where(r =>
                                 r.RoomType == "VIP" &&
                                 r.IsActive)
                             .Select(r => new DTO_ResourceType
                             {
                                 ResourcesTypeId = r.ResourcesTypeId,
-                                DeviceName = r.Device.DeviceName,
+                                DeviceName = r.ResourcesType.ResourceName,
                                 HourlyPrice = r.HourlyPrice,
                                 AvailableQuantity = r.TotalQuantity
                             })
                             .ToList(),
-
-                        Normal = c.ResourcesTypes
+                      
+                        Normal = c.CenterResources
                             .Where(r =>
                                 r.RoomType == "Normal" &&
                                 r.IsActive)
                             .Select(r => new DTO_ResourceType
                             {
                                 ResourcesTypeId = r.ResourcesTypeId,
-                                DeviceName = r.Device.DeviceName,
+                                DeviceName = r.ResourcesType.ResourceName,
                                 HourlyPrice = r.HourlyPrice,
                                 AvailableQuantity = r.TotalQuantity
                             })
@@ -269,19 +269,19 @@ namespace DataLayer
                         CenterType = c.CenterType ?? "Gaming Center",
                         CenterDescription = c.CenterDescription ?? "No description available",
                         CenterPhone = c.CenterPhone ?? "No phone number available",
-                        CenterImage = c.CenterImage.FirstOrDefault(i => i.IsMain).ImageUrl ?? "No image available",
+                        CenterImage = c.CenterImages.FirstOrDefault(i => i.IsMain).ImageUrl ?? "No image available",
                         OpenTime = c.OpenTime,
                         CloseTime = c.CloseTime,
                         CityName = c.City.Name,
 
                         EmployeeCount = c.Staff.Count(e => e.IsActive),
 
-                        ResourcesCount = c.ResourcesTypes
+                        ResourcesCount = c.CenterResources
                             .Count(r => r.IsActive),
-
-                        ServicesList = c.Services
+                     
+                        ServicesList = c.CenterServices
                             .Where(s => s.IsActive)
-                            .Select(s => s.Name)
+                            .Select(s => s.Service.Name)
                             .ToList()
                     })
                     .ToListAsync();
@@ -308,14 +308,14 @@ namespace DataLayer
                         CenterStatus = c.CenterStatus,
                         CenterAddress = c.CenterAddress,
 
-                        ImageUrl = c.CenterImage
+                        ImageUrl = c.CenterImages
                             .Where(i => i.IsMain == true)
                             .Select(i => i.ImageUrl)
                             .FirstOrDefault(),
 
-                        ResourceCount = c.ResourcesTypes.Count(),
-
-                        Units = c.ResourcesTypes
+                        ResourceCount = c.CenterResources.Count(),
+                     
+                        Units = c.CenterResources
                             .Sum(r => (int?)r.TotalQuantity) ?? 0,
 
                         BookingsCount = c.Bookings.Count(),

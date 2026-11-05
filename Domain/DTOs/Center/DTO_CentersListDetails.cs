@@ -12,7 +12,7 @@ namespace Domain.DTOs.Center
         public string CenterDescription { get; set; } = null!;
         public string CenterStatus { get; set; } = null!;
         public string CenterType { get; set; } = null!;
-        public string? CenterImage { get; set; }
+        public string CenterImage { get; set; } = null!;
         public string CenterPhone { get; set; } = null!;
         public TimeOnly? OpenTime { get; set; }
         public TimeOnly? CloseTime { get; set; }

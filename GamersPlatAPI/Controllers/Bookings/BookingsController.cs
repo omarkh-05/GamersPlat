@@ -208,9 +208,9 @@ namespace GamersPlatAPI.Controllers
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
             // Allow access to the booking owner or admin/staff only
-            if (booking.UserId.HasValue)
+            if (booking.UserId > 0)
             {
-                if (booking.UserId.Value != uid && !User.IsInRole("Admin") && !User.IsInRole("Staff")) return Forbid();
+                if (booking.UserId != uid && !User.IsInRole("Admin") && !User.IsInRole("Staff")) return Forbid();
             }
 
             return Ok(booking);

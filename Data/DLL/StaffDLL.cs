@@ -35,7 +35,8 @@ namespace Data.DLL
                 {
                     UserId = user.UserId,
                     CenterId = staff.CenterId,
-                    StaffRoleId = staff.StaffRoleId,
+                    Permissions = staff.Permissions,
+                    RoleName = staff.RoleName??string.Empty,
                     IsActive = staff.IsActive
                 };
 
@@ -83,8 +84,8 @@ namespace Data.DLL
                         FullName = s.User.FullName,
                         PhoneNumber = s.User.PhoneNumber,
                         CenterName = s.Center.CenterName,
-                        StaffRoleName = s.StaffRole.Name,
-                        Permissions = s.StaffRole.Permissions,
+                        StaffRoleName = s.RoleName ?? string.Empty,
+                        Permissions = s.Permissions,
                         IsActive = s.IsActive
                     })
                     .AsNoTracking()
@@ -111,8 +112,8 @@ namespace Data.DLL
                         FullName = s.User.FullName,
                         PhoneNumber = s.User.PhoneNumber,
                         CenterName = s.Center.CenterName,
-                        StaffRoleName = s.StaffRole.Name,
-                        Permissions = s.StaffRole.Permissions,
+                        StaffRoleName = s.RoleName ?? string.Empty,
+                        Permissions = s.Permissions,
                         IsActive = s.IsActive
                     })
                     .AsNoTracking()
@@ -135,8 +136,8 @@ namespace Data.DLL
                         FullName = s.User.FullName,
                         PhoneNumber = s.User.PhoneNumber,
                         CenterName = s.Center.CenterName,
-                        StaffRoleName = s.StaffRole.Name,
-                        Permissions = s.StaffRole.Permissions,
+                        StaffRoleName = s.RoleName ?? string.Empty,
+                        Permissions = s.Permissions,
                         IsActive = s.IsActive
                     })
                     .AsNoTracking()

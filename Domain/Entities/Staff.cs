@@ -16,21 +16,21 @@ public partial class Staff
 
     public int CenterId { get; set; }
 
-    public int StaffRoleId { get; set; }
+    [StringLength(100)]
+    public string? RoleName { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+    public short Permissions { get; set; }
 
+    [StringLength(50)]
     public string Status { get; set; } = null!;
 
     public bool IsActive { get; set; }
 
+    public DateTime CreatedAt { get; set; }
+
     [ForeignKey("CenterId")]
     [InverseProperty("Staff")]
     public virtual Center Center { get; set; } = null!;
-
-    [ForeignKey("StaffRoleId")]
-    [InverseProperty("Staff")]
-    public virtual StaffRole StaffRole { get; set; } = null!;
 
     [ForeignKey("UserId")]
     [InverseProperty("Staff")]

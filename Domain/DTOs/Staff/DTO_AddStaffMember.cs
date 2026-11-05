@@ -15,6 +15,7 @@ namespace Domain.DTOs.Staff
         public bool IsActive { get; set; }
 
         public int CenterId { get; set; }
-        public int StaffRoleId { get; set; }
+        public short Permissions { get; set; }
+        public string? RoleName { get; set; }
     }
 }

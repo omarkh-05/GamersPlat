@@ -25,7 +25,7 @@ public partial class CenterInvitation
     [Column(TypeName = "datetime")]
     public DateTime CreatedAt { get; set; }
 
-    public int? UserAcceptedId { get; set; }
+    public int UserAcceptedId { get; set; }
 
     public bool IsUsed { get; set; }
 
@@ -35,5 +35,5 @@ public partial class CenterInvitation
 
     [ForeignKey("UserAcceptedId")]
     [InverseProperty("CenterInvitations")]
-    public virtual User? UserAccepted { get; set; }
+    public virtual User UserAccepted { get; set; } = null!;
 }

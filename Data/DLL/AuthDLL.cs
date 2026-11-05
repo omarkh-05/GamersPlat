@@ -69,7 +69,6 @@ namespace Data.DLL
                 return false;
             }
         }
-
         public async Task<bool> VerifyEmail(int userId)
         {
             try
@@ -89,7 +88,6 @@ namespace Data.DLL
                 return false;
             }
         }
-
         public async Task<bool> VerifyPhone(int userId)
         {
             try
@@ -109,7 +107,6 @@ namespace Data.DLL
                 return false;
             }
         }
-
         // ================ Security ================
     }
 }

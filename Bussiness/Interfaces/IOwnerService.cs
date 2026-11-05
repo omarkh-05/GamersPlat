@@ -49,8 +49,6 @@ namespace Bussiness.Interfaces
         Task<bool> AddStaffMember(DTO_AddStaffMember staffMember);
         Task<bool> UpdateStaffMember(int userId, DTO_UpdateStaffMember request);
         Task<bool> DeleteStaffMember(int userId);
-        Task<bool> AddStaffRoleByCenterId(DTO_StaffRole role);
-        Task<bool> SetRoleToMember(DTO_SetRoleToMember request);
         Task<List<DTO_StaffDetails>> GetAllStaffByOwnerId(int ownerId);
         Task<List<DTO_StaffDetails>> GetAllStaffByCenterId(int centerId);
     }

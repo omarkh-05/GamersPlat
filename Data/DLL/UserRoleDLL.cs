@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Data;
 using Data.DLL;
 using Data.EF;
-using System.Diagnostics;
 
 namespace DataLayer
 {

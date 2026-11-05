@@ -61,11 +61,11 @@ namespace Data.DLL
                         TotalEmployees = _db.Staff
                             .Count(e => e.Center.OwnerUserId == ownerId),
 
-                        ActiveServices = (short)_db.Services
+                        ActiveServices = (short)_db.CenterServices
                             .Count(s => s.Center.OwnerUserId == ownerId
                                      && s.IsActive),
-
-                        ActiveResources = (short)_db.ResourcesTypes
+                      
+                        ActiveResources = (short)_db.CenterResources
                             .Count(r => r.Center.OwnerUserId == ownerId
                                      && r.IsActive),
 

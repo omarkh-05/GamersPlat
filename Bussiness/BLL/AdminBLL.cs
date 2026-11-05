@@ -17,12 +17,12 @@ namespace Bussiness.BLL
         private readonly CenterBLL _center;
         private readonly PlayerBLL _player;
         private readonly OwnerBLL _owner;
-        private readonly ServiceBLL _service;
+        private readonly CenterServiceBLL _service;
         private readonly DeviceBLL _device;
-        private readonly ResourcesTypeBLL _resource;
+        private readonly CenterResourcesBLL _resource;
         private readonly CityBLL _city;
         private readonly CountryBLL _country;
-        public AdminBLL(IUser user,CenterBLL center,PlayerBLL player,OwnerBLL owner,ServiceBLL service,CityBLL city,CountryBLL country,DeviceBLL device,ResourcesTypeBLL resource,AdminDLL adminDLL)
+        public AdminBLL(IUser user,CenterBLL center,PlayerBLL player,OwnerBLL owner,CenterServiceBLL service,CityBLL city,CountryBLL country,DeviceBLL device,CenterResourcesBLL resource,AdminDLL adminDLL)
         {
             _user = user;
             _center = center;
@@ -98,12 +98,8 @@ namespace Bussiness.BLL
 
 
         // ================ Device / Resource Types ================
-        public async Task<bool> AddDevice(Device device) => await _device.Add(device);
-        public async Task<bool> UpdateDevice(Device device) => await _device.Update(device);
-        public async Task<bool> DeleteDevice(int id) => await _device.Delete(id);
-
-        public async Task<bool> AddResourcesType(ResourcesType rt) => await _resource.Add(rt);
-        public async Task<bool> UpdateResourcesType(ResourcesType rt) => await _resource.Update(rt);
+        public async Task<bool> AddResourcesType(CenterResource rt) => await _resource.Add(rt);
+        public async Task<bool> UpdateResourcesType(CenterResource rt) => await _resource.Update(rt);
         public async Task<bool> ActiveResourcesType(int centerId, int resourceId) => await _resource.ActiveStatus(centerId, resourceId);
         public async Task<bool> DeactiveResourcesType(int centerId, int resourceId) => await _resource.DeactiveStatus(centerId, resourceId);
         public async Task<bool> DeleteResourcesType(int id) => await _resource.Delete(id);
@@ -111,7 +107,7 @@ namespace Bussiness.BLL
 
 
         // ================ Services Management ================
-        public async Task<bool> AddService(Service service) => await _service.Add(service);
+        public async Task<bool> AddService(Service service) => await _service.Add(service,1);
         public async Task<bool> UpdateService(Service service) => await _service.Update(service);
         public async Task<bool> ActiveService(int serviceId, int centerId) => await _service.ActiveStatus(serviceId, centerId);
         public async Task<bool> DeactiveService(int serviceId, int centerId) => await _service.DeactiveStatus(serviceId, centerId);

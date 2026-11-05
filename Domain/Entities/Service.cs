@@ -6,12 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data;
 
+[Index("Name", Name = "UQ_Services_Name", IsUnique = true)]
 public partial class Service
 {
     [Key]
     public byte ServiceId { get; set; }
-
-    public int CenterId { get; set; }
 
     [StringLength(50)]
     public string Name { get; set; } = null!;
@@ -24,7 +23,6 @@ public partial class Service
     [Column(TypeName = "datetime")]
     public DateTime? UpdatedAt { get; set; }
 
-    [ForeignKey("CenterId")]
-    [InverseProperty("Services")]
-    public virtual Center Center { get; set; } = null!;
+    [InverseProperty("Service")]
+    public virtual ICollection<CenterService> CenterServices { get; set; } = new List<CenterService>();
 }

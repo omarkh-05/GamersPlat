@@ -26,11 +26,13 @@ public partial class GamersPlatDbContext : DbContext
 
     public virtual DbSet<CenterInvitation> CenterInvitations { get; set; }
 
+    public virtual DbSet<CenterResource> CenterResources { get; set; }
+
+    public virtual DbSet<CenterService> CenterServices { get; set; }
+
     public virtual DbSet<City> Cities { get; set; }
 
     public virtual DbSet<Country> Countries { get; set; }
-
-    public virtual DbSet<Device> Devices { get; set; }
 
     public virtual DbSet<EmailVerificationToken> EmailVerificationTokens { get; set; }
 
@@ -46,7 +48,7 @@ public partial class GamersPlatDbContext : DbContext
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
-    public virtual DbSet<ResourcesType> ResourcesTypes { get; set; }
+    public virtual DbSet<Resource> Resources { get; set; }
 
     public virtual DbSet<Review> Reviews { get; set; }
 
@@ -59,8 +61,6 @@ public partial class GamersPlatDbContext : DbContext
     public virtual DbSet<SessionParticipant> SessionParticipants { get; set; }
 
     public virtual DbSet<Staff> Staff { get; set; }
-
-    public virtual DbSet<StaffRole> StaffRoles { get; set; }
 
     public virtual DbSet<Tournament> Tournaments { get; set; }
 
@@ -80,9 +80,11 @@ public partial class GamersPlatDbContext : DbContext
         {
             entity.HasKey(e => e.AuditId).HasName("PK__AuditLog__A17F23981428172B");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF__AuditLogs__Creat__7C4F7684");
 
-            entity.HasOne(d => d.User).WithMany(p => p.AuditLogs).HasConstraintName("FK__AuditLogs__UserI__395884C4");
+            entity.HasOne(d => d.User).WithMany(p => p.AuditLogs)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__AuditLogs__UserI__395884C4");
         });
 
         modelBuilder.Entity<Booking>(entity =>
@@ -100,11 +102,15 @@ public partial class GamersPlatDbContext : DbContext
 
             entity.HasOne(d => d.Offer).WithMany(p => p.Bookings).HasConstraintName("FK_Bookings_Offers");
 
-            entity.HasOne(d => d.ResourcesType).WithMany(p => p.Bookings)
+            entity.HasOne(d => d.User).WithMany(p => p.Bookings)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Bookings__Device__08B54D69");
+                .HasConstraintName("FK__Bookings__UserId__06CD04F7");
 
-            entity.HasOne(d => d.User).WithMany(p => p.Bookings).HasConstraintName("FK__Bookings__UserId__06CD04F7");
+            entity.HasOne(d => d.CenterResource).WithMany(p => p.Bookings)
+                .HasPrincipalKey(p => new { p.CenterResourceId, p.CenterId })
+                .HasForeignKey(d => new { d.CenterResourceId, d.CenterId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Bookings_CenterResources");
         });
 
         modelBuilder.Entity<Center>(entity =>
@@ -120,7 +126,11 @@ public partial class GamersPlatDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Centers__CityId__6A30C649");
 
-            entity.HasOne(d => d.OwnerUser).WithMany(p => p.Centers).HasConstraintName("FK__Centers__OwnerUs__68487DD7");
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.CenterCreatedByNavigations).OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.OwnerUser).WithMany(p => p.CenterOwnerUsers)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Centers__OwnerUs__68487DD7");
         });
 
         modelBuilder.Entity<CenterImage>(entity =>
@@ -133,7 +143,9 @@ public partial class GamersPlatDbContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF_CenterImages_CreatedAt");
 
-            entity.HasOne(d => d.Center).WithMany(p => p.CenterImage)
+            entity.HasOne(d => d.Center)
+                .WithMany(p => p.CenterImages)
+                .HasForeignKey(d => d.CenterId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__CenterIma__Cente__6E01572D");
         });
@@ -146,7 +158,37 @@ public partial class GamersPlatDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__CenterInv__Cente__778AC167");
 
-            entity.HasOne(d => d.UserAccepted).WithMany(p => p.CenterInvitations).HasConstraintName("FK_CenterInvitations_Users");
+            entity.HasOne(d => d.UserAccepted).WithMany(p => p.CenterInvitations)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CenterInvitations_Users");
+        });
+
+        modelBuilder.Entity<CenterResource>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF_CenterResources_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_CenterResources_IsActive");
+
+            entity.HasOne(d => d.Center).WithMany(p => p.CenterResources)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CenterResources_Centers");
+
+            entity.HasOne(d => d.ResourcesType).WithMany(p => p.CenterResources)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CenterResources_Resources");
+        });
+
+        modelBuilder.Entity<CenterService>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF_CenterServices_CreatedAt");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_CenterServices_IsActive");
+
+            entity.HasOne(d => d.Center).WithMany(p => p.CenterServices)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CenterServices_Centers");
+
+            entity.HasOne(d => d.Service).WithMany(p => p.CenterServices)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CenterServices_Services");
         });
 
         modelBuilder.Entity<City>(entity =>
@@ -161,11 +203,6 @@ public partial class GamersPlatDbContext : DbContext
         modelBuilder.Entity<Country>(entity =>
         {
             entity.HasKey(e => e.CountryId).HasName("PK__Countrie__10D1609FDC2C2450");
-        });
-
-        modelBuilder.Entity<Device>(entity =>
-        {
-            entity.Property(e => e.DeviceId).ValueGeneratedOnAdd();
         });
 
         modelBuilder.Entity<EmailVerificationToken>(entity =>
@@ -242,20 +279,9 @@ public partial class GamersPlatDbContext : DbContext
                 .HasConstraintName("FK__RefreshTo__UserI__628FA481");
         });
 
-        modelBuilder.Entity<ResourcesType>(entity =>
+        modelBuilder.Entity<Resource>(entity =>
         {
             entity.HasKey(e => e.ResourcesTypeId).HasName("PK__DeviceTy__07A6C7F6EB9269A4");
-
-            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF__DeviceTyp__IsAct__7B5B524B");
-            entity.Property(e => e.RoomType).IsFixedLength();
-
-            entity.HasOne(d => d.Center).WithMany(p => p.ResourcesTypes)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__DeviceTyp__Cente__7C4F7684");
-
-            entity.HasOne(d => d.Device).WithMany(p => p.ResourcesTypes)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_DeviceTypes_Devices");
         });
 
         modelBuilder.Entity<Review>(entity =>
@@ -288,10 +314,6 @@ public partial class GamersPlatDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF_Services_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Services_IsActive");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(NULL)", "DF_Services_UpdatedAt");
-
-            entity.HasOne(d => d.Center).WithMany(p => p.Services)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Services_Centers");
         });
 
         modelBuilder.Entity<Session>(entity =>
@@ -308,10 +330,6 @@ public partial class GamersPlatDbContext : DbContext
             entity.HasOne(d => d.CreatedByUser).WithMany(p => p.Sessions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Sessions__Create__10566F31");
-
-            entity.HasOne(d => d.Device).WithMany(p => p.Sessions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Sessions_Devices");
 
             entity.HasOne(d => d.Game).WithMany(p => p.Sessions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -337,29 +355,16 @@ public partial class GamersPlatDbContext : DbContext
         {
             entity.HasKey(e => e.StaffId).HasName("PK__Staff__96D4AB17D94330AB");
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF__Staff__CreatedAt__18EBB532");
+            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF__Staff__IsActive__19DFD96B");
 
             entity.HasOne(d => d.Center).WithMany(p => p.Staff)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Staff_Center");
 
-            entity.HasOne(d => d.StaffRole).WithMany(p => p.Staff)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Staff_StaffRole");
-
             entity.HasOne(d => d.User).WithOne(p => p.Staff)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Staff_User");
-        });
-
-        modelBuilder.Entity<StaffRole>(entity =>
-        {
-            entity.HasKey(e => e.StaffRoleId).HasName("PK__StaffRol__10792C91AE937824");
-
-            entity.HasOne(d => d.Center).WithMany(p => p.StaffRoles)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StaffRole_Center");
         });
 
         modelBuilder.Entity<Tournament>(entity =>
@@ -371,10 +376,6 @@ public partial class GamersPlatDbContext : DbContext
             entity.HasOne(d => d.Center).WithMany(p => p.Tournaments)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Tournamen__Cente__2A164134");
-
-            entity.HasOne(d => d.Device).WithMany(p => p.Tournaments)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Tournaments_Devices");
 
             entity.HasOne(d => d.Game).WithMany(p => p.Tournaments).HasConstraintName("FK_Tournaments_Games");
 

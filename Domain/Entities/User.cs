@@ -51,11 +51,14 @@ public partial class User
     [InverseProperty("User")]
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
+    [InverseProperty("CreatedByNavigation")]
+    public virtual ICollection<Center> CenterCreatedByNavigations { get; set; } = new List<Center>();
+
     [InverseProperty("UserAccepted")]
     public virtual ICollection<CenterInvitation> CenterInvitations { get; set; } = new List<CenterInvitation>();
 
     [InverseProperty("OwnerUser")]
-    public virtual ICollection<Center> Centers { get; set; } = new List<Center>();
+    public virtual ICollection<Center> CenterOwnerUsers { get; set; } = new List<Center>();
 
     [ForeignKey("CityId")]
     [InverseProperty("Users")]
@@ -103,6 +106,4 @@ public partial class User
 
     [InverseProperty("User")]
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
-    [InverseProperty("CreatedByUser")]
-    public virtual ICollection<Center> CreatedCenters { get; set; } = new List<Center>();
 }
