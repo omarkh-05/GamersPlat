@@ -57,6 +57,9 @@ public partial class Booking
 
     public bool IsApproved { get; set; }
 
+    public DateTime? StartedAt { get; set; }
+    public DateTime? EndedAt { get; set; }
+
     [Column(TypeName = "datetime")]
     public DateTime? CancelledAt { get; set; }
 

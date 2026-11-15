@@ -6,7 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace GamersPlatAPI.Controllers.Centers
 {
     [ApiController]
-    [Route("api/centers/{centerId:int}/[controller]")]
+    [Route("api/[controller]")]
+    [Authorize(Roles = "owner")]
     public class CenterImagesController : ControllerBase
     {
         private readonly ICenterService _center;
@@ -18,7 +19,6 @@ namespace GamersPlatAPI.Controllers.Centers
             _images = images;
         }
 
-        [Authorize(Roles = "Owner")]
         [HttpPost]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Upload(int centerId, IFormFile file, [FromForm] bool isMain = false)
@@ -34,7 +34,8 @@ namespace GamersPlatAPI.Controllers.Centers
             if (center.OwnerUserId != uid) return Forbid();
 
             // Save file to wwwroot/uploads/centers/{centerId}/ and record URL
-            var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "centers", centerId.ToString());
+            // var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", centerId.ToString()); ** to add folder for each center **
+            var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
             Directory.CreateDirectory(uploads);
             var fileName = DateTime.UtcNow.ToString("yyyyMMddHHmmss") + "_" + Path.GetFileName(file.FileName);
             var filePath = Path.Combine(uploads, fileName);
@@ -44,14 +45,14 @@ namespace GamersPlatAPI.Controllers.Centers
                 await file.CopyToAsync(stream);
             }
 
-            var url = $"/uploads/centers/{centerId}/{fileName}";
+            var url = $"/uploads/{fileName}";
 
             var img = new Data.CenterImage
             {
                 CenterId = centerId,
                 ImageUrl = url,
                 IsMain = isMain,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             if (!await _images.Add(img)) return StatusCode(500);
@@ -59,26 +60,41 @@ namespace GamersPlatAPI.Controllers.Centers
             return CreatedAtAction(nameof(GetById), new { centerId = centerId, id = _images.LastId }, img);
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetById(int centerId, int id)
-        {
-            var img = await _images.GetByID(id);
-            if (img == null || img.CenterId != centerId) return NotFound();
-            return Ok(img);
-        }
-
-        [Authorize(Roles = "Owner")]
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int centerId, int id)
+        [HttpGet]
+        public async Task<IActionResult> GetAll(int centerId)
         {
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
-            var img = await _images.GetByID(id);
+            var center = await _center.GetByID(centerId);
+            if (center == null) return NotFound();
+            if (center.OwnerUserId != uid) return Forbid();
+
+            var images = await _images.GetAll();
+            return Ok(images
+                .Where(image => image.CenterId == centerId)
+                .OrderBy(image => image.ImageId));
+        }
+
+        [HttpGet("{imageId:int}")]
+        public async Task<IActionResult> GetById(int centerId, int imageId)
+        {
+            var img = await _images.GetByID(imageId);
+            if (img == null || img.CenterId != centerId) return NotFound();
+            return Ok(img);
+        }
+
+        [HttpDelete("{imageId:int}")]
+        public async Task<IActionResult> Delete(int centerId, int imageId)
+        {
+            var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
+
+            var img = await _images.GetByID(imageId);
             if (img == null) return NotFound();
             var center = await _center.GetByID(centerId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-            if (!await _images.Delete(id)) return StatusCode(500);
+            if (!await _images.Delete(imageId)) return StatusCode(500);
 
             // attempt to delete file from disk (best-effort)
             try

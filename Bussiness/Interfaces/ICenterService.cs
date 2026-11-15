@@ -7,8 +7,8 @@ namespace Bussiness.Interfaces
 {
     public interface ICenterService
     {
-        Task<bool> Add(DTO_CreateCenter addCenter, int adminId);
-        Task<bool> Update(DTO_UpdateCenter center, int ownerId);
+        Task<bool> Add(DTO_CreateCenter addCenter, int userId);
+        Task<bool> Update(DTO_UpdateCenter center,int centerId, int ownerId);
         Task<bool> ActiveCenter(int centerId);
         Task<bool> DeactiveCenter(int centerId);
         Task<bool> ToggleCenterStatus(int centerId, string status, int ownerId);

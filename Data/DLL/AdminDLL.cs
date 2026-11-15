@@ -229,6 +229,7 @@ namespace DataLayer
         }
         // ================ Advanced analytics with time filters ================
 
+
         // ================ User Management ================
         public async Task<bool> BlockUser(int userId, int adminId = 0)
         {
@@ -291,7 +292,7 @@ namespace DataLayer
                     return false;
 
                 center.CenterStatus = "approved";
-                center.IsActive = true;
+                center.IsApproved = true;
                 center.UpdatedAt = DateTime.Now;
 
                 var ok = await _db.SaveChangesAsync() > 0;
@@ -340,6 +341,7 @@ namespace DataLayer
                     return false;
 
                 center.CenterStatus = "rejected";
+                center.IsApproved = false;
                 center.IsActive = false;
                 center.UpdatedAt = DateTime.Now;
 

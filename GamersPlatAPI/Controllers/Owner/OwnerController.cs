@@ -1,9 +1,7 @@
-using Bussiness;
 using Bussiness.Interfaces;
 using Data;
 using Domain.DTOs.Auth;
 using Domain.DTOs.Center;
-using Domain.DTOs.Owner;
 using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
 using Domain.DTOs.Staff;
@@ -16,7 +14,7 @@ namespace GamersPlatAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "owner")]
     public class OwnerController : ControllerBase
     {
         private readonly ICenterService _center;
@@ -53,7 +51,6 @@ namespace GamersPlatAPI.Controllers
                 return Unauthorized();
             return await Run(() => _owner.GetAllCentersForOwner(ownerId), res => Ok(res));
         }
-
         [HttpPost("center")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -62,7 +59,6 @@ namespace GamersPlatAPI.Controllers
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
             return await Run(() => _center.Add(addCenter, ownerId), result => Created());
         }
-
         [HttpPut("centers/{centerId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -73,23 +69,23 @@ namespace GamersPlatAPI.Controllers
         {
             if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.UpdateCenter(request, ownerId), result => Ok(result));
+            return await Run(() => _owner.UpdateCenter(request, centerId,ownerId), result => Ok(result));
         }
-
-        [HttpPut("centers/{centerId:int}/active")]
+        [HttpPatch("centers/{centerId:int}/active")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> ActiveCenter([FromRoute] int centerId)
         {
-            return await Run(() => _center.ActiveCenter(centerId), result => Ok());
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.ActiveCenter(centerId, ownerId), result => Ok());
         }
-
-        [HttpPut("centers/{centerId:int}/inactive")]
+        [HttpPatch("centers/{centerId:int}/inactive")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> InactiveCenter([FromRoute] int centerId)
         {
-            return await Run(() => _center.DeactiveCenter(centerId), result => Ok());
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.DeactiveCenter(centerId, ownerId), result => Ok());
         }
         // Center Managament
 
@@ -104,7 +100,7 @@ namespace GamersPlatAPI.Controllers
         {
             return await Run(() => _owner.GetCenterOverView(centerId), res => Ok(res));
         }
-         
+            // Center Resources
         [HttpGet("centers/{centerId:int}/resources")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -115,7 +111,6 @@ namespace GamersPlatAPI.Controllers
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
             return await Run(() => _owner.GetAllResourceByCenterId(centerId, ownerId), result => Ok(result));
         }
-
         [HttpPost("centers/{centerId:int}/resources")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -126,43 +121,43 @@ namespace GamersPlatAPI.Controllers
         {
             if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.AddResource(request, ownerId), result => CreatedAtAction(nameof(GetCenterResources), new { centerId }, result));
+            return await Run(() => _owner.AddResourceToCenter(request,centerId, ownerId), result => CreatedAtAction(nameof(GetCenterResources), new { centerId }, result));
         }
-        
-        [HttpPut("centers/{centerId:int}/resources/{resourceId:int}")]
+        [HttpPut("centers/{centerId:int}/resources/{centerResourceId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateResource(int centerId, int resourceId, [FromBody] DTO_UpdateResource request)
+        public async Task<IActionResult> UpdateCenterResource([FromRoute] int centerId, [FromRoute] int centerResourceId, [FromBody] DTO_UpdateResource request)
         {
             if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.UpdateResource(request, ownerId), result => Ok(result));
+            return await Run(() => _owner.UpdateCenterResource(request, centerId, centerResourceId, ownerId), result => Ok(result));
         }
-
-        [HttpDelete("centers/{centerId:int}/resources/{resourceId:int}/active")]
+        [HttpPatch("centers/{centerId:int}/resources/{centerResourceId:int}/active")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> ActiveResource(int centerId, int resourceId)
+        public async Task<IActionResult> ActiveCenterResource(int centerId, int centerResourceId)
         {
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.ActiveResource(centerId, resourceId, ownerId), _ => NoContent());
+            return await Run(() => _owner.ActiveCenterResource(centerId, centerResourceId, ownerId), _ => NoContent());
         }
-        [HttpDelete("centers/{centerId:int}/resources/{resourceId:int}/deactive")]
+        [HttpPatch("centers/{centerId:int}/resources/{centerResourceId:int}/deactive")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeactiveResource(int centerId, int resourceId)
+        public async Task<IActionResult> DeactiveCenterResource(int centerId, int centerResourceId)
         {
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.DeactiveResource(centerId, resourceId, ownerId), _ => NoContent());
+            return await Run(() => _owner.DeactiveCenterResource(centerId, centerResourceId, ownerId), _ => NoContent());
         }
+            // Center Resources
 
+            // Center Services
         [HttpGet("centers/{centerId:int}/services")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -171,56 +166,53 @@ namespace GamersPlatAPI.Controllers
         public async Task<IActionResult> GetCenterServices(int centerId)
         {
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.GetAllServicesByCenterId(centerId, ownerId), result => Ok(result));
+            return await Run(() => _owner.GetCenterServices(centerId, ownerId), result => Ok(result));
         }
-
         [HttpPost("centers/{centerId:int}/services")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> AddServiceToCenter(int centerId, [FromBody] DTO_AddService request)
+        public async Task<IActionResult> AddServiceToCenter([FromRoute] int centerId, [FromBody] DTO_AddCenterService request)
         {
             if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.AddService(request, ownerId), result => CreatedAtAction(nameof(GetCenterServices), new { centerId }, result));
+            return await Run(() => _owner.AddCenterService(request, centerId, ownerId), result => CreatedAtAction(nameof(GetCenterServices), new { centerId }, result));
         }
-
-        [HttpPut("centers/{centerId:int}/services/{serviceId:int}")]
+        [HttpPut("centers/{centerId:int}/services/{centerServiceId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateService(int centerId, int serviceId, [FromBody] DTO_UpdateService request)
+        public async Task<IActionResult> UpdateCenterService([FromRoute] int centerId, [FromRoute] int centerServiceId, [FromBody] DTO_UpdateCenterService request)
         {
             if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.UpdateService(request, ownerId), result => Ok(result));
+            return await Run(() => _owner.UpdateCenterService(request, centerId, centerServiceId, ownerId), result => Ok(result));
         }
-
-        [HttpDelete("centers/{centerId:int}/services/{serviceId:int}/active")]
+        [HttpPatch("centers/{centerId:int}/services/{centerServiceId:int}/active")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> ActiveService(int centerId, int serviceId)
+        public async Task<IActionResult> ActiveCenterService(int centerId, int centerServiceId)
         {
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.ActiveService(centerId, serviceId, ownerId), _ => NoContent());
+            return await Run(() => _owner.ActiveCenterService(centerId, centerServiceId, ownerId), _ => NoContent());
         }
-        [HttpDelete("centers/{centerId:int}/services/{serviceId:int}/deactive")]
+        [HttpPatch("centers/{centerId:int}/services/{centerServiceId:int}/deactive")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeactiveService(int centerId, int serviceId)
+        public async Task<IActionResult> DeactiveCenterService(int centerId, int centerServiceId)
         {
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.DeactiveService(centerId, serviceId, ownerId), _ => NoContent());
+            return await Run(() => _owner.DeactiveCenterService(centerId, centerServiceId, ownerId), _ => NoContent());
         }
-
+            // Center Services
         [HttpGet("bookings/{centerId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -244,7 +236,6 @@ namespace GamersPlatAPI.Controllers
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
             return await Run(() => _owner.GetAllBookings(ownerId), result => Ok(result));
         }
-
         [HttpPatch("bookings/{bookingId:int}/accept")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -258,7 +249,6 @@ namespace GamersPlatAPI.Controllers
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
             return await Run(() => _owner.AcceptBooking(bookingId, ownerId), result => Ok(result));
         }
-
         [HttpPatch("bookings/{bookingId:int}/reject")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -272,57 +262,80 @@ namespace GamersPlatAPI.Controllers
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
             return await Run(() => _owner.RejectBooking(bookingId, ownerId), result => Ok(result));
         }
+        [HttpPatch("bookings/{bookingId:int}/start")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> StartBooking(int bookingId)
+        {
+            if (bookingId <= 0) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.StartBooking(bookingId, ownerId), result => Ok(result));
+        }
+        [HttpPatch("bookings/{bookingId:int}/stop")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> StopBooking(int bookingId)
+        {
+            if (bookingId <= 0) return BadRequest();
+            if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
+            return await Run(() => _owner.StopBooking(bookingId, ownerId), result => Ok(result));
+        }
         // Bookings Management
 
 
         // Staff Management
-        [HttpGet("employees")]
+        [HttpGet("staff")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetAllOwnerEmployees()
+        public async Task<IActionResult> GetAllOwnerStaff()
         {
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
             return await Run(() => _owner.GetAllStaffByOwnerId(ownerId), result => Ok(result));
         }
-
-        [HttpGet("employees/{centerId:int}")]
+        [HttpGet("staff/{centerId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetAllCenterEmployees([FromRoute] int centerId)
+        public async Task<IActionResult> GetAllCenterStaff([FromRoute] int centerId)
         {
             if (centerId <= 0) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
             return await Run(() => _owner.GetAllStaffByCenterId(centerId), result => Ok(result));
         }
-
-        [HttpPost("employees")]
+        [HttpPost("staff")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> CreateOwnerEmployee([FromBody] DTO_AddStaffMember request)
+        public async Task<IActionResult> CreateStaff([FromBody] DTO_AddStaffMember request)
         {
             if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.AddStaffMember(request), result => CreatedAtAction(nameof(GetAllCenterEmployees), result));
+            return await Run(() => _owner.AddStaffMember(request), result => CreatedAtAction(nameof(GetAllCenterStaff), result));
         }
-
-        [HttpPut("employees/{employeeId:int}")]
+        [HttpPut("staff")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> UpdateOwnerEmployee(int employeeId, [FromBody] DTO_UpdateStaffMember request)
+        public async Task<IActionResult> UpdateOwnerStaff([FromBody] DTO_UpdateStaffMember request)
         {
             if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.UpdateStaffMember(employeeId, request), result => Ok(result));
+            return await Run(() => _owner.UpdateStaffMember(request), result => Ok(result));
         }
         // Staff Management
 
@@ -338,7 +351,6 @@ namespace GamersPlatAPI.Controllers
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
             return await Run(() => _owner.GetOwnerInfo(ownerId), result => Ok(result));
         }
-
         [HttpPut("profile")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -354,7 +366,6 @@ namespace GamersPlatAPI.Controllers
                 return await _owner.GetOwnerInfo(ownerId);
             }, result => Ok(result));
         }
-
         [HttpPut("profile/password")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -367,41 +378,6 @@ namespace GamersPlatAPI.Controllers
             return await Run(() => _owner.ChangeOwnerPassword(ownerId, request), _ => NoContent());
         }
         // Owner Profile
-
-        /*[HttpGet("requests")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public Task<IActionResult> GetOwnerRequests([FromQuery] string? type, [FromQuery] string? status)
-        {
-            if (!TryGetOwnerId(out var ownerId)) return Task.FromResult<IActionResult>(Unauthorized());
-            return Run(() => _owner.GetOwnerRequests(ownerId, type, status), result => Ok(result));
-        }
-
-        [HttpGet("requests/{requestId:int}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public Task<IActionResult> GetOwnerRequest(int requestId)
-        {
-            if (!TryGetOwnerId(out var ownerId)) return Task.FromResult<IActionResult>(Unauthorized());
-            return Run(() => _owner.GetOwnerRequest(requestId, ownerId), result => Ok(result));
-        }
-
-        [HttpPatch("requests/{requestId:int}/status")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
-        public Task<IActionResult> PatchRequestStatus(int requestId, [FromBody] DTO_OwnerRequestStatusUpdate request)
-        {
-            if (request == null) return Task.FromResult<IActionResult>(BadRequest());
-            if (!TryGetOwnerId(out var ownerId)) return Task.FromResult<IActionResult>(Unauthorized());
-            return Run(() => _owner.UpdateOwnerRequestStatus(requestId, request, ownerId), result => Ok(result));
-        }*/
 
 
         // Helpers
@@ -442,5 +418,40 @@ namespace GamersPlatAPI.Controllers
                 return StatusCode(500, new {message = "An unexpected error occurred."});
             }
         }
+        
+        /*[HttpGet("requests")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public Task<IActionResult> GetOwnerRequests([FromQuery] string? type, [FromQuery] string? status)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Task.FromResult<IActionResult>(Unauthorized());
+            return Run(() => _owner.GetOwnerRequests(ownerId, type, status), result => Ok(result));
+        }
+
+        [HttpGet("requests/{requestId:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public Task<IActionResult> GetOwnerRequest(int requestId)
+        {
+            if (!TryGetOwnerId(out var ownerId)) return Task.FromResult<IActionResult>(Unauthorized());
+            return Run(() => _owner.GetOwnerRequest(requestId, ownerId), result => Ok(result));
+        }
+
+        [HttpPatch("requests/{requestId:int}/status")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public Task<IActionResult> PatchRequestStatus(int requestId, [FromBody] DTO_OwnerRequestStatusUpdate request)
+        {
+            if (request == null) return Task.FromResult<IActionResult>(BadRequest());
+            if (!TryGetOwnerId(out var ownerId)) return Task.FromResult<IActionResult>(Unauthorized());
+            return Run(() => _owner.UpdateOwnerRequestStatus(requestId, request, ownerId), result => Ok(result));
+        }*/
     }
 }

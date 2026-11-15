@@ -15,8 +15,6 @@ namespace Domain.DTOs.User
 
         public string CityName { get; set; } = "";
 
-        public int Points { get; set; } = 0;
-
         public bool IsActive { get; set; } = true;
 
         public ICollection<string>? Roles { get; set; } = new List<string>();

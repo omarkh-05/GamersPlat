@@ -10,20 +10,24 @@ namespace GamersPlatAPI.Controllers
     public class CentersController : ControllerBase
     {
         private readonly ICenterService _center;
-
         public CentersController(ICenterService center)
         {
             _center = center;
         }
 
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
         {
+            var excludedStatuses = new[] { "pending", "approved", "rejected", "inactive" };
             var centers = await _center.GetAll();
-            return Ok(centers);
+            var homeCenter = centers.Where(c => !excludedStatuses.Contains(c.CenterStatus));
+            return Ok(homeCenter);
         }
 
         [HttpGet("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(int id)
         {
             var c = await _center.GetCenterDetailsById(id);

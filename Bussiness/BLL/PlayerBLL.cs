@@ -48,7 +48,6 @@ namespace Bussiness.BLL
                     FullName = userInfo.FullName,
                     Email = userInfo.Email,
                     CityName = userInfo.CityName,
-                    Points = userInfo.Points,
                     IsActive = userInfo.IsActive,
                     PhoneVerified = userInfo.PhoneVerified,
                     EmailVerified = userInfo.EmailVerified,
@@ -113,6 +112,7 @@ namespace Bussiness.BLL
             return await _booking.Cancel(booking,userId) == true;
         }
         // ================ Player Booking Management ================
+
 
         /*
         // ================ Player Review Management ================

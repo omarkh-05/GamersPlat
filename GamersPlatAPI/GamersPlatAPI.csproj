@@ -53,4 +53,8 @@
     <ProjectReference Include="..\Bussiness\Bussiness.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\uploads\1001\" />
+  </ItemGroup>
+
 </Project>

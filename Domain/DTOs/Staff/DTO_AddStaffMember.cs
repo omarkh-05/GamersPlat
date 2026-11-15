@@ -13,6 +13,7 @@ namespace Domain.DTOs.Staff
         public string? Email { get; set; }
         public short CityId { get; set; }
         public bool IsActive { get; set; }
+        public string Status { get; set; } = "active";
 
         public int CenterId { get; set; }
         public short Permissions { get; set; }

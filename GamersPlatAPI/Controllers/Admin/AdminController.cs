@@ -12,7 +12,7 @@ namespace GamersPlatAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "admin")]
     public class AdminController : ControllerBase
     {
         readonly IUser _user;
@@ -65,7 +65,6 @@ namespace GamersPlatAPI.Controllers
                 return StatusCode(500, "Failed to retrieve users. Please try again." + ex.Message);
             }
         }
-
         [HttpPost("user")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -90,7 +89,6 @@ namespace GamersPlatAPI.Controllers
                 return StatusCode(500, "Failed to add user. Please try again." + ex.Message);
             }
         }
-
         [HttpPut("user/{userId:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -123,8 +121,7 @@ namespace GamersPlatAPI.Controllers
 
             return NoContent();
         }
-
-        [HttpPut("user/{userId:int}/block")]
+        [HttpPatch("user/{userId:int}/block")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -145,8 +142,7 @@ namespace GamersPlatAPI.Controllers
             }
             return NoContent();
         }
-
-        [HttpPut("user/{userId:int}/unblock")]
+        [HttpPatch("user/{userId:int}/unblock")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -174,10 +170,9 @@ namespace GamersPlatAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetCenters()
         {
-            var centers = await _center.GetAll();
+            var centers = await _center.GetAllForAdmin();
             return Ok(centers);
         }
-
         [HttpPost("center")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -191,19 +186,17 @@ namespace GamersPlatAPI.Controllers
                 return Created();
             return BadRequest(new { message = "Error While Creating Center" });
         }
-
-        [HttpPut("centers/{centerId:int}/approve")]
+        [HttpPatch("centers/{centerId:int}/approve")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> ApproveCenter([FromRoute] int centerId)
         {
-            if (! await _admin.ApproveCenter(centerId)) 
+            if (!await _admin.ApproveCenter(centerId)) 
                 return StatusCode(500, new { message = "Error While Approving Center" });
             return NoContent();
         }
-
-        [HttpPut("centers/{centerId:int}/reject")]
+        [HttpPatch("centers/{centerId:int}/reject")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -213,8 +206,7 @@ namespace GamersPlatAPI.Controllers
                 return StatusCode(500, new { message = "Error While Rejecting Center" });
             return NoContent();
         }
-
-        [HttpPut("centers/{centerId:int}/active")]
+        [HttpPatch("centers/{centerId:int}/active")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> ActiveCenter([FromRoute] int centerId)
@@ -224,8 +216,7 @@ namespace GamersPlatAPI.Controllers
 
             return NoContent();
         }
-
-        [HttpPut("centers/{centerId:int}/inactive")]
+        [HttpPatch("centers/{centerId:int}/inactive")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> InactiveCenter([FromRoute] int centerId)
@@ -263,7 +254,6 @@ namespace GamersPlatAPI.Controllers
 
             return Ok(user);
         }
-
         [HttpPut("profile")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -296,7 +286,6 @@ namespace GamersPlatAPI.Controllers
 
             return NoContent();
         }
-
         [HttpPut("profile/change-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

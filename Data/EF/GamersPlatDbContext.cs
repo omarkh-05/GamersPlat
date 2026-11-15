@@ -179,6 +179,11 @@ public partial class GamersPlatDbContext : DbContext
 
         modelBuilder.Entity<CenterService>(entity =>
         {
+            entity.HasKey(e => e.CenterServiceId);
+
+            entity.HasIndex(e => new { e.CenterId, e.ServiceId })
+                  .IsUnique();
+
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF_CenterServices_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_CenterServices_IsActive");
 
@@ -312,7 +317,6 @@ public partial class GamersPlatDbContext : DbContext
         {
             entity.Property(e => e.ServiceId).ValueGeneratedOnAdd();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF_Services_CreatedAt");
-            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Services_IsActive");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(NULL)", "DF_Services_UpdatedAt");
         });
 

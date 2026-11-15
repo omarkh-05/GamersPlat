@@ -19,7 +19,7 @@ namespace Bussiness
         public int LastId => _bookingID;
         public string? LastError { get; private set; }
 
-        private readonly IResourcesTypeService _resourcesTypeBLL;
+        private readonly IResourcesTypeService _centerResourcesBLL;
         private readonly OfferDLL _offerDLL;
         private readonly BookingDLL _bookingDLL;
         private readonly IUser _userBLL;
@@ -28,7 +28,7 @@ namespace Bussiness
 
         public BookingBLL(IResourcesTypeService resourcesTypeBLL, OfferDLL offerDLL, BookingDLL bookingDLL, IUser userBLL, IAuthService authService, GamersPlatDbContext db)
         {
-            _resourcesTypeBLL = resourcesTypeBLL;
+            _centerResourcesBLL = resourcesTypeBLL;
             _offerDLL = offerDLL;
             _bookingDLL = bookingDLL;
             _userBLL = userBLL;
@@ -42,7 +42,7 @@ namespace Bussiness
         {
             try
             {
-                var rt = await GetValidResourceType(dto.ResourcesTypeId, dto.CenterId);
+                var rt = await GetValidResourceType(dto.CenterResourceId, dto.CenterId);
                 if (rt == null)
                     return false;
 
@@ -72,7 +72,7 @@ namespace Bussiness
                 var booking = new Booking
                 {
                     UserId = userId,
-                    CenterResourceId = dto.ResourcesTypeId,
+                    CenterResourceId = dto.CenterResourceId,
                     BookingDate = dto.BookingDate,
                     StartTime = start,
                     EndTime = end,
@@ -221,6 +221,7 @@ namespace Bussiness
                 existing.UnitPrice = unitPrice;
                 existing.Subtotal = subtotal;
                 existing.TotalPrice = subtotal;
+                existing.Status = "updated";
 
                 var updated = await _bookingDLL.UpdateIfAvailable(existing, rt.TotalQuantity);
 
@@ -321,22 +322,25 @@ namespace Bussiness
         // ================ Read By ================
         public async Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId) => await _bookingDLL.GetByUserId(userId);
         public async Task<Booking?> GetByID(int bookingID) => await _bookingDLL.GetByID(bookingID);
-        public async Task<List<DTO_StartEndTime>?> GetFullBookedHours(int centerId, int resourcesTypeId, DateOnly date)
+        public async Task<List<DTO_StartEndTime>?> GetFullBookedHours(int centerId, int centerResourceId, DateOnly date)
         {
-            if (resourcesTypeId <= 0 || centerId <= 0 || date < DateOnly.FromDateTime(DateTime.Today))
+            if (centerResourceId <= 0 || centerId <= 0 || date < DateOnly.FromDateTime(DateTime.Today))
                 return null;
 
-            var checkIfResourceForCenter = await _resourcesTypeBLL.CheckCenterAndResource(centerId, resourcesTypeId);
+            var checkIfResourceForCenter = await _centerResourcesBLL.CheckCenterAndResource(centerId, centerResourceId);
             if (checkIfResourceForCenter == false)
                 return null;
 
-            return await _bookingDLL.GetFullBookedHours(centerId,resourcesTypeId, date);
+            return await _bookingDLL.GetFullBookedHours(centerId, centerResourceId, date);
         }
         // ================ Read By ================
 
 
         // ================ Owner Booking Management ================
-        public async Task<bool> Accept_RejectBooking(int bookingId, string status) => await _bookingDLL.Accept_RejectBooking(bookingId, status);
+        public async Task<bool> AcceptBooking(int bookingId) => await _bookingDLL.AcceptBooking(bookingId);
+        public async Task<bool> RejectBooking(int bookingId) => await _bookingDLL.RejectBooking(bookingId);
+        public async Task<bool> StartBooking(int bookingId) => await _bookingDLL.StartBooking(bookingId);
+        public async Task<bool> StopBooking(int bookingId) => await _bookingDLL.StopBooking(bookingId);
         public async Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId) => await _bookingDLL.GetBookingsByOwnerId(ownerId);
         public async Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId) => await _bookingDLL.GetBookingsByCenterId(centerId);
         // ================ Owner Booking Management ================
@@ -345,7 +349,7 @@ namespace Bussiness
         // ================ Helpers ================
         private async Task<DTO_ResourceInfo?> GetValidResourceType(int resourcesTypeId,int centerId)
         {
-            var rt = await _resourcesTypeBLL.GetResourceInfo(resourcesTypeId);
+            var rt = await _centerResourcesBLL.GetResourceInfo(resourcesTypeId);
 
             if (rt == null)
             {

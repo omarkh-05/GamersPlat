@@ -22,6 +22,6 @@ public partial class CenterImage
     public bool IsMain { get; set; }
 
     [ForeignKey("CenterId")]
-    [InverseProperty("CenterImage")]
+    [InverseProperty("CenterImages")]
     public virtual Center Center { get; set; } = null!;
 }

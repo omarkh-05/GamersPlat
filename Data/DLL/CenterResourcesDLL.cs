@@ -33,8 +33,9 @@ namespace DataLayer
         {
             try
             { 
-                var existing = await _db.CenterResources.FirstOrDefaultAsync(r => r.ResourcesTypeId == rt.ResourcesTypeId && r.CenterId == rt.CenterId);
+                var existing = await _db.CenterResources.FirstOrDefaultAsync(r => r.CenterResourceId == rt.CenterResourceId && r.CenterId == rt.CenterId);
                 if (existing == null) return false;
+
                 _db.Entry(existing).CurrentValues.SetValues(rt);
                 return await _db.SaveChangesAsync() > 0;
             }
@@ -44,42 +45,38 @@ namespace DataLayer
                 return false;
             }
         }
-        public async Task<bool> ActiveStatus(int centerId,int resourceId)
+        public async Task<bool> ActiveStatus(int centerId,int centerResourceId)
         {
             try
             {
-
-                var resource = await _db.CenterResources
-             .FirstOrDefaultAsync(r =>
-                 r.ResourcesTypeId == resourceId &&
-                 r.CenterId == centerId);
-
+                var resource = await _db.CenterResources.FirstOrDefaultAsync(r =>r.CenterResourceId == centerResourceId && r.CenterId == centerId);
 
                 if (resource == null)
                     return false;
 
+                if (resource.IsActive == true)
+                    return false;
+                
                 resource.IsActive = true;
 
                 return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Update ResourcesType Active Status Error", ex);
+                EventLog_Helper.WriteEventLog("ResourcesType Active Status Error", ex);
                 return false;
             }
         }
-        public async Task<bool> DeactiveStatus(int centerId, int resourceId)
+        public async Task<bool> DeactiveStatus(int centerId, int centerResourceId)
         {
             try
             {
-
-                var resource = await _db.CenterResources
-             .FirstOrDefaultAsync(r =>
-                 r.ResourcesTypeId == resourceId &&
-                 r.CenterId == centerId);
-
+                var resource = await _db.CenterResources.FirstOrDefaultAsync(r => r.CenterResourceId == centerResourceId && r.CenterId == centerId);
 
                 if (resource == null)
+                    return false;
+
+                if (resource.IsActive == false)
                     return false;
 
                 resource.IsActive = false;
@@ -88,7 +85,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Update ResourcesType Active Status Error", ex);
+                EventLog_Helper.WriteEventLog("ResourcesType Deactive Status Error", ex);
                 return false;
             }
         }
@@ -107,27 +104,38 @@ namespace DataLayer
                 return false;
             }
         }
-        public async Task<List<CenterResource>> GetAll()
+        public async Task<List<DTO_ResourceInfo>> GetAll()
         {
             try
             {
-                return await _db.CenterResources.AsNoTracking().ToListAsync();
+                return await _db.CenterResources.AsNoTracking().Select(r => new DTO_ResourceInfo
+                {
+                    CenterResourceId = r.CenterResourceId,
+                    ResourcesTypeId = r.ResourcesTypeId,
+                    CenterId = r.CenterId,
+                    ResourceName = r.ResourcesType.ResourceName,
+                    HourlyPrice = r.HourlyPrice,
+                    TotalQuantity = r.TotalQuantity,
+                    RoomType = r.RoomType,
+                    Description = r.Description,
+                    IsActive = r.IsActive
+                }).ToListAsync();
             }
             catch (Exception ex)
             {
                 EventLog_Helper.WriteEventLog("Get All Center Resources Error", ex);
-                return new List<CenterResource>();
+                return new List<DTO_ResourceInfo>();
             }
         }
         // ================ CRUD ===========
 
 
         // ================ Read By ===========
-        public async Task<CenterResource?> GetByID(int id)
+        public async Task<CenterResource?> GetByID(int centerResourceId)
         {
             try
             {
-                return await _db.CenterResources.AsNoTracking().FirstOrDefaultAsync(r => r.ResourcesTypeId == id);
+                return await _db.CenterResources.FirstOrDefaultAsync(r => r.CenterResourceId == centerResourceId);
             }
             catch (Exception ex)
             {
@@ -144,12 +152,14 @@ namespace DataLayer
                     .Where(r => r.CenterId == centerId)
                     .Select(r => new DTO_ResourceInfo
                     {
+                        CenterResourceId = r.CenterResourceId,
                         ResourcesTypeId = r.ResourcesTypeId,
                         CenterId = r.CenterId,
-                        ResourceId = r.ResourcesTypeId,
+                        ResourceName = r.ResourcesType.ResourceName,
                         HourlyPrice = r.HourlyPrice,
                         TotalQuantity = r.TotalQuantity,
                         RoomType = r.RoomType,
+                        Description = r.Description,
                         IsActive = r.IsActive
                     })
                     .ToListAsync();
@@ -160,10 +170,10 @@ namespace DataLayer
                 return new List<DTO_ResourceInfo>();
             }
         }
-        public async Task<bool> CheckCenterAndResource(int centerId,int resourceId)
+        public async Task<bool> CheckCenterAndResource(int centerId,int centerResourceId)
         {
             try {
-            var resourceExists = await _db.CenterResources.AnyAsync(r => r.ResourcesTypeId == resourceId && r.CenterId == centerId);
+            var resourceExists = await _db.CenterResources.AnyAsync(r => r.CenterResourceId == centerResourceId && r.CenterId == centerId);
                 return resourceExists;
             }
             catch (Exception ex)

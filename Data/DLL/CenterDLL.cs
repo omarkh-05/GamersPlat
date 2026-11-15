@@ -34,19 +34,24 @@ namespace DataLayer
                 return 0;
             }
         }
-        public async Task<bool> Update(Center center, int ownerId)
+        public async Task<bool> Update(DTO_UpdateCenter center,int centerId, int ownerId)
         {
             try
             {
-                var existing = await _db.Centers
-                    .FirstOrDefaultAsync(c =>
-                        c.CenterId == center.CenterId &&
-                        c.OwnerUserId == ownerId);
+                var existing = await _db.Centers.FirstOrDefaultAsync(c => c.CenterId == centerId && c.OwnerUserId == ownerId);
 
                 if (existing == null)
                     return false;
 
-                _db.Entry(existing).CurrentValues.SetValues(center);
+                existing.CenterName = center.CenterName;
+                existing.CenterDescription = center.CenterDescription;
+                existing.CityId = center.CityId;
+                existing.CenterAddress = center.CenterAddress;
+                existing.CenterPhone = center.CenterPhone;
+                existing.CenterType = center.CenterType;
+                existing.OpenTime = center.OpenTime;
+                existing.CloseTime = center.CloseTime;
+                existing.UpdatedAt = DateTime.Now;
 
                 return await _db.SaveChangesAsync() > 0;
             }
@@ -81,13 +86,12 @@ namespace DataLayer
             try
             {
                 return await _db.Centers
-                    .Where(c => c.CenterStatus != "pending")
                     .Select(c => new DTO_HomePageCentersDetails
                     {
                         CenterId = c.CenterId,
                         CenterName = c.CenterName,
                         CenterAddress = c.CenterAddress??"",
-                        CenterStatus = c.CenterStatus??"Busy",
+                        CenterStatus = c.CenterStatus??"busy",
                         CenterType = c.CenterType??"Gaming Center",
                         OpenTime = c.OpenTime,
                         CloseTime = c.CloseTime,
@@ -134,10 +138,7 @@ namespace DataLayer
             try
             {
                 return await _db.Centers
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(c =>
-                        c.CenterId == centerId &&
-                        c.IsActive == true);
+                    .FirstOrDefaultAsync(c => c.CenterId == centerId);
             }
             catch (Exception ex)
             {
@@ -160,7 +161,7 @@ namespace DataLayer
                         Address = c.CenterAddress??"",
                         Description = c.CenterDescription??"No Description",
                         Type = c.CenterType??"Gaming Center",
-                        Status = c.CenterStatus??"Busy",
+                        Status = c.CenterStatus??"closed",
                         OpenTime = c.OpenTime,
                         CloseTime = c.CloseTime,
 
@@ -177,6 +178,43 @@ namespace DataLayer
                             .Where(s => s.IsActive)
                             .Select(s => s.Service.Name)
                             .ToList(),
+
+                        Vip = c.CenterResources
+                            .Where(r => r.RoomType == "vip" && r.IsActive)
+                            .Select(r => new DTO_ResourceType
+                            {
+                                CenterResourceId = r.CenterResourceId,
+                                ResourcesId = r.ResourcesTypeId,
+                                DeviceName = r.ResourcesType.ResourceName,
+                                Description = r.Description,
+                                HourlyPrice = r.HourlyPrice,
+                                AvailableQuantity = r.TotalQuantity
+                            })
+                            .ToList(),
+                        Private = c.CenterResources
+                            .Where(r => r.RoomType == "private" && r.IsActive)
+                            .Select(r => new DTO_ResourceType
+                            {
+                                CenterResourceId = r.CenterResourceId,
+                                ResourcesId = r.ResourcesTypeId,
+                                DeviceName = r.ResourcesType.ResourceName,
+                                Description = r.Description,
+                                HourlyPrice = r.HourlyPrice,
+                                AvailableQuantity = r.TotalQuantity
+                            })
+                            .ToList(),
+                        Public = c.CenterResources
+                            .Where(r => r.RoomType == "public" && r.IsActive)
+                            .Select(r => new DTO_ResourceType
+                            {
+                                CenterResourceId = r.CenterResourceId,
+                                ResourcesId = r.ResourcesTypeId,
+                                DeviceName = r.ResourcesType.ResourceName,
+                                Description = r.Description,
+                                HourlyPrice = r.HourlyPrice,
+                                AvailableQuantity = r.TotalQuantity
+                            })
+                            .ToList()
 
                         /* Rating = c.Reviews
                              .Average(r => (double?)r.Rating) ?? 0,
@@ -220,32 +258,6 @@ namespace DataLayer
                              })
                              .ToList(),
                         */
-
-                        Vip = c.CenterResources
-                            .Where(r =>
-                                r.RoomType == "VIP" &&
-                                r.IsActive)
-                            .Select(r => new DTO_ResourceType
-                            {
-                                ResourcesTypeId = r.ResourcesTypeId,
-                                DeviceName = r.ResourcesType.ResourceName,
-                                HourlyPrice = r.HourlyPrice,
-                                AvailableQuantity = r.TotalQuantity
-                            })
-                            .ToList(),
-                      
-                        Normal = c.CenterResources
-                            .Where(r =>
-                                r.RoomType == "Normal" &&
-                                r.IsActive)
-                            .Select(r => new DTO_ResourceType
-                            {
-                                ResourcesTypeId = r.ResourcesTypeId,
-                                DeviceName = r.ResourcesType.ResourceName,
-                                HourlyPrice = r.HourlyPrice,
-                                AvailableQuantity = r.TotalQuantity
-                            })
-                            .ToList()
                     })
                     .FirstOrDefaultAsync();
             }
@@ -263,6 +275,7 @@ namespace DataLayer
                     .Where(c => c.OwnerUserId == ownerId)
                     .Select(c => new DTO_CentersListDetails
                     {
+                        CenterId = c.CenterId,
                         CenterName = c.CenterName,
                         CenterAddress = c.CenterAddress ?? "",
                         CenterStatus = c.CenterStatus ?? "Busy",
@@ -321,7 +334,8 @@ namespace DataLayer
                         BookingsCount = c.Bookings.Count(),
 
                         Revenue = c.Bookings
-                            .Sum(b => (decimal?)b.TotalPrice) ?? 0m
+                        .Where(b => b.Status == "completed")
+                        .Sum(b => (decimal?)b.TotalPrice) ?? 0m
                     })
                     .FirstOrDefaultAsync();
             }
@@ -340,9 +354,7 @@ namespace DataLayer
             try
             {
                 var center = await _db.Centers
-                    .FirstOrDefaultAsync(c =>
-                        c.CenterId == centerId &&
-                        c.OwnerUserId == ownerId);
+                    .FirstOrDefaultAsync(c => c.CenterId == centerId && c.OwnerUserId == ownerId);
 
                 if (center == null)
                     return false;
@@ -353,8 +365,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Toggle Center Status Error", ex);
+                EventLog_Helper.WriteEventLog("Toggle Center Status Error", ex);
 
                 return false;
             }
@@ -364,8 +375,8 @@ namespace DataLayer
             try
             {
                 var center = await _db.Centers
-                    .FirstOrDefaultAsync(c =>
-                        c.CenterId == centerId);
+                    .FirstOrDefaultAsync(c => c.CenterId == centerId);
+
                 if (center == null)
                     return false;
                 center.IsActive = true;

@@ -36,19 +36,18 @@ namespace Data.DLL
 
                         UpcomingBookings = _db.Bookings
                             .Count(b => b.Center.OwnerUserId == ownerId
-                                     && b.Status == "Upcoming"),
+                                     && b.Status == "pending"),
 
                         CompletedBookings = _db.Bookings
                             .Count(b => b.Center.OwnerUserId == ownerId
-                                     && b.Status == "Completed"),
+                                     && b.Status == "completed"),
 
                         CancelledBookings = _db.Bookings
                             .Count(b => b.Center.OwnerUserId == ownerId
-                                     && b.Status == "Cancelled"),
+                                     && b.Status == "cancelled"),
 
                         TotalRevenue = _db.Bookings
-                            .Where(b => b.Center.OwnerUserId == ownerId
-                                     && b.Status == "Completed")
+                            .Where(b => b.Center.OwnerUserId == ownerId && b.Status == "completed")
                             .Sum(b => (decimal?)b.TotalPrice) ?? 0m,
 
                         AverageRating = _db.Reviews

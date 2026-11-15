@@ -6,10 +6,6 @@ namespace Domain.DTOs.Service
 {
     public class DTO_AddService
     {
-        public int CenterId { get; set; }
-
-        public string Name { get; set; } = null!;
-
-        public bool IsActive { get; set; }
+        public string Name { get; set; }
     }
 }

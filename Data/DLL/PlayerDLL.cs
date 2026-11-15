@@ -36,17 +36,17 @@ namespace Data.DLL
 
                         // Player Statistics
                         TotalBookings = _db.Bookings
-                            .Count(b => b.UserId == userId && b.Status == "Completed"),
+                            .Count(b => b.UserId == userId && b.Status == "completed"),
 
                         TotalTournaments = _db.TournamentPlayers
                             .Count(tp => tp.UserId == userId),
 
                         TotalPaid = _db.Bookings
-                            .Where(b => b.UserId == userId && b.Status == "Completed")
+                            .Where(b => b.UserId == userId && b.Status == "completed")
                             .Sum(b => (decimal?)b.TotalPrice) ?? 0m,
 
                         MostPlayedCenterId = _db.Bookings
-                            .Where(b => b.UserId == userId && b.Status == "Completed")
+                            .Where(b => b.UserId == userId && b.Status == "completed")
                             .GroupBy(b => b.CenterId)
                             .Select(g => new
                             {
@@ -59,7 +59,7 @@ namespace Data.DLL
                             .FirstOrDefault(),
 
                         MostPlayedCenterName = _db.Bookings
-                            .Where(b => b.UserId == userId && b.Status == "Completed")
+                            .Where(b => b.UserId == userId && b.Status == "completed")
                             .GroupBy(b => b.CenterId)
                             .Select(g => new
                             {

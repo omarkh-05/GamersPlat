@@ -3,6 +3,7 @@ using Bussiness.Helpers;
 using Bussiness.Interfaces;
 using Data;
 using Data.DLL;
+using Data.EF;
 using Domain.DTOs.Auth;
 using Domain.DTOs.User;
 using System.Security.Cryptography;
@@ -19,7 +20,8 @@ namespace Bussiness.BLL
         private readonly IRoles _roles;
         private readonly IUserRole _userRole;
         private readonly PasswordResetTokenBLL _passwordResetTokenBLL;
-        public AuthBLL(IUser user, AuthHelpers authHelpers, RefreshTokenBLL refreshTokenBLL, IRoles roles, IUserRole userRole, PasswordResetTokenBLL passwordResetTokenBLL, AuthDLL authDLL)
+        readonly GamersPlatDbContext _db;
+        public AuthBLL(IUser user, AuthHelpers authHelpers, RefreshTokenBLL refreshTokenBLL, IRoles roles, IUserRole userRole, PasswordResetTokenBLL passwordResetTokenBLL, AuthDLL authDLL, GamersPlatDbContext db)
         {
             _authHelpers = authHelpers;
             _refreshTokenBLL = refreshTokenBLL;
@@ -28,6 +30,7 @@ namespace Bussiness.BLL
             _userRole = userRole;
             _passwordResetTokenBLL = passwordResetTokenBLL;
             _authDLL = authDLL;
+            _db = db;
         }
         public record ServiceResult(bool Success,string Message, int StatusCode);
         // ================ User Auth Management ================
@@ -38,6 +41,10 @@ namespace Bussiness.BLL
                 string.IsNullOrWhiteSpace(request.Password))
                 throw new Exception("Invalid data");
 
+            using var transaction = await _db.Database.BeginTransactionAsync();
+
+            try {
+
             if (await _user.ExistsByPhone(request.PhoneNumber))
                 throw new Exception("Phone number already exists");
 
@@ -45,7 +52,6 @@ namespace Bussiness.BLL
             if (role == null)
                 throw new Exception("Invalid role");
 
-            
                 var user = new User
                 {
                     FullName = request.FullName,
@@ -67,8 +73,14 @@ namespace Bussiness.BLL
 
                 if(!await _userRole.Add(userRole))
                 throw new Exception("Failed to add user role");
-
+            await transaction.CommitAsync();
             return user.UserId;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw new Exception("Failed Register User With Role");
+            }
         }
         public async Task<TokenResponse> LoginAsync(LoginRequest request)
         {
@@ -204,6 +216,7 @@ namespace Bussiness.BLL
             var user = await _authDLL.GetUserAuth(userId: userId);
             if (user == null)
                 return new(false, "User not found.", 404);
+
             if (!user.IsActive)
                 return new(false, "User account is inactive.", 403);
 

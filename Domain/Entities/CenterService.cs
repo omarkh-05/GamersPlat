@@ -6,14 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data;
 
-[PrimaryKey("CenterId", "ServiceId")]
 public partial class CenterService
 {
     [Key]
+    public int CenterServiceId { get; set; }
+
     public int CenterId { get; set; }
 
-    [Key]
     public byte ServiceId { get; set; }
+
+    public string Icon { get; set; } = null!;
 
     public bool IsActive { get; set; }
 

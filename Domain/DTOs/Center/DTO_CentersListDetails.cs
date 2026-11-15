@@ -6,6 +6,7 @@ namespace Domain.DTOs.Center
 {
     public class DTO_CentersListDetails
     {
+        public int CenterId { get; set; }
         public string CenterName { get; set; } = null!;
         public string CityName { get; set; } = null!;
         public string CenterAddress { get; set; } = null!;

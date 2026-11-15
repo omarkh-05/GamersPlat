@@ -27,7 +27,8 @@ namespace Domain.DTOs.Center
 
 
         public List<DTO_ResourceType> Vip { get; set; } = new();
-        public List<DTO_ResourceType> Normal { get; set; } = new();
+        public List<DTO_ResourceType> Private { get; set; } = new();
+        public List<DTO_ResourceType> Public { get; set; } = new();
 
         /*
         public double Rating { get; set; }

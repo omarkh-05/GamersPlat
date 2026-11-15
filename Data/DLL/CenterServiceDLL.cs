@@ -17,18 +17,15 @@ namespace DataLayer
         }
 
         // ================ CRUD ===============
-        public async Task<int> Add(Service service, int centerId)
+        public async Task<int> Add(CenterService service, int centerId)
         {
             try
             {
-                var isActiveForCenter = service.IsActive;
-                var existingService = await _db.Services
-                    .FirstOrDefaultAsync(s => s.Name == service.Name);
+                var existingService = await _db.Services.FirstOrDefaultAsync(s => s.ServiceId == service.ServiceId);
 
                 if (existingService == null)
                 {
-                    service.IsActive = true;
-                    _db.Services.Add(service);
+                    return 0;
                 }
 
                 var existingCenterService = await _db.CenterServices
@@ -37,13 +34,7 @@ namespace DataLayer
                 if (existingCenterService)
                     return 0;
 
-                _db.CenterServices.Add(new CenterService
-                {
-                    CenterId = centerId,
-                    Service = existingService,
-                    IsActive = isActiveForCenter,
-                    CreatedAt = DateTime.UtcNow
-                });
+                _db.CenterServices.Add(service);
 
                 await _db.SaveChangesAsync();
 
@@ -51,38 +42,31 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog( "Add Service Error", ex);
-
+                EventLog_Helper.WriteEventLog("Add Service Error", ex);
                 return 0;
             }
         }
-
-        public async Task<bool> Update(Service service)
+        public async Task<bool> Update(CenterService service)
         {
             try
             {
                 var existing = await _db.CenterServices
-                    .Include(cs => cs.Service)
-                    .FirstOrDefaultAsync(cs => cs.ServiceId == service.ServiceId && cs.CenterId == service.ServiceId);
+                    .FirstOrDefaultAsync(cs => cs.CenterServiceId == service.CenterServiceId);
 
                 if (existing == null)
                     return false;
 
-                existing.Service.Name = service.Name;
-                existing.Service.UpdatedAt = DateTime.UtcNow;
+                existing.ServiceId = service.ServiceId;
                 existing.IsActive = service.IsActive;
 
                 return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Update Service Error", ex);
-
+                EventLog_Helper.WriteEventLog("Update Service Error", ex);
                 return false;
             }
         }
-
         public async Task<bool> Delete(int serviceId, int centerId)
         {
             try
@@ -91,9 +75,7 @@ namespace DataLayer
                     return false;
 
                 var existing = await _db.CenterServices
-                    .FirstOrDefaultAsync(cs =>
-                        cs.ServiceId == (byte)serviceId &&
-                        cs.CenterId == centerId);
+                    .FirstOrDefaultAsync(cs => cs.ServiceId == (byte)serviceId && cs.CenterId == centerId);
 
                 if (existing == null)
                     return false;
@@ -104,24 +86,22 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Delete Service Error", ex);
+                EventLog_Helper.WriteEventLog("Delete Service Error", ex);
 
                 return false;
             }
         }
-
-        public async Task<bool> ActiveStatus(int serviceId, int centerId)
+        public async Task<bool> ActiveStatus(int centerServiceId, int centerId)
         {
             try
             {
-                if (serviceId <= 0 || serviceId > byte.MaxValue)
-                    return false;
-
                 var service = await _db.CenterServices
-                    .FirstOrDefaultAsync(cs => cs.ServiceId == (byte)serviceId && cs.CenterId == centerId);
+                    .FirstOrDefaultAsync(cs => cs.CenterServiceId == centerServiceId);
 
                 if (service == null)
+                    return false;
+
+                if (service.IsActive == true)
                     return false;
 
                 service.IsActive = true;
@@ -135,17 +115,18 @@ namespace DataLayer
                 return false;
             }
         }
-        public async Task<bool> DeactiveStatus(int serviceId, int centerId)
+        public async Task<bool> DeactiveStatus(int centerServiceId, int centerId)
         {
             try
             {
-                if (serviceId <= 0 || serviceId > byte.MaxValue)
-                    return false;
 
                 var service = await _db.CenterServices
-                    .FirstOrDefaultAsync(cs => cs.ServiceId == (byte)serviceId && cs.CenterId == centerId);
+                    .FirstOrDefaultAsync(cs => cs.CenterServiceId == centerServiceId);
 
                 if (service == null)
+                    return false;
+
+                if (service.IsActive == false)
                     return false;
 
                 service.IsActive = false;
@@ -159,21 +140,27 @@ namespace DataLayer
                 return false;
             }
         }
-
-        public async Task<List<Service>> GetAll()
+        public async Task<List<DTO_ServicesInfo>> GetAll()
         {
             try
             {
-                return await _db.Services
+                return await _db.CenterServices
                     .AsNoTracking()
+                    .Select(s => new DTO_ServicesInfo
+                    {
+                        CenterServiceId = s.CenterServiceId,
+                        ServiceId = s.ServiceId,
+                        Name = s.Service.Name,
+                        Icon = s.Icon,
+                        IsActive = s.IsActive
+                    })
                     .ToListAsync();
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Get All Services Error", ex);
+                EventLog_Helper.WriteEventLog("Get All Services Error", ex);
 
-                return new List<Service>();
+                return new List<DTO_ServicesInfo>();
             }
         }
 
@@ -181,18 +168,16 @@ namespace DataLayer
 
 
         // ================ Read By ===============
-        public async Task<Service?> GetByID(int serviceId)
+        public async Task<CenterService?> GetByID(int centerServiceId)
         {
             try
             {
-                return await _db.Services
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
+                return await _db.CenterServices
+                    .FirstOrDefaultAsync(s => s.CenterServiceId == centerServiceId);
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Get Service By ID Error", ex);
+                EventLog_Helper.WriteEventLog("Get Service By ID Error", ex);
 
                 return null;
             }
@@ -202,14 +187,15 @@ namespace DataLayer
             try
             {
                 return await _db.CenterServices
-                    .Include(cs => cs.Service)
                     .AsNoTracking()
                     .Where(cs => cs.CenterId == centerId)
                     .Select(cs => new DTO_ServicesInfo
                     {
+                        CenterServiceId = cs.CenterServiceId,
                         ServiceId = cs.ServiceId,
                         CenterId = cs.CenterId,
                         Name = cs.Service.Name,
+                        Icon = cs.Icon,
                         IsActive = cs.IsActive
                     })
                     .ToListAsync();

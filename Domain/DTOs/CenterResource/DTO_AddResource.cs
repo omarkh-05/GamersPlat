@@ -6,8 +6,6 @@ namespace Domain.DTOs.Resource
 {
     public class DTO_AddResource
     {
-        public int CenterId { get; set; }
-
         public byte ResourceId { get; set; }
 
         public decimal HourlyPrice { get; set; }
@@ -15,6 +13,8 @@ namespace Domain.DTOs.Resource
         public int TotalQuantity { get; set; }
 
         public string? RoomType { get; set; }
+
+        public string? Description { get; set; }
 
         public bool IsActive { get; set; }
     }

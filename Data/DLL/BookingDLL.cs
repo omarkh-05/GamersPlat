@@ -4,6 +4,7 @@ using Data.EF;
 using Domain.DTOs.Booking;
 using Domain.DTOs.Player;
 using Microsoft.EntityFrameworkCore;
+using System.Net.NetworkInformation;
 
 namespace DataLayer
 {
@@ -253,7 +254,7 @@ namespace DataLayer
                 return new List<DTO_PlayerBookingsInfo>();
             }
         }
-        public async Task<List<DTO_StartEndTime>> GetFullBookedHours(int centerId, int resourcesTypeId, DateOnly date)
+        public async Task<List<DTO_StartEndTime>> GetFullBookedHours(int centerId, int centerResourceId, DateOnly date)
         {
                 var activeStatuses = new[]
                 {
@@ -262,7 +263,7 @@ namespace DataLayer
                 };
             var fullyBooked = await _db.Bookings
                 .Where(b =>
-                    b.CenterResourceId == resourcesTypeId &&
+                    b.CenterResourceId == centerResourceId &&
                     b.CenterId == centerId &&
                     b.BookingDate == date &&
                     activeStatuses.Contains(b.Status))
@@ -330,24 +331,106 @@ namespace DataLayer
 
 
         // ================ Owner Booking Management ================
-        public async Task<bool> Accept_RejectBooking(int bookingId, string status)
+        public async Task<bool> AcceptBooking(int bookingId)
         {
-            if (status != nameof(BookingStatus.cancelled) || status != nameof(BookingStatus.accepted))
-                return false;
             try
             {
                 var booking = await _db.Bookings
                     .FirstOrDefaultAsync(b => b.BookingId == bookingId);
                 if (booking == null)
                     return false;
-                booking.Status = status.ToLower();
-                booking.UpdatedAt = DateTime.UtcNow;
+
+                if (booking.Status == "pending" || booking.Status == "updated")
+                {
+                    booking.Status = "accepted";
+                    booking.IsApproved = true;
+                    booking.UpdatedAt = DateTime.Now;
+                }
+                else
+                    return false;
 
                 return await _db.SaveChangesAsync() > 0;
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog("Update Booking Status Error", ex);
+                EventLog_Helper.WriteEventLog("Accept Booking Status Error", ex);
+                return false;
+            }
+        }
+        public async Task<bool> RejectBooking(int bookingId)
+        {
+            try
+            {
+                var booking = await _db.Bookings
+                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
+                if (booking == null)
+                    return false;
+                if (booking.Status == "pending" || booking.Status == "updated")
+                {
+                    booking.Status = "rejected";
+                    booking.IsApproved = false;
+                    booking.UpdatedAt = DateTime.Now;
+                }
+                else
+                    return false;
+
+                return await _db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Reject Booking Status Error", ex);
+                return false;
+            }
+        }
+        public async Task<bool> StartBooking(int bookingId)
+        {
+            try
+            {
+                var booking = await _db.Bookings
+                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
+
+                if (booking == null)
+                    return false;
+
+                if (booking.Status == "accepted")
+                {
+                    booking.Status = "running";
+                    booking.StartedAt = DateTime.Now;
+                    booking.UpdatedAt = DateTime.Now;
+                }
+                else
+                    return false;
+
+                return await _db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Accept Booking Status Error", ex);
+                return false;
+            }
+        }
+        public async Task<bool> StopBooking(int bookingId)
+        {
+            try
+            {
+                var booking = await _db.Bookings
+                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
+                if (booking == null)
+                    return false;
+                if (booking.Status == "running")
+                {
+                    booking.Status = "completed";
+                    booking.EndedAt = DateTime.Now;
+                    booking.UpdatedAt = DateTime.Now;
+                }
+                else
+                    return false;
+
+                return await _db.SaveChangesAsync() > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Reject Booking Status Error", ex);
                 return false;
             }
         }
@@ -361,6 +444,7 @@ namespace DataLayer
                     .OrderBy(b => b.BookingDate)
                     .Select(b => new DTO_BookingDetails
                     {
+                        BookingId = b.BookingId,
                         CustomerName = b.CustomerName,
                         PhoneNumber = b.PhoneNumber,
                         CenterName = b.Center.CenterName,
@@ -393,6 +477,7 @@ namespace DataLayer
                     .OrderBy(b => b.BookingDate)
                     .Select(b => new DTO_BookingDetails
                     {
+                        BookingId = b.BookingId,
                         CustomerName = b.CustomerName,
                         PhoneNumber = b.PhoneNumber,
                         CenterName = b.Center.CenterName,

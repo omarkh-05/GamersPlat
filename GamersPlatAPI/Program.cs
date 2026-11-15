@@ -19,21 +19,26 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-//builder.Services.AddOpenApi();
-
-// Add services to the container.s
 builder.Services.AddControllers();
-builder.Services.AddDbContext<GamersPlatDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("GamersPlat")));
+builder.Services.AddDbContext<GamersPlatDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("GamersPlat")));
 
+// Interface -> implementation registrations
+builder.Services.AddScoped<ICenterService, CenterBLL>();
+builder.Services.AddScoped<IResourcesTypeService, CenterResourcesBLL>();
+builder.Services.AddScoped<ITournamentService, TournamentBLL>();
+builder.Services.AddScoped<ITournamentPlayerService, TournamentPlayerBLL>();
+builder.Services.AddScoped<IOfferService, OfferBLL>();
+builder.Services.AddScoped<IReviewService, ReviewBLL>();
+builder.Services.AddScoped<INotificationService, NotificationBLL>();
+builder.Services.AddScoped<ICenterImageService, CenterImageBLL>();
+builder.Services.AddScoped<IBookingService, BookingBLL>();
+builder.Services.AddScoped<IOwnerService, OwnerBLL>();
 builder.Services.AddScoped<IAuthService, AuthBLL>();
 builder.Services.AddScoped<IUser, UserBLL>();
 builder.Services.AddScoped<IUserRole, UserRoleBLL>();
 builder.Services.AddScoped<IRoles, RoleBLL>();
+// Register other bussiness layer services so controllers can inject them
 builder.Services.AddScoped<AdminBLL>();
-// Register other business layer services so controllers can inject them
 builder.Services.AddScoped<CenterBLL>();
 builder.Services.AddScoped<BookingBLL>();
 builder.Services.AddScoped<CenterImageBLL>();
@@ -43,9 +48,11 @@ builder.Services.AddScoped<TournamentBLL>();
 builder.Services.AddScoped<TournamentPlayerBLL>();
 builder.Services.AddScoped<ReviewBLL>();
 builder.Services.AddScoped<CenterResourcesBLL>();
+builder.Services.AddScoped<ResourceBLL>();
 builder.Services.AddScoped<OwnerBLL>();
 builder.Services.AddScoped<DeviceBLL>();
 builder.Services.AddScoped<SessionBLL>();
+builder.Services.AddScoped<ServiceBLL>();
 builder.Services.AddScoped<SessionParticipantBLL>();
 builder.Services.AddScoped<CenterServiceBLL>();
 builder.Services.AddScoped<GameBLL>();
@@ -65,8 +72,10 @@ builder.Services.AddScoped<TournamentPlayerDLL>();
 builder.Services.AddScoped<SessionDLL>();
 builder.Services.AddScoped<SessionParticipantDLL>();
 builder.Services.AddScoped<StaffDLL>();
+builder.Services.AddScoped<ServiceDLL>();
 builder.Services.AddScoped<OfferDLL>();
 builder.Services.AddScoped<CenterResourcesDLL>();
+builder.Services.AddScoped<ResourceDLL>();
 builder.Services.AddScoped<ReviewDLL>();
 builder.Services.AddScoped<NotificationDLL>();
 builder.Services.AddScoped<AdminDLL>();
@@ -91,17 +100,6 @@ builder.Services.AddScoped<PlayerBLL>();
 builder.Services.AddScoped<PointTransactionDLL>();
 builder.Services.AddScoped<PointTransactionBLL>();
 builder.Services.AddScoped<BookingDLL>();
-// Interface -> implementation registrations
-builder.Services.AddScoped<ICenterService, CenterBLL>();
-builder.Services.AddScoped<IResourcesTypeService, CenterResourcesBLL>();
-builder.Services.AddScoped<ITournamentService, TournamentBLL>();
-builder.Services.AddScoped<ITournamentPlayerService, TournamentPlayerBLL>();
-builder.Services.AddScoped<IOfferService, OfferBLL>();
-builder.Services.AddScoped<IReviewService, ReviewBLL>();
-builder.Services.AddScoped<INotificationService, NotificationBLL>();
-builder.Services.AddScoped<ICenterImageService, CenterImageBLL>();
-builder.Services.AddScoped<IBookingService, BookingBLL>();
-builder.Services.AddScoped<IOwnerService, OwnerBLL>();
 builder.Services.AddScoped<CityBLL>();
 
 #region Swagger
@@ -289,7 +287,7 @@ builder.Services.AddRateLimiter(options =>
 
 
 var app = builder.Build();
-// Seed roles at startup
+
 // Seed roles at startup
 using (var scope = app.Services.CreateScope())
 {

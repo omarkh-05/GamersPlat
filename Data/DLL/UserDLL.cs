@@ -74,9 +74,7 @@ namespace DataLayer
         {
             try
             {
-                return await _db.Users
-                    .AsNoTracking()
-            .Select(u => new DTO_UserListResponse
+                return await _db.Users.AsNoTracking().Select(u => new DTO_UserListResponse
             {
                 UserId = u.UserId,
                 FullName = u.FullName,
@@ -145,7 +143,6 @@ namespace DataLayer
                             FullName = u.FullName,
                             Email = u.Email,
                             CityName = u.City.Name,
-                            Points = u.Points,
                             IsActive = u.IsActive,
                             Roles = u.UserRoles.Select(ur => ur.Role.RoleName).ToList() ?? null,
                             PhoneVerified = u.PhoneVerified == false ? false : true,
@@ -167,11 +164,11 @@ namespace DataLayer
           .Where(u => u.UserId == userId)
           .Select(u => new DTO_UserInfoRequest
           {
+
               PhoneNumber = u.PhoneNumber,
               FullName = u.FullName,
               Email = u.Email,
               CityName = u.City.Name,
-              Points = u.Points,
               IsActive = u.IsActive,
               Roles = u.UserRoles.Select(ur => ur.Role.RoleName).ToList() ?? null,
               PhoneVerified = u.PhoneVerified == false ? false : true,

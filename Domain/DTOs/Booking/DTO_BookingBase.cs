@@ -8,7 +8,7 @@ namespace Domain.DTOs.Booking
     public class DTO_BookingBase
     {
         public int CenterId { get; set; }
-        public int ResourcesTypeId { get; set; }
+        public int CenterResourceId { get; set; }
         public DateOnly BookingDate { get; set; }
         public TimeOnly StartTime { get; set; }
         public TimeOnly? EndTime { get; set; }

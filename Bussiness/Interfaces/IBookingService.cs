@@ -27,10 +27,13 @@ namespace Bussiness.Interfaces
         Task<List<DTO_BookingDetails>> GetAll();
         Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId);
         Task<Booking?> GetByID(int bookingID);
-        Task<bool> Accept_RejectBooking(int bookingId, string status);
+        Task<bool> AcceptBooking(int bookingId);
+        Task<bool> RejectBooking(int bookingId);
+        Task<bool> StartBooking(int bookingId);
+        Task<bool> StopBooking(int bookingId);
         Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId);
         Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId);
-        Task<List<DTO_StartEndTime>?> GetFullBookedHours(int centerId, int resourcesTypeId, DateOnly date);
+        Task<List<DTO_StartEndTime>?> GetFullBookedHours(int centerId, int centerResourceId, DateOnly date);
         // helper to compute booked quantity for availability check // no-op
         string? LastError { get; }
         // other booking operations can be added as needed

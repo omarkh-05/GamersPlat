@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using Bussiness.Helpers;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace GamersPlatAPI.Controllers
 {
@@ -84,7 +85,7 @@ namespace GamersPlatAPI.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.BookingId }, new { id = result.BookingId, token = result.Token });
         }
 
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "admin,staff")]
         [HttpPost("admin")]
         [EnableRateLimiting("user-booking")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -145,7 +146,7 @@ namespace GamersPlatAPI.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "admin")]
         [HttpDelete("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -161,7 +162,7 @@ namespace GamersPlatAPI.Controllers
         }
 
         [Authorize]
-        [HttpPut("cancel")]
+        [HttpPatch("cancel")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -218,9 +219,9 @@ namespace GamersPlatAPI.Controllers
 
         [HttpGet("fully-booked-hours")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetFullyBookedHours([FromQuery] int centerId,[FromQuery] int resourceTypeId,[FromQuery] DateOnly date)
+        public async Task<IActionResult> GetFullyBookedHours([FromQuery] int centerId,[FromQuery] int centerResourceId,[FromQuery] DateOnly date)
         {
-            List<DTO_StartEndTime>? fullTimeList = await _booking.GetFullBookedHours(centerId, resourceTypeId, date);
+            List<DTO_StartEndTime>? fullTimeList = await _booking.GetFullBookedHours(centerId, centerResourceId, date);
             return Ok(fullTimeList);
         }
 
@@ -235,7 +236,7 @@ namespace GamersPlatAPI.Controllers
             return Ok(list);
         }
 
-        [Authorize(Roles = "Owner")]
+        [Authorize(Roles = "owner")]
         [HttpGet("owner")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetOwnerBookings()
@@ -245,71 +246,6 @@ namespace GamersPlatAPI.Controllers
             var list = await _booking.GetBookingsByOwnerId(uid);
             return Ok(list);
         }
-
-        [Authorize(Roles = "Owner")]
-        [HttpPut("owner/accept/{id:int}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> OwnerAccept(int id)
-        {
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
-
-            try
-            {
-                var ok = await _ownerService.AcceptBooking(id, uid);
-                if (!ok) return StatusCode(500);
-                return NoContent();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Forbid();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [Authorize(Roles = "Owner")]
-        [HttpPut("owner/reject/{id:int}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> OwnerReject(int id)
-        {
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
-
-            try
-            {
-                var ok = await _ownerService.RejectBooking(id, uid);
-                if (!ok) return StatusCode(500);
-                return NoContent();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Forbid();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-
-
 
         // Internal method to handle booking creation logic
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -7,11 +7,11 @@ namespace Domain.DTOs.Service
 {
     public class DTO_ServicesInfo
     {
-        [Key]
+        public int CenterServiceId { get; set; }
         public byte ServiceId { get; set; }
         public int CenterId { get; set; }
-        [StringLength(50)]
         public string Name { get; set; } = null!;
+        public string Icon { get; set; } = "other";
         public bool IsActive { get; set; }
     }
 }
