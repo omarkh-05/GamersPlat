@@ -57,7 +57,10 @@ public partial class Booking
 
     public bool IsApproved { get; set; }
 
+    [Precision(0)]
     public DateTime? StartedAt { get; set; }
+
+    [Precision(0)]
     public DateTime? EndedAt { get; set; }
 
     [Column(TypeName = "datetime")]
@@ -72,6 +75,15 @@ public partial class Booking
     [Column(TypeName = "datetime")]
     public DateTime CreatedAt { get; set; }
 
+    public int? AcceptedBy { get; set; }
+              
+    public int? RejectedBy { get; set; }
+              
+    public int? StartedBy { get; set; }
+              
+    public int? StoppedBy { get; set; }
+
+
     [ForeignKey("CenterId")]
     [InverseProperty("Bookings")]
     public virtual Center Center { get; set; } = null!;
@@ -80,6 +92,9 @@ public partial class Booking
     [InverseProperty("Bookings")]
     public virtual CenterResource CenterResource { get; set; } = null!;
 
+    [InverseProperty("Booking")]
+    public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+
     [ForeignKey("OfferId")]
     [InverseProperty("Bookings")]
     public virtual Offer? Offer { get; set; }
@@ -87,7 +102,21 @@ public partial class Booking
     [InverseProperty("Booking")]
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 
+    [ForeignKey("AcceptedBy")]
+    [InverseProperty("BookingAcceptedByNavigations")]
+    public virtual User? AcceptedByNavigation { get; set; } = null!;
+    [ForeignKey("RejectedBy")]
+    [InverseProperty("BookingRejectedByNavigations")]
+    public virtual User? RejectedByNavigation { get; set; } = null!;
+    [ForeignKey("StartedBy")]
+    [InverseProperty("BookingStartedByNavigations")]
+    public virtual User? StartedByNavigation { get; set; } = null!;
+
+    [ForeignKey("StoppedBy")]
+    [InverseProperty("BookingStoppedByNavigations")]
+    public virtual User? StoppedByNavigation { get; set; } = null!;
+
     [ForeignKey("UserId")]
-    [InverseProperty("Bookings")]
+    [InverseProperty("BookingUsers")]
     public virtual User User { get; set; } = null!;
 }

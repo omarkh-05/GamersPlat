@@ -14,6 +14,7 @@ namespace Bussiness.BLL
     using Bussiness.Interfaces;
     using DataLayer;
     using Domain.DTOs.Auth;
+    using Domain.DTOs.Invoice;
     using System.Net.NetworkInformation;
 
     public class OwnerBLL : IOwnerService
@@ -26,8 +27,9 @@ namespace Bussiness.BLL
         readonly StaffBLL _staff;
         readonly IAuthService _auth;
         private readonly OwnerDLL _ownerDLL;
+        private readonly InvoiceBLL _invoice;
 
-        public OwnerBLL(IUser user, CenterBLL centerBLL, CenterResourcesBLL centerResourcesBLL, CenterServiceBLL centerServicesBLL, BookingBLL bookingBLL, StaffBLL staffBLL, IAuthService auth, OwnerDLL ownerDLL)
+        public OwnerBLL(IUser user, CenterBLL centerBLL, CenterResourcesBLL centerResourcesBLL, CenterServiceBLL centerServicesBLL, BookingBLL bookingBLL, StaffBLL staffBLL, IAuthService auth, OwnerDLL ownerDLL, InvoiceBLL invoice)
         {
             _user = user;
             _center = centerBLL;
@@ -37,6 +39,7 @@ namespace Bussiness.BLL
             _staff = staffBLL;
             _auth = auth;
             _ownerDLL = ownerDLL;
+            _invoice = invoice;
         }
         // ================ Owner Management ================
         public async Task<DTO_UserInfoRequest?> GetOwnerInfo(int ownerId)
@@ -373,7 +376,7 @@ namespace Bussiness.BLL
             }
             return await _booking.Update(booking,0);
         }
-        public async Task<bool> AcceptBooking(int bookingId,int ownerUserId)
+        public async Task<bool> AcceptBooking(int bookingId,int ownerId)
         {
             if (bookingId <= 0)
                 throw new ArgumentException("Invalid booking ID.");
@@ -383,17 +386,17 @@ namespace Bussiness.BLL
             if (booking == null)
                 throw new KeyNotFoundException("Booking not found.");
 
-            await ValidateCenterOwner(booking.CenterId, ownerUserId, requireApproved: true);
+            await ValidateCenterOwner(booking.CenterId, ownerId, requireApproved: true);
 
             if (booking.Status != "pending" && booking.Status != "updated")
                 throw new InvalidOperationException("Only pending or updated bookings can be accepted.");
 
-            bool res = await _booking.AcceptBooking(bookingId);
+            bool res = await _booking.AcceptBooking(bookingId, ownerId);
             if (res)
                 return true;
             throw new ArgumentException("Error while accept booking.");
         }
-        public async Task<bool> RejectBooking(int bookingId,int ownerUserId)
+        public async Task<bool> RejectBooking(int bookingId,int ownerId)
         {
             if (bookingId <= 0)
                 throw new ArgumentException("Invalid booking ID.");
@@ -403,17 +406,17 @@ namespace Bussiness.BLL
             if (booking == null)
                 throw new KeyNotFoundException("Booking not found.");
 
-            await ValidateCenterOwner(booking.CenterId, ownerUserId, requireApproved: true);
+            await ValidateCenterOwner(booking.CenterId, ownerId, requireApproved: true);
 
             if (booking.Status != "pending" && booking.Status != "updated")
                 throw new InvalidOperationException("Only pending or updated bookings can be rejected.");
 
-            bool res = await _booking.RejectBooking(bookingId);
+            bool res = await _booking.RejectBooking(bookingId, ownerId);
             if (res)
                 return true;
             throw new ArgumentException("Error while reject booking.");
         }
-        public async Task<bool> StartBooking(int bookingId, int ownerUserId)
+        public async Task<bool> StartBooking(int bookingId, int ownerId)
         {
             if (bookingId <= 0)
                 throw new ArgumentException("Invalid booking ID.");
@@ -423,17 +426,17 @@ namespace Bussiness.BLL
             if (booking == null)
                 throw new KeyNotFoundException("Booking not found.");
 
-            await ValidateCenterOwner(booking.CenterId, ownerUserId, requireApproved: true);
+            await ValidateCenterOwner(booking.CenterId, ownerId, requireApproved: true);
 
             if (booking.Status != "accepted")
                 throw new InvalidOperationException("Only accepted bookings can be started.");
 
-            bool res = await _booking.StartBooking(bookingId);
+            bool res = await _booking.StartBooking(bookingId, ownerId);
             if (res)
                 return true;
             throw new ArgumentException("Error while start booking.");
         }
-        public async Task<bool> StopBooking(int bookingId, int ownerUserId)
+        public async Task<DTO_InvoicePreview> GetInvoicePreview(int bookingId, int ownerId)
         {
             if (bookingId <= 0)
                 throw new ArgumentException("Invalid booking ID.");
@@ -443,14 +446,27 @@ namespace Bussiness.BLL
             if (booking == null)
                 throw new KeyNotFoundException("Booking not found.");
 
-            await ValidateCenterOwner(booking.CenterId, ownerUserId, requireApproved: true);
+            await ValidateCenterOwner(booking.CenterId, ownerId, requireApproved: true);
 
-            if (booking.Status != "running")
-                throw new InvalidOperationException("Only running bookings can be stoped.");
+            return await _booking.GetInvoicePreview(bookingId)
+                ?? throw new InvalidOperationException("Could not create invoice preview.");
+        }
+        public async Task<DTO_Invoice> StopBooking(int bookingId, int ownerId, DTO_EndBookingInvoice endBooking)
+        {
+            if (bookingId <= 0)
+                throw new ArgumentException("Invalid booking ID.");
 
-            bool res = await _booking.StopBooking(bookingId);
-            if (res)
-                return true;
+            var booking = await _booking.GetByID(bookingId);
+
+            if (booking == null)
+                throw new KeyNotFoundException("Booking not found.");
+
+            await ValidateCenterOwner(booking.CenterId, ownerId, requireApproved: true);
+
+            var res = await _booking.StopBooking(bookingId, ownerId, endBooking);
+            if (res != null)
+                return res;
+
             throw new ArgumentException("Error while stop booking.");
         }
 
@@ -595,14 +611,31 @@ namespace Bussiness.BLL
         // ================ Staffs Management ================
 
 
-        // Helpers
-        private async Task ValidateCenterOwner(int centerId, int ownerUserId, bool requireApproved = false)
+        // ================ Services Management ================
+        public async Task<List<DTO_CenterInvoices>?> GetAllCenterInvoices(int centerId,int ownerId)
         {
+            await ValidateCenterOwner(centerId, ownerId, requireApproved: true);
+
+            var res = await _invoice.GetAllCenterInvoices(centerId);
+            if (res != null)
+                return res;
+            throw new KeyNotFoundException("No invoices found");
+        }
+        // ================ Services Management ================
+
+
+        // Helpers
+        private async Task ValidateCenterOwner(int centerId, int ownerId, bool requireApproved = false)
+        {
+            if(centerId<=0 || ownerId <= 0)
+                throw new ArgumentException("Invalid Input Data");
+
             var center = await _center.GetByID(centerId);
             if (center == null)
                 throw new KeyNotFoundException("Center not found.");
-            if (center.OwnerUserId != ownerUserId)
+            if (center.OwnerUserId != ownerId)
                 throw new UnauthorizedAccessException("You are not the owner of this center.");
+
             if (requireApproved && center.IsApproved != true)
                 throw new ArgumentException("Can not change status of an unapproved center");
         }

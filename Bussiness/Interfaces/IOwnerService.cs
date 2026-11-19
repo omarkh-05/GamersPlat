@@ -1,6 +1,7 @@
 using Domain.DTOs.Auth;
 using Domain.DTOs.Booking;
 using Domain.DTOs.Center;
+using Domain.DTOs.Invoice;
 using Domain.DTOs.Owner;
 using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
@@ -41,10 +42,13 @@ namespace Bussiness.Interfaces
         Task<bool> AcceptBooking(int bookingId, int ownerUserId);
         Task<bool> RejectBooking(int bookingId, int ownerUserId);
         Task<bool> StartBooking(int bookingId, int ownerUserId);
-        Task<bool> StopBooking(int bookingId, int ownerUserId);
+        Task<DTO_InvoicePreview> GetInvoicePreview(int bookingId, int ownerUserId);
+        Task<DTO_Invoice> StopBooking(int bookingId, int ownerUserId, DTO_EndBookingInvoice endBooking);
         Task<DTO_BookingDetails> ViewBookingDetails(int bookingId, int ownerUserId);
         Task<List<DTO_BookingDetails>> GetAllBookings(int ownerUserId);
         Task<List<DTO_BookingDetails>> GetAllUBookings_ByCenterId(int centerId, int ownerUserId);
+
+        Task<List<DTO_CenterInvoices>?> GetAllCenterInvoices(int centerId, int ownerId);
 
         Task<bool> AddStaffMember(DTO_AddStaffMember staffMember);
         Task<bool> UpdateStaffMember(DTO_UpdateStaffMember request);

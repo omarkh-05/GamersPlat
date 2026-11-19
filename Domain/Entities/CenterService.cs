@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data;
 
+[Index("CenterId", "ServiceId", Name = "UQ_CenterServices_Center_Service", IsUnique = true)]
 public partial class CenterService
 {
     [Key]
@@ -15,6 +16,7 @@ public partial class CenterService
 
     public byte ServiceId { get; set; }
 
+    [StringLength(50)]
     public string Icon { get; set; } = null!;
 
     public bool IsActive { get; set; }

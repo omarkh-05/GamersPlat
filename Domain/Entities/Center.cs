@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Data;
 
 [Index("CenterPhone", Name = "UQ_Centers_CenterPhone", IsUnique = true)]
+[Index(nameof(Slug), Name = "UQ_Centers_Slug", IsUnique = true)]
 public partial class Center
 {
     [Key]
@@ -16,6 +17,9 @@ public partial class Center
 
     [StringLength(150)]
     public string CenterName { get; set; } = null!;
+
+    [StringLength(255)]
+    public string Slug { get; set; } = null!;
 
     [StringLength(255)]
     public string CenterAddress { get; set; } = null!;

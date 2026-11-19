@@ -1,6 +1,7 @@
 using Data;
 using DataLayer;
 using Domain.DTOs.Center;
+using System.Text.RegularExpressions;
 
 namespace Bussiness
 {
@@ -34,6 +35,7 @@ namespace Bussiness
                         : userId,
 
                     CenterName = addCenter.CenterName,
+                    Slug = await GenerateUniqueSlug(addCenter.CenterName, addCenter.CityId),
 
                     CityId = addCenter.CityId <= 0
                         ? throw new ArgumentException("Invalid City ID.")
@@ -68,6 +70,35 @@ namespace Bussiness
                 EventLog_Helper.WriteEventLog("Error While Creating Center", ex);
             }
             return _centerID > 0;
+        }
+
+        private async Task<string> GenerateUniqueSlug(string centerName, short cityId)
+        {
+            var slug = NormalizeSlug(centerName);
+
+            if (string.IsNullOrEmpty(slug))
+                slug = "center";
+
+            if (await _centerDLL.CenterNameExists(centerName))
+            {
+                var citySlug = NormalizeSlug(await _centerDLL.GetCityName(cityId) ?? string.Empty);
+                if (!string.IsNullOrEmpty(citySlug))
+                    slug = $"{slug}-{citySlug}";
+            }
+
+            var uniqueSlug = slug;
+            var suffix = 2;
+            while (await _centerDLL.SlugExists(uniqueSlug))
+                uniqueSlug = $"{slug}-{suffix++}";
+
+            return uniqueSlug;
+        }
+
+        private static string NormalizeSlug(string value)
+        {
+            var slug = Regex.Replace(value.ToLowerInvariant(), @"\s+", "-");
+            slug = Regex.Replace(slug, @"[^a-z0-9-]", "");
+            return Regex.Replace(slug, @"-+", "-").Trim('-');
         }
         public async Task<bool> Update(DTO_UpdateCenter updateCenter, int centerId, int ownerId)
         {
@@ -128,6 +159,13 @@ namespace Bussiness
                 throw new ArgumentException("Invalid center ID.");
 
             return await _centerDLL.GetCenterDetailsById(centerId);
+        }
+        public async Task<DTO_CenterDetails?> GetCenterDetailsBySlug(string slug)
+        {
+            if (string.IsNullOrWhiteSpace(slug))
+                throw new ArgumentException("Invalid center slug.", nameof(slug));
+
+            return await _centerDLL.GetCenterDetailsBySlug(slug);
         }
         public async Task<DTO_CenterOverview?> GetCenterOverView(int centerId)
         {

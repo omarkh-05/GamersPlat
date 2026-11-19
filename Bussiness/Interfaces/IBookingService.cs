@@ -1,6 +1,7 @@
 using Data;
 using Domain.DTOs.Auth;
 using Domain.DTOs.Booking;
+using Domain.DTOs.Invoice;
 using Domain.DTOs.Player;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -27,10 +28,11 @@ namespace Bussiness.Interfaces
         Task<List<DTO_BookingDetails>> GetAll();
         Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId);
         Task<Booking?> GetByID(int bookingID);
-        Task<bool> AcceptBooking(int bookingId);
-        Task<bool> RejectBooking(int bookingId);
-        Task<bool> StartBooking(int bookingId);
-        Task<bool> StopBooking(int bookingId);
+        Task<bool> AcceptBooking(int bookingId, int userId);
+        Task<bool> RejectBooking(int bookingId, int userId);
+        Task<bool> StartBooking(int bookingId, int userId);
+        Task<DTO_InvoicePreview?> GetInvoicePreview(int bookingId);
+        Task<DTO_Invoice?> StopBooking(int bookingId, int userId, DTO_EndBookingInvoice endBooking);
         Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId);
         Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId);
         Task<List<DTO_StartEndTime>?> GetFullBookedHours(int centerId, int centerResourceId, DateOnly date);

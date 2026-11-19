@@ -89,6 +89,7 @@ namespace DataLayer
                     .Select(c => new DTO_HomePageCentersDetails
                     {
                         CenterId = c.CenterId,
+                        Slug = c.Slug,
                         CenterName = c.CenterName,
                         CenterAddress = c.CenterAddress??"",
                         CenterStatus = c.CenterStatus??"busy",
@@ -146,6 +147,25 @@ namespace DataLayer
                 return null;
             }
         }
+
+        public async Task<bool> SlugExists(string slug)
+        {
+            return await _db.Centers.AnyAsync(c => c.Slug == slug);
+        }
+
+        public async Task<bool> CenterNameExists(string centerName)
+        {
+            return await _db.Centers.AnyAsync(c => c.CenterName == centerName);
+        }
+
+        public async Task<string?> GetCityName(short cityId)
+        {
+            return await _db.Cities
+                .Where(city => city.CityId == cityId)
+                .Select(city => city.Name)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<DTO_CenterDetails?> GetCenterDetailsById(int centerId)
         {
             try
@@ -156,6 +176,7 @@ namespace DataLayer
                     .Select(c => new DTO_CenterDetails
                     {
                         CenterId = c.CenterId,
+                        Slug = c.Slug,
                         Name = c.CenterName,
                         City = c.City.Name,
                         Address = c.CenterAddress??"",
@@ -267,6 +288,24 @@ namespace DataLayer
                 return null;
             }
         }
+        public async Task<DTO_CenterDetails?> GetCenterDetailsBySlug(string slug)
+        {
+            try
+            {
+                var centerId = await _db.Centers
+                    .AsNoTracking()
+                    .Where(c => c.Slug == slug && c.IsActive == true)
+                    .Select(c => c.CenterId)
+                    .FirstOrDefaultAsync();
+
+                return centerId == 0 ? null : await GetCenterDetailsById(centerId);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Center By Slug Error", ex);
+                return null;
+            }
+        }
         public async Task<List<DTO_CentersListDetails>> GetAllCentersByOwnerId(int ownerId)
         {
             try
@@ -276,6 +315,7 @@ namespace DataLayer
                     .Select(c => new DTO_CentersListDetails
                     {
                         CenterId = c.CenterId,
+                        Slug = c.Slug,
                         CenterName = c.CenterName,
                         CenterAddress = c.CenterAddress ?? "",
                         CenterStatus = c.CenterStatus ?? "Busy",

@@ -6,6 +6,7 @@ using Data.DLL;
 using Data.EF;
 using Domain.DTOs.Auth;
 using Domain.DTOs.Booking;
+using Domain.DTOs.Invoice;
 using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
 using Domain.DTOs.Staff;
@@ -373,7 +374,7 @@ namespace Bussiness.BLL
             if (booking.Status != "pending" && booking.Status != "updated")
                 throw new InvalidOperationException("Only pending bookings can be accepted.");
 
-            bool res =  await _booking.AcceptBooking(bookingId);
+            bool res =  await _booking.AcceptBooking(bookingId, staffId);
             if (res)
                 return true;
             throw new ArgumentException("Error while accept booking.");
@@ -394,7 +395,7 @@ namespace Bussiness.BLL
             if (booking.Status != "pending" && booking.Status != "updated")
                 throw new InvalidOperationException("Only pending bookings can be rejected.");
 
-            bool res = await _booking.RejectBooking(bookingId);
+            bool res = await _booking.RejectBooking(bookingId, staffId);
             if (res)
                 return true;
             throw new ArgumentException("Error while reject booking.");
@@ -414,12 +415,26 @@ namespace Bussiness.BLL
             if (booking.Status != "accepted")
                 throw new InvalidOperationException("Only accepted bookings can be started.");
 
-            bool res = await _booking.StartBooking(bookingId);
+            bool res = await _booking.StartBooking(bookingId, staffId);
             if (res)
                 return true;
             throw new ArgumentException("Error while start booking.");
         }
-        public async Task<bool> StopBooking(int bookingId, int staffId)
+        public async Task<DTO_InvoicePreview> GetInvoicePreview(int bookingId, int staffId)
+        {
+            if (bookingId <= 0)
+                throw new ArgumentException("Invalid booking ID.");
+
+            var booking = await _booking.GetByID(bookingId);
+            if (booking == null)
+                throw new KeyNotFoundException("Booking not found.");
+
+            await GetAuthorizedStaff(staffId, booking.CenterId, Permissions.AcceptRejectBooking);
+
+            return await _booking.GetInvoicePreview(bookingId)
+                ?? throw new InvalidOperationException("Could not create invoice preview.");
+        }
+        public async Task<DTO_Invoice> StopBooking(int bookingId, int staffId, DTO_EndBookingInvoice endBooking)
         {
             if (bookingId <= 0)
                 throw new ArgumentException("Invalid booking ID.");
@@ -431,12 +446,9 @@ namespace Bussiness.BLL
 
             await GetAuthorizedStaff(staffId, booking.CenterId, Permissions.AcceptRejectBooking);
 
-            if (booking.Status != "running")
-                throw new InvalidOperationException("Only running bookings can be stoped.");
-
-            bool res = await _booking.StopBooking(bookingId);
-            if (res)
-                return true;
+            var res = await _booking.StopBooking(bookingId, staffId, endBooking);
+            if (res != null)
+                return res;
             throw new ArgumentException("Error while stop booking.");
         }
         // ================ Bookings Management ================

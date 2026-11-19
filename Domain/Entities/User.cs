@@ -48,8 +48,20 @@ public partial class User
     [InverseProperty("User")]
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
+    [InverseProperty("AcceptedByNavigation")]
+    public virtual ICollection<Booking> BookingAcceptedByNavigations { get; set; } = new List<Booking>();
+
+    [InverseProperty("RejectedByNavigation")]
+    public virtual ICollection<Booking> BookingRejectedByNavigations { get; set; } = new List<Booking>();
+
+    [InverseProperty("StartedByNavigation")]
+    public virtual ICollection<Booking> BookingStartedByNavigations { get; set; } = new List<Booking>();
+
+    [InverseProperty("StoppedByNavigation")]
+    public virtual ICollection<Booking> BookingStoppedByNavigations { get; set; } = new List<Booking>();
+
     [InverseProperty("User")]
-    public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+    public virtual ICollection<Booking> BookingUsers { get; set; } = new List<Booking>();
 
     [InverseProperty("CreatedByNavigation")]
     public virtual ICollection<Center> CenterCreatedByNavigations { get; set; } = new List<Center>();

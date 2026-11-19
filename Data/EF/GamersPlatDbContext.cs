@@ -38,6 +38,8 @@ public partial class GamersPlatDbContext : DbContext
 
     public virtual DbSet<Game> Games { get; set; }
 
+    public virtual DbSet<Invoice> Invoices { get; set; }
+
     public virtual DbSet<Notification> Notifications { get; set; }
 
     public virtual DbSet<Offer> Offers { get; set; }
@@ -96,13 +98,21 @@ public partial class GamersPlatDbContext : DbContext
             entity.Property(e => e.Status).HasDefaultValue("Pending", "DF__Bookings__Bookin__04E4BC85");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(NULL)", "DF_Bookings_UpdatedAt");
 
+            entity.HasOne(d => d.AcceptedByNavigation).WithMany(p => p.BookingAcceptedByNavigations).HasConstraintName("FK_Bookings_AcceptedBy_Users");
+
             entity.HasOne(d => d.Center).WithMany(p => p.Bookings)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Bookings__Center__07C12930");
 
             entity.HasOne(d => d.Offer).WithMany(p => p.Bookings).HasConstraintName("FK_Bookings_Offers");
 
-            entity.HasOne(d => d.User).WithMany(p => p.Bookings)
+            entity.HasOne(d => d.RejectedByNavigation).WithMany(p => p.BookingRejectedByNavigations).HasConstraintName("FK_Bookings_RejectedBy_Users");
+
+            entity.HasOne(d => d.StartedByNavigation).WithMany(p => p.BookingStartedByNavigations).HasConstraintName("FK_Bookings_StartedBy_Users");
+
+            entity.HasOne(d => d.StoppedByNavigation).WithMany(p => p.BookingStoppedByNavigations).HasConstraintName("FK_Bookings_StoppedBy_Users");
+
+            entity.HasOne(d => d.User).WithMany(p => p.BookingUsers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Bookings__UserId__06CD04F7");
 
@@ -179,11 +189,6 @@ public partial class GamersPlatDbContext : DbContext
 
         modelBuilder.Entity<CenterService>(entity =>
         {
-            entity.HasKey(e => e.CenterServiceId);
-
-            entity.HasIndex(e => new { e.CenterId, e.ServiceId })
-                  .IsUnique();
-
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF_CenterServices_CreatedAt");
             entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_CenterServices_IsActive");
 
@@ -223,6 +228,17 @@ public partial class GamersPlatDbContext : DbContext
         modelBuilder.Entity<Game>(entity =>
         {
             entity.Property(e => e.GameName).IsFixedLength();
+        });
+
+        modelBuilder.Entity<Invoice>(entity =>
+        {
+            entity.HasKey(e => e.InvoiceId).HasName("PK__Invoices__D796AAB5BC4C7D69");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_Invoices_CreatedAt");
+
+            entity.HasOne(d => d.Booking).WithMany(p => p.Invoices)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Invoices_Bookings");
         });
 
         modelBuilder.Entity<Notification>(entity =>

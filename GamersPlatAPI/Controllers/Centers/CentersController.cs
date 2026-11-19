@@ -35,6 +35,16 @@ namespace GamersPlatAPI.Controllers
             return Ok(c);
         }
 
+        [HttpGet("slug/{slug}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetBySlug(string slug)
+        {
+            var center = await _center.GetCenterDetailsBySlug(slug);
+            if (center == null) return NotFound();
+            return Ok(center);
+        }
+
         //[Authorize]
         //[HttpPost]
         //public async Task<IActionResult> Create([FromBody] Data.Center center)

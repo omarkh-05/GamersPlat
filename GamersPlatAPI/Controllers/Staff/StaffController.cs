@@ -2,6 +2,7 @@
 using Bussiness.Interfaces;
 using Data;
 using Domain.DTOs.Auth;
+using Domain.DTOs.Invoice;
 using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
 using Microsoft.AspNetCore.Authorization;
@@ -225,6 +226,17 @@ namespace GamersPlatAPI.Controllers.Staff
             if (!TryGetOwnerId(out var staffId)) return Unauthorized();
             return await Run(() => _staff.StartBooking(bookingId, staffId), result => Ok(result));
         }
+        [HttpGet("bookings/{bookingId:int}/invoice-preview")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetInvoicePreview(int bookingId)
+        {
+            if (bookingId <= 0) return BadRequest();
+            if (!TryGetOwnerId(out var staffId)) return Unauthorized();
+            return await Run(() => _staff.GetInvoicePreview(bookingId, staffId), result => Ok(result));
+        }
         [HttpPatch("bookings/{bookingId:int}/stop")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -232,11 +244,12 @@ namespace GamersPlatAPI.Controllers.Staff
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> StopBooking(int bookingId)
+        public async Task<IActionResult> StopBooking(int bookingId, [FromBody] DTO_EndBookingInvoice request)
         {
             if (bookingId <= 0) return BadRequest();
+            if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var staffId)) return Unauthorized();
-            return await Run(() => _staff.StopBooking(bookingId, staffId), result => Ok(result));
+            return await Run(() => _staff.StopBooking(bookingId, staffId, request), result => Ok(result));
         }
         // Center Bookings
 
