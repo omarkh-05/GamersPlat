@@ -20,6 +20,7 @@ using System.Threading.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<GamersPlatDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("GamersPlat")));
 
 // Interface -> implementation registrations
@@ -36,6 +37,7 @@ builder.Services.AddScoped<IOwnerService, OwnerBLL>();
 builder.Services.AddScoped<IAuthService, AuthBLL>();
 builder.Services.AddScoped<IUser, UserBLL>();
 builder.Services.AddScoped<IUserRole, UserRoleBLL>();
+builder.Services.AddScoped<IAuditLogService, AuditLogBLL>();
 builder.Services.AddScoped<IRoles, RoleBLL>();
 // Register other bussiness layer services so controllers can inject them
 builder.Services.AddScoped<AdminBLL>();
@@ -154,7 +156,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("GamersPlatAPIpolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins("http://localhost:3000", "https://gamersplat.vercel.app", "https://professionally-overjocular-chelsie.ngrok-free.dev")
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials(); // السماح بالوصول مع credentials
@@ -323,6 +325,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("GamersPlatAPIpolicy");
+
 app.UseStaticFiles();
 
 if (!app.Environment.IsDevelopment())
@@ -330,7 +334,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-app.UseCors("GamersPlatAPIpolicy");
 
 #region RateLimit 
 app.UseRateLimiter();

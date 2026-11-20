@@ -86,6 +86,7 @@ public partial class GamersPlatDbContext : DbContext
 
             entity.HasOne(d => d.User).WithMany(p => p.AuditLogs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
+                .IsRequired(false)
                 .HasConstraintName("FK__AuditLogs__UserI__395884C4");
         });
 

@@ -15,6 +15,8 @@ namespace Bussiness.BLL
     using DataLayer;
     using Domain.DTOs.Auth;
     using Domain.DTOs.Invoice;
+    using Microsoft.AspNetCore.Http;
+    using System.Security.Claims;
     using System.Net.NetworkInformation;
 
     public class OwnerBLL : IOwnerService
@@ -28,8 +30,10 @@ namespace Bussiness.BLL
         readonly IAuthService _auth;
         private readonly OwnerDLL _ownerDLL;
         private readonly InvoiceBLL _invoice;
+        private readonly IAuditLogService _auditLogService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public OwnerBLL(IUser user, CenterBLL centerBLL, CenterResourcesBLL centerResourcesBLL, CenterServiceBLL centerServicesBLL, BookingBLL bookingBLL, StaffBLL staffBLL, IAuthService auth, OwnerDLL ownerDLL, InvoiceBLL invoice)
+        public OwnerBLL(IUser user, CenterBLL centerBLL, CenterResourcesBLL centerResourcesBLL, CenterServiceBLL centerServicesBLL, BookingBLL bookingBLL, StaffBLL staffBLL, IAuthService auth, OwnerDLL ownerDLL, InvoiceBLL invoice, IAuditLogService auditLogService, IHttpContextAccessor httpContextAccessor)
         {
             _user = user;
             _center = centerBLL;
@@ -40,6 +44,8 @@ namespace Bussiness.BLL
             _auth = auth;
             _ownerDLL = ownerDLL;
             _invoice = invoice;
+            _auditLogService = auditLogService;
+            _httpContextAccessor = httpContextAccessor;
         }
         // ================ Owner Management ================
         public async Task<DTO_UserInfoRequest?> GetOwnerInfo(int ownerId)
@@ -112,27 +118,42 @@ namespace Bussiness.BLL
         }
         public async Task<bool> UpdateCenter(DTO_UpdateCenter updateCenter,int centerId, int ownerId)
         {
+            var oldCenter = await SafeGetCenter(centerId);
             bool res = await _center.Update(updateCenter, centerId, ownerId);
             if (res)
+            {
+                var newCenter = await SafeGetCenter(centerId);
+                await _auditLogService.LogAsync(ownerId, "CenterUpdated", "Center", centerId, CenterSnapshot(oldCenter), CenterSnapshot(newCenter));
                 return true;
+            }
             throw new ArgumentException("Error while updating center.");
         }
         public async Task<bool> ActiveCenter(int centerId, int ownerUserId)
         {
+            var oldCenter = await SafeGetCenter(centerId);
             await ValidateCenterOwner(centerId, ownerUserId, requireApproved: true);
 
             bool res = await _center.ActiveCenter(centerId);
             if (res)
+            {
+                var newCenter = await SafeGetCenter(centerId);
+                await _auditLogService.LogAsync(ownerUserId, "CenterActivated", "Center", centerId, CenterSnapshot(oldCenter), CenterSnapshot(newCenter));
                 return true;
+            }
             throw new ArgumentException("Error while active center.");
         }
         public async Task<bool> DeactiveCenter(int centerId, int ownerUserId)
         {
+            var oldCenter = await SafeGetCenter(centerId);
             await ValidateCenterOwner(centerId, ownerUserId, requireApproved: true);
 
             bool res = await _center.DeactiveCenter(centerId);
             if (res)
+            {
+                var newCenter = await SafeGetCenter(centerId);
+                await _auditLogService.LogAsync(ownerUserId, "CenterDeactivated", "Center", centerId, CenterSnapshot(oldCenter), CenterSnapshot(newCenter));
                 return true;
+            }
             throw new ArgumentException("Error while deactive center.");
         }
         public async Task<bool> ToggleCenterStatus(int centerId, int ownerUserId, string status)
@@ -574,6 +595,18 @@ namespace Bussiness.BLL
            var result = await _staff.Add(staffMember);
             if(result > 0)
             {
+                await _auditLogService.LogAsync(GetCurrentUserId(), "StaffCreated", "Staff", result, null, new
+                {
+                    staffMember.FullName,
+                    staffMember.PhoneNumber,
+                    staffMember.Email,
+                    staffMember.CityId,
+                    staffMember.CenterId,
+                    staffMember.Permissions,
+                    RoleName = staffMember.RoleName,
+                    staffMember.Status,
+                    staffMember.IsActive
+                });
                 return true;
             }
             throw new ArgumentException("Error while adding staff");
@@ -584,16 +617,26 @@ namespace Bussiness.BLL
             {
                 throw new ArgumentNullException(nameof(staffMember), "Staff member cannot be null while updating staff member");
             }
+            var oldStaff = await GetStaffSnapshot(staffMember.CenterId, staffMember.StaffId);
             var result = await _staff.Update(staffMember);
             if (result)
             {
+                var newStaff = await GetStaffSnapshot(staffMember.CenterId, staffMember.StaffId);
+                await _auditLogService.LogAsync(GetCurrentUserId(), "StaffUpdated", "Staff", staffMember.StaffId, StaffSnapshot(oldStaff), StaffSnapshot(newStaff));
                 return true;
             }
             throw new ArgumentException("Error while updating staff");
         }
         public async Task<bool> DeleteStaffMember(int userId)
         {
-            return await _staff.Delete(userId);
+            var oldStaff = await _staff.GetStaffMemberById(userId);
+            var deleted = await _staff.Delete(userId);
+            if (deleted)
+            {
+                var actorId = GetCurrentUserId();
+                await _auditLogService.LogAsync(actorId, "StaffDeleted", "Staff", oldStaff?.StaffId ?? userId, oldStaff, null);
+            }
+            return deleted;
         }
         public async Task<List<DTO_StaffDetails>> GetAllStaffByOwnerId(int ownerId)
         {
@@ -639,6 +682,65 @@ namespace Bussiness.BLL
             if (requireApproved && center.IsApproved != true)
                 throw new ArgumentException("Can not change status of an unapproved center");
         }
+
+        private int? GetCurrentUserId()
+        {
+            var value = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return int.TryParse(value, out var userId) && userId > 0 ? userId : null;
+        }
+
+        private async Task<Center?> SafeGetCenter(int centerId)
+        {
+            try
+            {
+                return await _center.GetByID(centerId);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private async Task<DTO_StaffDetails?> GetStaffSnapshot(int centerId, int staffId)
+        {
+            try
+            {
+                return (await _staff.GetAllStaff_ByCenterId(centerId)).FirstOrDefault(staff => staff.StaffId == staffId);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static object? CenterSnapshot(Center? center)
+            => center == null ? null : new
+            {
+                center.CenterName,
+                center.CityId,
+                center.CenterAddress,
+                center.CenterDescription,
+                center.CenterPhone,
+                center.CenterType,
+                center.CenterStatus,
+                center.IsApproved,
+                center.IsActive,
+                center.OpenTime,
+                center.CloseTime
+            };
+
+        private static object? StaffSnapshot(DTO_StaffDetails? staff)
+            => staff == null ? null : new
+            {
+                staff.FullName,
+                staff.PhoneNumber,
+                staff.CenterId,
+                staff.CenterName,
+                staff.Permissions,
+                staff.StaffRoleName,
+                staff.Status,
+                staff.IsActive
+            };
 
         /*// ================ Offers Management ================
         public async Task<bool> AddOffer()

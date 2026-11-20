@@ -24,7 +24,8 @@ namespace Bussiness.BLL
         private readonly CenterResourcesBLL _resource;
         private readonly CityBLL _city;
         private readonly CountryBLL _country;
-        public AdminBLL(IUser user,CenterBLL center,PlayerBLL player,OwnerBLL owner,CenterServiceBLL service,ServiceBLL serviceBLL,CityBLL city,CountryBLL country,DeviceBLL device,CenterResourcesBLL resource,AdminDLL adminDLL)
+        private readonly IAuditLogService _auditLogService;
+        public AdminBLL(IUser user,CenterBLL center,PlayerBLL player,OwnerBLL owner,CenterServiceBLL service,ServiceBLL serviceBLL,CityBLL city,CountryBLL country,DeviceBLL device,CenterResourcesBLL resource,AdminDLL adminDLL, IAuditLogService auditLogService)
         {
             _user = user;
             _center = center;
@@ -37,6 +38,7 @@ namespace Bussiness.BLL
             _device = device;
             _resource = resource;
             _adminDLL = adminDLL;
+            _auditLogService = auditLogService;
         }
 
         // ================ Admin Analytics ================
@@ -59,6 +61,11 @@ namespace Bussiness.BLL
             if (user == null) throw new Exception("User not found.");
 
             bool blockUser = await _adminDLL.BlockUser(userId, adminId);
+            if (blockUser)
+            {
+                var newValues = await _user.GetById(userId);
+                await _auditLogService.LogAsync(adminId > 0 ? adminId : userId, "UserDeactivated", "User", userId, user, newValues);
+            }
             return blockUser;
         }
         public async Task<bool> UnblockUser(int userId, int adminId = 0)
@@ -68,6 +75,11 @@ namespace Bussiness.BLL
             if (user == null) throw new Exception("User not found.");
 
             bool blockUser = await _adminDLL.UnBlockUser(userId, adminId);
+            if (blockUser)
+            {
+                var newValues = await _user.GetById(userId);
+                await _auditLogService.LogAsync(adminId > 0 ? adminId : userId, "UserActivated", "User", userId, user, newValues);
+            }
             return blockUser;
         }
         // ================ User Management ================

@@ -4,17 +4,23 @@ using Data.DLL;
 using DataLayer;
 using Domain.DTOs.Auth;
 using Domain.DTOs.User;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 namespace Bussiness
 {
     public class UserBLL : IUser
     {
         private readonly UserDLL _userDLL;
         readonly CityBLL _cityBLL;
+        private readonly IAuditLogService _auditLogService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         public string? LastError { get; private set; }
-        public UserBLL(UserDLL userDLL, CityBLL cityBLL)
+        public UserBLL(UserDLL userDLL, CityBLL cityBLL, IAuditLogService auditLogService, IHttpContextAccessor httpContextAccessor)
         {
             _userDLL = userDLL;
             _cityBLL = cityBLL;
+            _auditLogService = auditLogService;
+            _httpContextAccessor = httpContextAccessor;
         }
         // ================ CRUD ================
         public async Task<bool> Add(User user)
@@ -73,17 +79,31 @@ namespace Bussiness
                     return false;
                 }
 
+                var oldValues = await _userDLL.GetById(userId);
                 bool updated = await _userDLL.Update(userId, dto, adminId);
                 if (!updated)
                 {
                     LastError = "An unexpected error occurred while updating the profile";
                     return false;
                 }
+
+                var newValues = await _userDLL.GetById(userId);
+                var actorId = adminId > 0 ? adminId : GetCurrentUserId() ?? userId;
+                await _auditLogService.LogAsync(actorId, "UserUpdated", "User", userId, oldValues, newValues);
             return true;
         }
         public async Task<bool> Delete(int userId)
         {
-            return await _userDLL.Delete(userId);
+            var oldValues = await _userDLL.GetById(userId);
+            var deleted = await _userDLL.Delete(userId);
+            if (deleted)
+            {
+                var actorId = GetCurrentUserId();
+                if (actorId == userId)
+                    actorId = null;
+                await _auditLogService.LogAsync(actorId, "UserDeleted", "User", userId, oldValues, null);
+            }
+            return deleted;
         }
         public async Task<List<DTO_UserListResponse>> GetAll()
         {
@@ -122,5 +142,11 @@ namespace Bussiness
             return await _userDLL.ExistsByPhone(phone, excludeId);
         }
         // ================ Validation ============
+
+        private int? GetCurrentUserId()
+        {
+            var value = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return int.TryParse(value, out var userId) && userId > 0 ? userId : null;
+        }
     }
 }

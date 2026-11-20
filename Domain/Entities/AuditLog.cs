@@ -11,7 +11,7 @@ public partial class AuditLog
     [Key]
     public int AuditId { get; set; }
 
-    public int UserId { get; set; }
+    public int? UserId { get; set; }
 
     [StringLength(100)]
     public string ActionDone { get; set; } = null!;
@@ -37,5 +37,5 @@ public partial class AuditLog
 
     [ForeignKey("UserId")]
     [InverseProperty("AuditLogs")]
-    public virtual User User { get; set; } = null!;
+    public virtual User? User { get; set; }
 }

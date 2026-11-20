@@ -134,7 +134,9 @@ namespace GamersPlatAPI.Controllers
 
                 bool IsBlocked = await _admin.BlockUser(userId, adminId);
                 if (IsBlocked)
+                {
                     return Ok();
+                }
             }
             catch(Exception)
             {
@@ -155,7 +157,9 @@ namespace GamersPlatAPI.Controllers
 
                 bool IsBlocked = await _admin.UnblockUser(userId, adminId);
                 if (IsBlocked)
+                {
                     return Ok();
+                }
             }
             catch (Exception)
             {

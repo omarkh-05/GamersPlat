@@ -11,13 +11,15 @@ namespace Bussiness
     public class CenterBLL : ICenterService
     {
         private readonly CenterDLL _centerDLL;
+        private readonly IAuditLogService _auditLogService;
 
         public int LastId => _centerID;
         public int _centerID { get; private set; }
 
-        public CenterBLL(CenterDLL centerDLL)
+        public CenterBLL(CenterDLL centerDLL, IAuditLogService auditLogService)
         {
             _centerDLL = centerDLL;
+            _auditLogService = auditLogService;
         }
 
         // ================ CRUD ================
@@ -64,6 +66,11 @@ namespace Bussiness
 
             int centerID = await _centerDLL.Add(createCenter);
             _centerID = centerID;
+            if (centerID > 0)
+            {
+                var createdCenter = await _centerDLL.GetByID(centerID);
+                await _auditLogService.LogAsync(userId, "CenterCreated", "Center", centerID, null, CenterSnapshot(createdCenter));
+            }
             }
             catch(Exception ex)
             {
@@ -183,5 +190,21 @@ namespace Bussiness
         }
         public async Task<List<string>> GetCenterNames() => await _centerDLL.GetCenterNames();
         // ================ Read By ================
+
+        private static object? CenterSnapshot(Center? center)
+            => center == null ? null : new
+            {
+                center.CenterName,
+                center.CityId,
+                center.CenterAddress,
+                center.CenterDescription,
+                center.CenterPhone,
+                center.CenterType,
+                center.CenterStatus,
+                center.IsApproved,
+                center.IsActive,
+                center.OpenTime,
+                center.CloseTime
+            };
     }
 }

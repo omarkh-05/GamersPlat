@@ -6,6 +6,8 @@ using Data.DLL;
 using Data.EF;
 using Domain.DTOs.Auth;
 using Domain.DTOs.User;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -20,8 +22,10 @@ namespace Bussiness.BLL
         private readonly IRoles _roles;
         private readonly IUserRole _userRole;
         private readonly PasswordResetTokenBLL _passwordResetTokenBLL;
+        private readonly IAuditLogService _auditLogService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         readonly GamersPlatDbContext _db;
-        public AuthBLL(IUser user, AuthHelpers authHelpers, RefreshTokenBLL refreshTokenBLL, IRoles roles, IUserRole userRole, PasswordResetTokenBLL passwordResetTokenBLL, AuthDLL authDLL, GamersPlatDbContext db)
+        public AuthBLL(IUser user, AuthHelpers authHelpers, RefreshTokenBLL refreshTokenBLL, IRoles roles, IUserRole userRole, PasswordResetTokenBLL passwordResetTokenBLL, AuthDLL authDLL, GamersPlatDbContext db, IAuditLogService auditLogService, IHttpContextAccessor httpContextAccessor)
         {
             _authHelpers = authHelpers;
             _refreshTokenBLL = refreshTokenBLL;
@@ -31,6 +35,8 @@ namespace Bussiness.BLL
             _passwordResetTokenBLL = passwordResetTokenBLL;
             _authDLL = authDLL;
             _db = db;
+            _auditLogService = auditLogService;
+            _httpContextAccessor = httpContextAccessor;
         }
         public record ServiceResult(bool Success,string Message, int StatusCode);
         // ================ User Auth Management ================
@@ -74,6 +80,16 @@ namespace Bussiness.BLL
                 if(!await _userRole.Add(userRole))
                 throw new Exception("Failed to add user role");
             await transaction.CommitAsync();
+            var currentActorId = GetCurrentUserId();
+            var actorId = currentActorId ?? user.UserId;
+            await _auditLogService.LogAsync(actorId, currentActorId.HasValue ? "UserCreated" : "UserRegistered", "User", user.UserId, null, new
+            {
+                user.FullName,
+                user.PhoneNumber,
+                user.Email,
+                user.CityId,
+                Role = roleName
+            });
             return user.UserId;
             }
             catch
@@ -91,10 +107,24 @@ namespace Bussiness.BLL
             var user = await _authDLL.GetUserAuth(request.PhoneNumber);
 
             if (user == null || !user.IsActive)
+            {
+                await _auditLogService.LogAsync(user?.UserId, "LoginFailed", "User", user?.UserId ?? 0, null, new
+                {
+                    Outcome = "Failed",
+                    Reason = user == null ? "UnknownAccount" : "InactiveAccount"
+                });
                 throw new UnauthorizedAccessException("Invalid credentials");
+            }
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            {
+                await _auditLogService.LogAsync(user.UserId, "LoginFailed", "User", user.UserId, null, new
+                {
+                    Outcome = "Failed",
+                    Reason = "InvalidCredentials"
+                });
                 throw new UnauthorizedAccessException("Invalid credentials");
+            }
 
             var accessToken = _authHelpers.GenerateAccessToken(user);
             var refreshToken = _authHelpers.GenerateRefreshToken();
@@ -110,6 +140,8 @@ namespace Bussiness.BLL
 
             if (!await _refreshTokenBLL.Add(rt))
                 throw new Exception("Failed to create refresh token");
+
+            await _auditLogService.LogAsync(user.UserId, "LoginSucceeded", "User", user.UserId, null, new { Outcome = "Succeeded" });
 
             return new TokenResponse
             {
@@ -130,12 +162,18 @@ namespace Bussiness.BLL
                 return false;
 
             if (existingToken.IsRevoked)
+            {
+                await _auditLogService.LogAsync(existingToken.UserId, "Logout", "User", existingToken.UserId, null, new { Outcome = "Succeeded" });
                 return true;
+            }
 
             existingToken.IsRevoked = true;
             existingToken.RevokedAt = DateTime.UtcNow;
 
-            return await _refreshTokenBLL.Update(existingToken);
+            var loggedOut = await _refreshTokenBLL.Update(existingToken);
+            if (loggedOut)
+                await _auditLogService.LogAsync(existingToken.UserId, "Logout", "User", existingToken.UserId, new { RefreshTokenRevoked = false }, new { RefreshTokenRevoked = true });
+            return loggedOut;
         }
         // احتاج اضافة ترانس اكشن عند تعديل التوكن ثم اضافة توكن جديدة للتأكد من عدم تحديث التوكن دون اضافتها في الجدول
         public async Task<TokenResponse> RefreshAsync(string refreshToken)
@@ -237,6 +275,8 @@ namespace Bussiness.BLL
             if (!updated)
                 throw new Exception("Failed to update password.");
 
+            await _auditLogService.LogAsync(userId, "PasswordChanged", "User", userId, new { PasswordChanged = false }, new { PasswordChanged = true });
+
             return new(true, "Password changed successfully.", 200);
         }
         public async Task<string> RequestResetPassword(RequestResetRequest request)
@@ -255,6 +295,8 @@ namespace Bussiness.BLL
 
            if (!await _passwordResetTokenBLL.Add(token))
                 throw new Exception("Failed to create password reset token");
+
+            await _auditLogService.LogAsync(null, "PasswordResetRequested", "User", userId, null, new { ResetRequested = true });
 
             return token.TokenHash;
         }
@@ -276,9 +318,18 @@ namespace Bussiness.BLL
                 throw new Exception("Failed to update password");
 
             if (await _passwordResetTokenBLL.Delete(token.TokenId))
+            {
+                await _auditLogService.LogAsync(user.UserId, "PasswordReset", "User", user.UserId, new { PasswordChanged = false }, new { PasswordChanged = true });
                 return true;
+            }
             else
                 throw new Exception("Failed to delete password reset token");
+        }
+
+        private int? GetCurrentUserId()
+        {
+            var value = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return int.TryParse(value, out var userId) && userId > 0 ? userId : null;
         }
         // ================ Password Management ================
         /*

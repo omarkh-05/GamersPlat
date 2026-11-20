@@ -70,7 +70,7 @@ namespace GamersPlatAPI.Controllers
         {
             if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.UpdateCenter(request, centerId,ownerId), result => Ok(result));
+            return await Run(() => _owner.UpdateCenter(request, centerId, ownerId), result => Ok(result));
         }
         [HttpPatch("centers/{centerId:int}/active")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -409,6 +409,7 @@ namespace GamersPlatAPI.Controllers
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(claim, out ownerId) && ownerId > 0;
         }
+
         private async Task<IActionResult> Run<T>(Func<Task<T>> action,Func<T, IActionResult> success)
         {
             try
