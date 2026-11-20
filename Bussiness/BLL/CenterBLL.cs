@@ -12,14 +12,16 @@ namespace Bussiness
     {
         private readonly CenterDLL _centerDLL;
         private readonly IAuditLogService _auditLogService;
+        private readonly INotificationService _notificationService;
 
         public int LastId => _centerID;
         public int _centerID { get; private set; }
 
-        public CenterBLL(CenterDLL centerDLL, IAuditLogService auditLogService)
+        public CenterBLL(CenterDLL centerDLL, IAuditLogService auditLogService, INotificationService notificationService)
         {
             _centerDLL = centerDLL;
             _auditLogService = auditLogService;
+            _notificationService = notificationService;
         }
 
         // ================ CRUD ================
@@ -70,6 +72,7 @@ namespace Bussiness
             {
                 var createdCenter = await _centerDLL.GetByID(centerID);
                 await _auditLogService.LogAsync(userId, "CenterCreated", "Center", centerID, null, CenterSnapshot(createdCenter));
+                    await _notificationService.NotifyCenterCreatedAsync(centerID);
             }
             }
             catch(Exception ex)
@@ -132,7 +135,10 @@ namespace Bussiness
             if (center.IsActive == true)
                 throw new ArgumentException("center already active");
 
-            return await _centerDLL.ActiveCenter(centerId);
+            var activated = await _centerDLL.ActiveCenter(centerId);
+            if (activated)
+                await _notificationService.NotifyCenterStatusAsync(centerId, "activated");
+            return activated;
         }
         public async Task<bool> DeactiveCenter(int centerId)
         {
@@ -143,7 +149,10 @@ namespace Bussiness
             if (center.IsActive == false)
                 throw new ArgumentException("Can not deactive a deactived center");
 
-            return await _centerDLL.DeactiveCenter(centerId);
+            var deactivated = await _centerDLL.DeactiveCenter(centerId);
+            if (deactivated)
+                await _notificationService.NotifyCenterStatusAsync(centerId, "deactivated");
+            return deactivated;
         }
         public async Task<bool> ToggleCenterStatus(int centerId, string status, int ownerId) => await _centerDLL.ToggleCenterStatus(centerId, status, ownerId);
         public async Task<bool> Delete(int centerId) => await _centerDLL.Delete(centerId);

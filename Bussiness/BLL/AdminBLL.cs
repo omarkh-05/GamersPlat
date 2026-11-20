@@ -25,7 +25,8 @@ namespace Bussiness.BLL
         private readonly CityBLL _city;
         private readonly CountryBLL _country;
         private readonly IAuditLogService _auditLogService;
-        public AdminBLL(IUser user,CenterBLL center,PlayerBLL player,OwnerBLL owner,CenterServiceBLL service,ServiceBLL serviceBLL,CityBLL city,CountryBLL country,DeviceBLL device,CenterResourcesBLL resource,AdminDLL adminDLL, IAuditLogService auditLogService)
+        private readonly INotificationService _notificationService;
+        public AdminBLL(IUser user,CenterBLL center,PlayerBLL player,OwnerBLL owner,CenterServiceBLL service,ServiceBLL serviceBLL,CityBLL city,CountryBLL country,DeviceBLL device,CenterResourcesBLL resource,AdminDLL adminDLL, IAuditLogService auditLogService, INotificationService notificationService)
         {
             _user = user;
             _center = center;
@@ -39,6 +40,7 @@ namespace Bussiness.BLL
             _resource = resource;
             _adminDLL = adminDLL;
             _auditLogService = auditLogService;
+            _notificationService = notificationService;
         }
 
         // ================ Admin Analytics ================
@@ -90,13 +92,19 @@ namespace Bussiness.BLL
         public async Task<bool> ApproveCenter(int centerId)
         {
             if (centerId <= 0) throw new ArgumentException("Invalid center ID.");
-            return await _adminDLL.ApproveCenter(centerId);
+            var approved = await _adminDLL.ApproveCenter(centerId);
+            if (approved)
+                await _notificationService.NotifyCenterStatusAsync(centerId, "accepted");
+            return approved;
         }
         public async Task<bool> RejectCenter(int centerId,string reason = "")
         {
             if (centerId <= 0) throw new ArgumentException("Invalid center ID.");
             reason = "Center Rejected, Call Us To Full Reason";
-            return await _adminDLL.RejectCenter(centerId,reason);
+            var rejected = await _adminDLL.RejectCenter(centerId,reason);
+            if (rejected)
+                await _notificationService.NotifyCenterStatusAsync(centerId, "rejected");
+            return rejected;
         }
         // ================ Center Managament ================
 

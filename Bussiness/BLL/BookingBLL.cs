@@ -25,21 +25,26 @@ namespace Bussiness
         private readonly BookingDLL _bookingDLL;
         private readonly IUser _userBLL;
         private readonly IAuthService _authService;
+        private readonly INotificationService _notificationService;
         private readonly GamersPlatDbContext _db;
 
-        public BookingBLL(IResourcesTypeService resourcesTypeBLL, OfferDLL offerDLL, BookingDLL bookingDLL, IUser userBLL, IAuthService authService, GamersPlatDbContext db)
+        public BookingBLL(IResourcesTypeService resourcesTypeBLL, OfferDLL offerDLL, BookingDLL bookingDLL, IUser userBLL, IAuthService authService, INotificationService notificationService, GamersPlatDbContext db)
         {
             _centerResourcesBLL = resourcesTypeBLL;
             _offerDLL = offerDLL;
             _bookingDLL = bookingDLL;
             _userBLL = userBLL;
             _authService = authService;
+            _notificationService = notificationService;
             _db = db;
         }
 
 
         // ================ CRUD ================
-        public async Task<bool> Add(DTO_BookingBase dto, int userId, string? customerName, string? phone)
+        public Task<bool> Add(DTO_BookingBase dto, int userId, string? customerName, string? phone)
+            => AddInternal(dto, userId, customerName, phone, true);
+
+        private async Task<bool> AddInternal(DTO_BookingBase dto, int userId, string? customerName, string? phone, bool notify)
         {
             try
             {
@@ -104,6 +109,8 @@ namespace Bussiness
                 if (!result.IsSuccess) return false;
 
                 _bookingID = result.BookingId;
+                if (notify && !isStaffOrAdmin)
+                    await _notificationService.NotifyBookingManagersAsync(_bookingID, "Created");
                 return true;
             }
             catch (Exception ex)
@@ -142,13 +149,14 @@ namespace Bussiness
                     return new(false, Message: "Error occurred while registering user", Failure: GuestBookingFailure.RegistrationFailed);
                 }
 
-                if (!await Add(dto, userId, dto.CustomerName, dto.PhoneNumber))
+                if (!await AddInternal(dto, userId, dto.CustomerName, dto.PhoneNumber, false))
                 {
                     await transaction.RollbackAsync();
                     return new(false, Message: LastError ?? "Booking failed", Failure: GuestBookingFailure.BookingFailed);
                 }
 
                 await transaction.CommitAsync();
+                await _notificationService.NotifyBookingManagersAsync(LastId, "Created");
 
                 TokenResponse? token = null;
                 try
@@ -232,6 +240,7 @@ namespace Bussiness
                     return false;
                 }
 
+                await _notificationService.NotifyBookingManagersAsync(existing.BookingId, "Updated");
                 return true;
             }
             catch (Exception ex)
@@ -307,6 +316,7 @@ namespace Bussiness
                     LastError = "Failed to cancel booking";
                     return false;
                 }
+                await _notificationService.NotifyBookingManagersAsync(existing.BookingId, "Cancelled");
                 return true;
             }
             catch (Exception ex)
@@ -338,8 +348,20 @@ namespace Bussiness
 
 
         // ================ Owner Booking Management ================
-        public async Task<bool> AcceptBooking(int bookingId, int userId) => await _bookingDLL.AcceptBooking(bookingId, userId);
-        public async Task<bool> RejectBooking(int bookingId, int userId) => await _bookingDLL.RejectBooking(bookingId, userId);
+        public async Task<bool> AcceptBooking(int bookingId, int userId)
+        {
+            var accepted = await _bookingDLL.AcceptBooking(bookingId, userId);
+            if (accepted)
+                await _notificationService.NotifyBookingDecisionAsync(bookingId, userId, true);
+            return accepted;
+        }
+        public async Task<bool> RejectBooking(int bookingId, int userId)
+        {
+            var rejected = await _bookingDLL.RejectBooking(bookingId, userId);
+            if (rejected)
+                await _notificationService.NotifyBookingDecisionAsync(bookingId, userId, false);
+            return rejected;
+        }
         public async Task<bool> StartBooking(int bookingId, int userId) => await _bookingDLL.StartBooking(bookingId  , userId);
         public async Task<DTO_InvoicePreview?> GetInvoicePreview(int bookingId)
         {
@@ -425,6 +447,9 @@ namespace Bussiness
 
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
+                await transaction.DisposeAsync();
+
+                await _notificationService.NotifyBookingCompletedAsync(booking.BookingId, invoice.InvoiceId);
 
                 return new DTO_Invoice
                 {
@@ -461,7 +486,6 @@ namespace Bussiness
             var durationHours = (decimal)(endedAt - booking.StartedAt.Value).TotalHours;
             return Math.Round(durationHours * booking.UnitPrice, 2);
         }
-
         private static InvoicePricing CalculateInvoicePricing(Booking booking, DTO_EndBookingInvoice request, DateTime endedAt)
         {
             var subtotal = request.UseOriginalPrice
@@ -503,9 +527,7 @@ namespace Bussiness
 
             return new InvoicePricing(subtotal, discountType, discountValue, Math.Round(subtotal - discountAmount, 2));
         }
-
         private readonly record struct InvoicePricing(decimal Subtotal, string? DiscountType, decimal? DiscountValue, decimal TotalPrice);
-
         private async Task<DTO_ResourceInfo?> GetValidResourceType(int resourcesTypeId,int centerId)
         {
             var rt = await _centerResourcesBLL.GetResourceInfo(resourcesTypeId);

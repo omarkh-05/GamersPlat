@@ -9,14 +9,10 @@ namespace DataLayer
     public class AdminDLL
     {
         private readonly GamersPlatDbContext _db;
-        private readonly ReviewDLL _reviewDLL;
-        private readonly NotificationDLL _notificationDLL;
 
-        public AdminDLL(GamersPlatDbContext db,ReviewDLL reviewDLL,NotificationDLL notificationDLL)
+        public AdminDLL(GamersPlatDbContext db)
         {
             _db = db;
-            _reviewDLL = reviewDLL;
-            _notificationDLL = notificationDLL;
         }
 
         // ================ Admin Analytics ================
@@ -297,30 +293,6 @@ namespace DataLayer
 
                 var ok = await _db.SaveChangesAsync() > 0;
 
-                try
-                {
-                    if (center.OwnerUserId > 0)
-                    {
-                        var n = new Notification
-                        {
-                            UserId = center.OwnerUserId,
-                            CenterId = center.CenterId,
-                            Title = "Center Approved",
-                            Message = $"Your center '{center.CenterName}' has been approved by admin.",
-                            Type = "Admin",
-                            Status = "Unread",
-                            ReferenceType = "Center",
-                            CreatedAt = DateTime.Now
-                        };
-
-                        await _notificationDLL.Add(n);
-                    }
-                }
-                catch (Exception nEx)
-                {
-                    EventLog_Helper.WriteEventLog("Send Center Approved Notification Error",nEx);
-                }
-
                 return ok;
             }
             catch (Exception ex)
@@ -347,30 +319,6 @@ namespace DataLayer
 
                 var ok = await _db.SaveChangesAsync() > 0;
 
-                try
-                {
-                    if (center.OwnerUserId > 0)
-                    {
-                        var n = new Notification
-                        {
-                            UserId = center.OwnerUserId,
-                            CenterId = center.CenterId,
-                            Title = "Center Rejected",
-                            Message = $"Your center '{center.CenterName}' was rejected. Reason: {reason}",
-                            Type = "Admin",
-                            Status = "Unread",
-                            ReferenceType = "Center",
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        await _notificationDLL.Add(n);
-                    }
-                }
-                catch (Exception nEx)
-                {
-                    EventLog_Helper.WriteEventLog("Send Center Rejected Notification Error",nEx);
-                }
-
                 EventLog_Helper.WriteEventLog($"Center {centerId} rejected by admin.", new Exception(reason));
 
                 return ok;
@@ -384,160 +332,5 @@ namespace DataLayer
         // ================ Center approval/rejection ================
 
 
-        // ================ Announcements ================
-        public async Task<bool> SendAnnouncement( string title, string message, string audience)
-        {
-            try
-            {
-                var usersQuery = _db.Users.AsQueryable();
-
-                if (audience == "Players")
-                {
-                    usersQuery = usersQuery
-                        .Where(u => u.UserRoles.Any(
-                            ur => ur.Role.RoleName == "Player"));
-                }
-                else if (audience == "Owners")
-                {
-                    usersQuery = usersQuery
-                        .Where(u => u.UserRoles.Any(
-                            ur => ur.Role.RoleName == "Owner"));
-                }
-
-                var users = await usersQuery
-                    .Select(u => new { u.UserId })
-                    .ToListAsync();
-
-                foreach (var u in users)
-                {
-                    var n = new Notification
-                    {
-                        UserId = u.UserId,
-                        Title = title,
-                        Message = message,
-                        Type = "Announcement",
-                        Status = "Unread",
-                        ReferenceType = "Announcement",
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _notificationDLL.Add(n);
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog(
-                    "Send Announcement Error",
-                    ex);
-
-                return false;
-            }
-        }
-        // ================ Announcements ================
-
-
-        // ================ Reports ================
-        public async Task<bool> SubmitReport( int reporterUserId, string reportType, int? referenceId, string reason, int? centerId = null)
-        {
-            try
-            {
-                var admins = await _db.Users
-                    .Where(u => u.UserRoles.Any(ur => ur.Role.RoleName == "admin"))
-                    .Select(u => new { u.UserId })
-                    .ToListAsync();
-
-                foreach (var a in admins)
-                {
-                    var n = new Notification
-                    {
-                        UserId = a.UserId,
-                        CenterId = centerId,
-                        Title = "New Report",
-                        Message = $"Reporter: {reporterUserId}. Type: {reportType}. RefId: {referenceId}. Reason: {reason}",
-                        Type = "Report",
-                        Status = "Open",
-                        ReferenceType = "Report",
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _notificationDLL.Add(n);
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog("Submit Report Error",ex);
-                return false;
-            }
-        }
-        public async Task<List<Notification>> GetReports()
-        {
-            try
-            {
-                var all = await _notificationDLL.GetAll();
-
-                return all
-                    .Where(n => n.ReferenceType == "Report")
-                    .ToList();
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog(
-                    "Get Reports Error",
-                    ex);
-
-                return new List<Notification>();
-            }
-        }
-        public async Task<bool> ResolveReport( int notificationId, string action, int? relatedId = null)
-        {
-            try
-            {
-                var n = await _notificationDLL.GetByID(notificationId);
-
-                if (n == null)
-                    return false;
-
-                n.Status = "Resolved";
-
-                var ok = await _notificationDLL.Update(n);
-
-                if (!ok)
-                    return false;
-
-                if (!string.IsNullOrWhiteSpace(action))
-                {
-                    if (action == "DeleteReview" && relatedId.HasValue)
-                    {
-                        await _reviewDLL.Delete(relatedId.Value);
-                    }
-                    else if (action == "BlockUser" && relatedId.HasValue)
-                    {
-                        var user = await _db.Users
-                            .FindAsync(relatedId.Value);
-
-                        if (user != null)
-                        {
-                            user.IsActive = false;
-                            await _db.SaveChangesAsync();
-                        }
-                    }
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog(
-                    "Resolve Report Error",
-                    ex);
-
-                return false;
-            }
-        }
-        // ================ Reports ================
     }
 }

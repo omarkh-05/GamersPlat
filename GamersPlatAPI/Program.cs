@@ -6,6 +6,7 @@ using Data.DLL;
 using Data.EF;
 using DataLayer;
 using GamersPlatAPI.Authorization;
+using GamersPlatAPI.Hubs;
 using GamersPlatAPI.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +21,7 @@ using System.Threading.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<GamersPlatDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("GamersPlat")));
 
@@ -31,6 +33,7 @@ builder.Services.AddScoped<ITournamentPlayerService, TournamentPlayerBLL>();
 builder.Services.AddScoped<IOfferService, OfferBLL>();
 builder.Services.AddScoped<IReviewService, ReviewBLL>();
 builder.Services.AddScoped<INotificationService, NotificationBLL>();
+builder.Services.AddScoped<INotificationRealtimePublisher, SignalRNotificationPublisher>();
 builder.Services.AddScoped<ICenterImageService, CenterImageBLL>();
 builder.Services.AddScoped<IBookingService, BookingBLL>();
 builder.Services.AddScoped<IOwnerService, OwnerBLL>();
@@ -200,10 +203,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 if (string.IsNullOrEmpty(context.Token))
                 {
-                    var token = context.Request.Cookies["accessToken"];
+                    if (context.Request.Path.StartsWithSegments("/notificationHub"))
+                        context.Token = context.Request.Query["access_token"];
 
-                    if (!string.IsNullOrEmpty(token))
-                        context.Token = token;
+                    if (string.IsNullOrEmpty(context.Token))
+                    {
+                        var token = context.Request.Cookies["accessToken"];
+                        if (!string.IsNullOrEmpty(token))
+                            context.Token = token;
+                    }
                 }
 
                 return Task.CompletedTask;
@@ -289,6 +297,7 @@ builder.Services.AddRateLimiter(options =>
 });
 #endregion
 
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -396,5 +405,7 @@ app.Use(async (context, next) =>
 });
 
 app.MapControllers();
+
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
