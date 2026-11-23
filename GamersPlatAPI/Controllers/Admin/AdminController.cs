@@ -4,6 +4,7 @@ using Bussiness.Interfaces;
 using Domain.DTOs.Auth;
 using Domain.DTOs.Center;
 using Domain.DTOs.User;
+using Domain.DTOs.Pagination;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -53,11 +54,11 @@ namespace GamersPlatAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetUsers()
+        public async Task<IActionResult> GetUsers([FromQuery] PaginationParameters pagination)
         {
             try
             {
-                var users = await _user.GetAll();
+                var users = await _user.GetAll(pagination);
                 return Ok(users);
             }
             catch (Exception ex)
@@ -172,9 +173,9 @@ namespace GamersPlatAPI.Controllers
 
         [HttpGet("centers")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetCenters()
+        public async Task<IActionResult> GetCenters([FromQuery] PaginationParameters pagination)
         {
-            var centers = await _center.GetAllForAdmin();
+            var centers = await _center.GetAllForAdmin(pagination);
             return Ok(centers);
         }
         [HttpPost("center")]
@@ -235,9 +236,9 @@ namespace GamersPlatAPI.Controllers
         [HttpGet("bookings")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetBookings()
+        public async Task<IActionResult> GetBookings([FromQuery] PaginationParameters pagination)
         {
-            var bookings = await _booking.GetAll();
+            var bookings = await _booking.GetAll(pagination);
             if (bookings == null) return NotFound();
             return Ok(bookings);
         }

@@ -3,6 +3,8 @@ using Data.DLL;
 using Data.EF;
 using Domain.DTOs.Auth;
 using Domain.DTOs.User;
+using Domain.DTOs.Pagination;
+using Data.Pagination;
 using Microsoft.EntityFrameworkCore;
 
 namespace DataLayer
@@ -14,6 +16,36 @@ namespace DataLayer
         public UserDLL(GamersPlatDbContext db)
         {
             _db = db;
+        }
+        public async Task<PaginatedResponse<DTO_UserListResponse>> GetAll(PaginationParameters pagination)
+        {
+            try
+            {
+                return await _db.Users
+                    .AsNoTracking()
+                    .OrderBy(u => u.UserId)
+                    .Select(u => new DTO_UserListResponse
+                    {
+                        UserId = u.UserId,
+                        FullName = u.FullName,
+                        Email = u.Email,
+                        PhoneNumber = u.PhoneNumber,
+                        CityId = u.CityId,
+                        Points = u.Points,
+                        IsActive = u.IsActive,
+                        PhoneVerified = u.PhoneVerified == false ? false : true,
+                        EmailVerified = u.EmailVerified == false ? false : true,
+                        Roles = u.UserRoles.Select(ur => ur.Role.RoleName).ToList()
+                    })
+                    .ToPaginatedResponseAsync(pagination);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Users Error", ex);
+                return PaginatedResponse<DTO_UserListResponse>.Create(
+                    Array.Empty<DTO_UserListResponse>(), pagination.Normalize().PageNumber,
+                    pagination.Normalize().PageSize, 0);
+            }
         }
 
         // ================ CRUD ================

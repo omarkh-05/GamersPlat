@@ -40,14 +40,29 @@ namespace Bussiness.BLL
         }
         public record ServiceResult(bool Success,string Message, int StatusCode);
         // ================ User Auth Management ================
-        public async Task<int> RegisterWithRoleAsync(UserRegisterRequest request, string roleName)
+        public Task<int> RegisterWithRoleAsync(UserRegisterRequest request, string roleName)
         {
             if (string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber) ||
                 string.IsNullOrWhiteSpace(request.Password))
                 throw new Exception("Invalid data");
 
-            using var transaction = await _db.Database.BeginTransactionAsync();
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            return RegisterWithRoleAsync(request, roleName, passwordHash);
+        }
+
+        public async Task<int> RegisterWithRoleAsync(UserRegisterRequest request, string roleName, string passwordHash)
+        {
+            if (string.IsNullOrWhiteSpace(request.FullName) ||
+                string.IsNullOrWhiteSpace(request.PhoneNumber) ||
+                string.IsNullOrWhiteSpace(request.Password) ||
+                string.IsNullOrWhiteSpace(passwordHash))
+                throw new Exception("Invalid data");
+
+            var transaction = _db.Database.CurrentTransaction;
+            var ownsTransaction = transaction == null;
+            if (ownsTransaction)
+                transaction = await _db.Database.BeginTransactionAsync();
 
             try {
 
@@ -63,7 +78,7 @@ namespace Bussiness.BLL
                     FullName = request.FullName,
                     PhoneNumber = request.PhoneNumber,
                     Email = request.Email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                    PasswordHash = passwordHash,
                     IsActive = true,
                     CityId = request.CityId
                 };
@@ -79,7 +94,8 @@ namespace Bussiness.BLL
 
                 if(!await _userRole.Add(userRole))
                 throw new Exception("Failed to add user role");
-            await transaction.CommitAsync();
+            if (ownsTransaction)
+                await transaction!.CommitAsync();
             var currentActorId = GetCurrentUserId();
             var actorId = currentActorId ?? user.UserId;
             await _auditLogService.LogAsync(actorId, currentActorId.HasValue ? "UserCreated" : "UserRegistered", "User", user.UserId, null, new
@@ -94,8 +110,14 @@ namespace Bussiness.BLL
             }
             catch
             {
-                await transaction.RollbackAsync();
+                if (ownsTransaction && transaction != null)
+                    await transaction.RollbackAsync();
                 throw new Exception("Failed Register User With Role");
+            }
+            finally
+            {
+                if (ownsTransaction && transaction != null)
+                    await transaction.DisposeAsync();
             }
         }
         public async Task<TokenResponse> LoginAsync(LoginRequest request)
@@ -199,24 +221,21 @@ namespace Bussiness.BLL
 
             var newAccessToken = _authHelpers.GenerateAccessToken(user);
             var newRefreshToken = _authHelpers.GenerateRefreshToken();
-
-            existingToken.IsRevoked = true;
-            existingToken.RevokedAt = DateTime.UtcNow;
-             
-            if (!await _refreshTokenBLL.Update(existingToken))
-                throw new Exception("Failed to revoke refresh token");
+            var rotationTime = DateTime.UtcNow;
 
             var rt = new RefreshToken
             {
                 UserId = user.UserId,
                 TokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(newRefreshToken))),
-                ExpiresAt = DateTime.UtcNow.AddDays(7),
-                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = rotationTime.AddDays(7),
+                CreatedAt = rotationTime,
                 IsRevoked = false
             };
 
-            if (!await _refreshTokenBLL.Add(rt))
-                throw new Exception("Failed to create refresh token");
+            var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken)));
+            var rotated = await _refreshTokenBLL.RotateAsync(existingToken.TokenId, tokenHash, rotationTime, rt);
+            if (!rotated)
+                throw new UnauthorizedAccessException("Refresh token is revoked");
 
             return new TokenResponse
             {

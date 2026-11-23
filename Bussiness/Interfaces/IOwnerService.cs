@@ -7,6 +7,7 @@ using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
 using Domain.DTOs.Staff;
 using Domain.DTOs.User;
+using Domain.DTOs.Pagination;
 
 namespace Bussiness.Interfaces
 {
@@ -23,6 +24,7 @@ namespace Bussiness.Interfaces
         Task<bool> DeactiveCenter(int centerId, int ownerUserId);
         Task<bool> ToggleCenterStatus(int centerId, int ownerUserId, string status);
         Task<List<DTO_CentersListDetails>> GetAllCentersForOwner(int ownerId);
+        Task<PaginatedResponse<DTO_CentersListDetails>> GetAllCentersForOwner(int ownerId, PaginationParameters pagination);
         Task<DTO_CenterOverview?> GetCenterOverView(int centerId);
 
         Task<List<DTO_ResourceInfo>> GetAllResourceByCenterId(int centerId, int ownerUserId);
@@ -46,9 +48,11 @@ namespace Bussiness.Interfaces
         Task<DTO_Invoice> StopBooking(int bookingId, int ownerUserId, DTO_EndBookingInvoice endBooking);
         Task<DTO_BookingDetails> ViewBookingDetails(int bookingId, int ownerUserId);
         Task<List<DTO_BookingDetails>> GetAllBookings(int ownerUserId);
-        Task<List<DTO_BookingDetails>> GetAllUBookings_ByCenterId(int centerId, int ownerUserId);
+        Task<PaginatedResponse<DTO_BookingDetails>> GetAllBookings(int ownerUserId, PaginationParameters pagination);
+        Task<List<DTO_BookingDetails>> GetAllBookings_ByCenterId(int centerId, int ownerUserId);
+        Task<PaginatedResponse<DTO_BookingDetails>> GetAllBookings_ByCenterId(int centerId, int ownerUserId, PaginationParameters pagination);
 
-        Task<List<DTO_CenterInvoices>?> GetAllCenterInvoices(int centerId, int ownerId);
+        Task<PaginatedResponse<DTO_CenterInvoices>> GetAllCenterInvoices(int centerId, int ownerId, PaginationParameters pagination);
 
         Task<bool> AddStaffMember(DTO_AddStaffMember staffMember);
         Task<bool> UpdateStaffMember(DTO_UpdateStaffMember request);

@@ -3,6 +3,7 @@ using Domain.DTOs.Auth;
 using Domain.DTOs.Booking;
 using Domain.DTOs.Invoice;
 using Domain.DTOs.Player;
+using Domain.DTOs.Pagination;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -26,7 +27,9 @@ namespace Bussiness.Interfaces
         Task<bool> Delete(int bookingID);
         Task<bool> Cancel(DTO_CancelBooking cancelBooking, int userId);
         Task<List<DTO_BookingDetails>> GetAll();
+        Task<PaginatedResponse<DTO_BookingDetails>> GetAll(PaginationParameters pagination);
         Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId);
+        Task<PaginatedResponse<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId, PaginationParameters pagination);
         Task<Booking?> GetByID(int bookingID);
         Task<bool> AcceptBooking(int bookingId, int userId);
         Task<bool> RejectBooking(int bookingId, int userId);
@@ -34,7 +37,9 @@ namespace Bussiness.Interfaces
         Task<DTO_InvoicePreview?> GetInvoicePreview(int bookingId);
         Task<DTO_Invoice?> StopBooking(int bookingId, int userId, DTO_EndBookingInvoice endBooking);
         Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId);
+        Task<PaginatedResponse<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId, PaginationParameters pagination);
         Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId);
+        Task<PaginatedResponse<DTO_BookingDetails>> GetBookingsByCenterId(int centerId, PaginationParameters pagination);
         Task<List<DTO_StartEndTime>?> GetFullBookedHours(int centerId, int centerResourceId, DateOnly date);
         // helper to compute booked quantity for availability check // no-op
         string? LastError { get; }

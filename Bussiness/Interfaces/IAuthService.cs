@@ -12,6 +12,7 @@ namespace Bussiness.Interfaces
     {
         Task<TokenResponse> LoginAsync(LoginRequest request);
         Task<int> RegisterWithRoleAsync(UserRegisterRequest request, string roleName);
+        Task<int> RegisterWithRoleAsync(UserRegisterRequest request, string roleName, string passwordHash);
         Task<TokenResponse> RefreshAsync(string refreshToken);
         Task<bool> LogoutAsync(string refreshToken);
         Task<ServiceResult> ChangePassword(int userId, ChangePasswordRequest request);

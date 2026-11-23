@@ -3,6 +3,7 @@ using Bussiness.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Domain.DTOs.Pagination;
 
 namespace GamersPlatAPI.Controllers
 {

@@ -1,5 +1,7 @@
 ﻿using Data.EF;
+using Data.Pagination;
 using Domain.DTOs.Invoice;
+using Domain.DTOs.Pagination;
 using Domain.DTOs.Player;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -16,12 +18,13 @@ namespace Data.DLL
         {
             _db = db;
         }
-        public async Task<List<DTO_CenterInvoices>> GetCenterInvoices(int centerId)
+        public async Task<PaginatedResponse<DTO_CenterInvoices>> GetCenterInvoices(int centerId, PaginationParameters pagination)
         {
             try
             {
                 return await _db.Invoices
                         .Where(i => i.Booking.CenterId == centerId)
+                        .OrderBy(i => i.InvoiceId)
                         .Select(i => new DTO_CenterInvoices
                         {
                             InvoiceNumber = i.InvoiceId,
@@ -41,7 +44,7 @@ namespace Data.DLL
                             StartedBy = i.Booking.StartedByNavigation.FullName,
                             StoppedBy = i.Booking.StoppedByNavigation.FullName
                         })
-                        .ToListAsync();
+                        .ToPaginatedResponseAsync(pagination);
             }
             catch(Exception ex)
             {

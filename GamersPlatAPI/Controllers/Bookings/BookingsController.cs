@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using Bussiness.Helpers;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Domain.DTOs.Pagination;
 
 namespace GamersPlatAPI.Controllers
 {
@@ -228,22 +229,22 @@ namespace GamersPlatAPI.Controllers
         [Authorize]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetMine()
+        public async Task<IActionResult> GetMine([FromQuery] PaginationParameters pagination)
         {
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
-            var list = await _booking.GetByPlayerId(uid);
+            var list = await _booking.GetByPlayerId(uid, pagination);
             return Ok(list);
         }
 
         [Authorize(Roles = "owner")]
         [HttpGet("owner")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetOwnerBookings()
+        public async Task<IActionResult> GetOwnerBookings([FromQuery] PaginationParameters pagination)
         {
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
-            var list = await _booking.GetBookingsByOwnerId(uid);
+            var list = await _booking.GetBookingsByOwnerId(uid, pagination);
             return Ok(list);
         }
 

@@ -4,6 +4,7 @@ using Data.DLL;
 using DataLayer;
 using Domain.DTOs.Auth;
 using Domain.DTOs.User;
+using Domain.DTOs.Pagination;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 namespace Bussiness
@@ -108,6 +109,10 @@ namespace Bussiness
         public async Task<List<DTO_UserListResponse>> GetAll()
         {
             return await _userDLL.GetAll();
+        }
+        public async Task<PaginatedResponse<DTO_UserListResponse>> GetAll(PaginationParameters pagination)
+        {
+            return await _userDLL.GetAll(pagination);
         }
         // ================ CRUD ================
 

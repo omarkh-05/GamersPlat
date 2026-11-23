@@ -48,6 +48,40 @@ namespace DataLayer
                 return false;
             }
         }
+
+        public async Task<bool> RotateAsync(int tokenId, string tokenHash, DateTime now, RefreshToken replacement)
+        {
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var revoked = await _db.RefreshTokens
+                    .Where(t => t.TokenId == tokenId
+                        && t.TokenHash == tokenHash
+                        && !t.IsRevoked
+                        && t.RevokedAt == null
+                        && t.ExpiresAt > now)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(t => t.IsRevoked, true)
+                        .SetProperty(t => t.RevokedAt, now));
+
+                if (revoked != 1)
+                {
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+
+                _db.RefreshTokens.Add(replacement);
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                try { await transaction.RollbackAsync(); } catch { }
+                EventLog_Helper.WriteEventLog("Rotate RefreshToken Error", ex);
+                throw;
+            }
+        }
         // ================ CRUD ================
 
 

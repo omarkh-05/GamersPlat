@@ -7,6 +7,7 @@ using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Domain.DTOs.Pagination;
 using System.Security.Claims;
 
 namespace GamersPlatAPI.Controllers.Staff
@@ -182,10 +183,10 @@ namespace GamersPlatAPI.Controllers.Staff
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetAllBookingsForCenter(int centerId)
+        public async Task<IActionResult> GetAllBookingsForCenter(int centerId, [FromQuery] PaginationParameters pagination)
         {
             if (!TryGetOwnerId(out var staffId)) return Unauthorized();
-            return await Run(() => _staff.GetAllBookings_ByCenterId(centerId, staffId), result => Ok(result));
+            return await Run(() => _staff.GetAllBookings_ByCenterId(centerId, staffId, pagination), result => Ok(result));
         }
         [HttpPatch("bookings/{bookingId:int}/accept")]
         [ProducesResponseType(StatusCodes.Status200OK)]

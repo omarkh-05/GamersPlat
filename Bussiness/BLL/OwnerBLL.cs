@@ -8,6 +8,7 @@ using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
 using Domain.DTOs.Staff;
 using Domain.DTOs.User;
+using Domain.DTOs.Pagination;
 
 namespace Bussiness.BLL
 {
@@ -178,6 +179,15 @@ namespace Bussiness.BLL
             {
                 throw new InvalidOperationException("No centers found for this owner.");
             }
+            return centers;
+        }
+        public async Task<PaginatedResponse<DTO_CentersListDetails>> GetAllCentersForOwner(int ownerId, PaginationParameters pagination)
+        {
+            if (ownerId <= 0)
+                throw new ArgumentException("Invalid owner ID.");
+            var centers = await _center.GetAllCentersByOwnerId(ownerId, pagination);
+            if (centers.TotalCount == 0)
+                throw new InvalidOperationException("No centers found for this owner.");
             return centers;
         }
         public async Task<DTO_CenterOverview?> GetCenterOverView(int centerId)
@@ -573,7 +583,13 @@ namespace Bussiness.BLL
 
             return await _booking.GetBookingsByOwnerId(ownerUserId);
         }
-        public async Task<List<DTO_BookingDetails>> GetAllUBookings_ByCenterId(int centerId,int ownerUserId)
+        public async Task<PaginatedResponse<DTO_BookingDetails>> GetAllBookings(int ownerUserId, PaginationParameters pagination)
+        {
+            if (ownerUserId <= 0)
+                throw new ArgumentException("Invalid owner ID.");
+            return await _booking.GetBookingsByOwnerId(ownerUserId, pagination);
+        }
+        public async Task<List<DTO_BookingDetails>> GetAllBookings_ByCenterId(int centerId,int ownerUserId)
         {
             if (centerId <= 0)
                 throw new ArgumentException("Invalid center ID.");
@@ -581,6 +597,13 @@ namespace Bussiness.BLL
             await ValidateCenterOwner(centerId, ownerUserId, requireApproved: true);
 
             return await _booking.GetBookingsByCenterId(centerId);
+        }
+        public async Task<PaginatedResponse<DTO_BookingDetails>> GetAllBookings_ByCenterId(int centerId, int ownerUserId, PaginationParameters pagination)
+        {
+            if (centerId <= 0)
+                throw new ArgumentException("Invalid center ID.");
+            await ValidateCenterOwner(centerId, ownerUserId, requireApproved: true);
+            return await _booking.GetBookingsByCenterId(centerId, pagination);
         }
         // ================ Bookings Management ================
 
@@ -655,17 +678,16 @@ namespace Bussiness.BLL
 
 
         // ================ Services Management ================
-        public async Task<List<DTO_CenterInvoices>?> GetAllCenterInvoices(int centerId,int ownerId)
+        public async Task<PaginatedResponse<DTO_CenterInvoices>?> GetAllCenterInvoices(int centerId,int ownerId, PaginationParameters pagination)
         {
             await ValidateCenterOwner(centerId, ownerId, requireApproved: true);
 
-            var res = await _invoice.GetAllCenterInvoices(centerId);
+            var res = await _invoice.GetAllCenterInvoices(centerId, pagination);
             if (res != null)
                 return res;
             throw new KeyNotFoundException("No invoices found");
         }
         // ================ Services Management ================
-
 
         // Helpers
         private async Task ValidateCenterOwner(int centerId, int ownerId, bool requireApproved = false)

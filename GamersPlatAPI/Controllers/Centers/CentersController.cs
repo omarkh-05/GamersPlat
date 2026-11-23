@@ -2,6 +2,7 @@ using Bussiness;
 using Bussiness.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Domain.DTOs.Pagination;
 
 namespace GamersPlatAPI.Controllers
 {
@@ -17,12 +18,10 @@ namespace GamersPlatAPI.Controllers
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] PaginationParameters pagination)
         {
-            var excludedStatuses = new[] { "pending", "approved", "rejected", "inactive" };
-            var centers = await _center.GetAll();
-            var homeCenter = centers.Where(c => !excludedStatuses.Contains(c.CenterStatus));
-            return Ok(homeCenter);
+            var centers = await _center.GetAll(pagination);
+            return Ok(centers);
         }
 
         [HttpGet("{id:int}")]

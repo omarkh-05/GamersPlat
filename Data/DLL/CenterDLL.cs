@@ -7,6 +7,8 @@ using Domain.DTOs.Tournuments;
 using Domain.DTOs.Session;
 using Domain.DTOs.Offer;
 using Domain.DTOs.Resource;
+using Domain.DTOs.Pagination;
+using Data.Pagination;
 
 namespace DataLayer
 {
@@ -17,6 +19,70 @@ namespace DataLayer
         public CenterDLL(GamersPlatDbContext db)
         {
             _db = db;
+        }
+        public async Task<PaginatedResponse<DTO_HomePageCentersDetails>> GetAllPublic(PaginationParameters pagination)
+        {
+            try
+            {
+                var excludedStatuses = new[] { "pending", "approved", "rejected", "inactive" };
+                return await _db.Centers
+                    .Where(c => !excludedStatuses.Contains(c.CenterStatus))
+                    .OrderBy(c => c.CenterId)
+                    .Select(c => new DTO_HomePageCentersDetails
+                    {
+                        CenterId = c.CenterId,
+                        Slug = c.Slug,
+                        CenterName = c.CenterName,
+                        CenterAddress = c.CenterAddress ?? "",
+                        CenterStatus = c.CenterStatus ?? "busy",
+                        CenterType = c.CenterType ?? "Gaming Center",
+                        OpenTime = c.OpenTime,
+                        CloseTime = c.CloseTime,
+                        CityName = c.City.Name,
+                        Rating = c.Reviews.Select(r => (decimal?)r.Rating).Average() ?? 0,
+                        MainImage = c.CenterImages.Where(i => i.IsMain).Select(i => i.ImageUrl).FirstOrDefault() ?? ""
+                    })
+                    .AsNoTracking()
+                    .ToPaginatedResponseAsync(pagination);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Centers Error", ex);
+                var normalized = pagination.Normalize();
+                return PaginatedResponse<DTO_HomePageCentersDetails>.Create(
+                    Array.Empty<DTO_HomePageCentersDetails>(), normalized.PageNumber, normalized.PageSize, 0);
+            }
+        }
+        public async Task<PaginatedResponse<DTO_HomePageCentersDetails>> GetAllForAdmin(PaginationParameters pagination)
+        {
+            try
+            {
+                return await _db.Centers
+                    .OrderBy(c => c.CenterId)
+                    .Select(c => new DTO_HomePageCentersDetails
+                    {
+                        CenterId = c.CenterId,
+                        Slug = c.Slug,
+                        CenterName = c.CenterName,
+                        CenterAddress = c.CenterAddress ?? "",
+                        CenterStatus = c.CenterStatus ?? "busy",
+                        CenterType = c.CenterType ?? "Gaming Center",
+                        OpenTime = c.OpenTime,
+                        CloseTime = c.CloseTime,
+                        CityName = c.City.Name,
+                        Rating = c.Reviews.Select(r => (decimal?)r.Rating).Average() ?? 0,
+                        MainImage = c.CenterImages.Where(i => i.IsMain).Select(i => i.ImageUrl).FirstOrDefault() ?? ""
+                    })
+                    .AsNoTracking()
+                    .ToPaginatedResponseAsync(pagination);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Centers Error", ex);
+                var normalized = pagination.Normalize();
+                return PaginatedResponse<DTO_HomePageCentersDetails>.Create(
+                    Array.Empty<DTO_HomePageCentersDetails>(), normalized.PageNumber, normalized.PageSize, 0);
+            }
         }
 
         // ================ CRUD ================
@@ -32,6 +98,42 @@ namespace DataLayer
             {
                 EventLog_Helper.WriteEventLog("Add Center Error", ex);
                 return 0;
+            }
+        }
+            
+        public async Task<PaginatedResponse<DTO_CentersListDetails>> GetAllCentersByOwnerId(int ownerId, PaginationParameters pagination)
+        {
+            try
+            {
+                return await _db.Centers
+                    .Where(c => c.OwnerUserId == ownerId)
+                    .OrderBy(c => c.CenterId)
+                    .Select(c => new DTO_CentersListDetails
+                    {
+                        CenterId = c.CenterId,
+                        Slug = c.Slug,
+                        CenterName = c.CenterName,
+                        CenterAddress = c.CenterAddress ?? "",
+                        CenterStatus = c.CenterStatus ?? "Busy",
+                        CenterType = c.CenterType ?? "Gaming Center",
+                        CenterDescription = c.CenterDescription ?? "No description available",
+                        CenterPhone = c.CenterPhone ?? "No phone number available",
+                        CenterImage = c.CenterImages.FirstOrDefault(i => i.IsMain).ImageUrl ?? "No image available",
+                        OpenTime = c.OpenTime,
+                        CloseTime = c.CloseTime,
+                        CityName = c.City.Name,
+                        EmployeeCount = c.Staff.Count(e => e.IsActive),
+                        ResourcesCount = c.CenterResources.Count(r => r.IsActive),
+                        ServicesList = c.CenterServices.Where(s => s.IsActive).Select(s => s.Service.Name).ToList()
+                    })
+                    .ToPaginatedResponseAsync(pagination);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Centers By Owner ID Error", ex);
+                var normalized = pagination.Normalize();
+                return PaginatedResponse<DTO_CentersListDetails>.Create(
+                    Array.Empty<DTO_CentersListDetails>(), normalized.PageNumber, normalized.PageSize, 0);
             }
         }
         public async Task<bool> Update(DTO_UpdateCenter center,int centerId, int ownerId)

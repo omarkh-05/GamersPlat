@@ -7,6 +7,7 @@ using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
 using Domain.DTOs.Staff;
 using Domain.DTOs.User;
+using Domain.DTOs.Pagination;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -46,11 +47,11 @@ namespace GamersPlatAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetOwnerCenters()
+        public async Task<IActionResult> GetOwnerCenters([FromQuery] PaginationParameters pagination)
         {
             if (!TryGetOwnerId(out var ownerId))
                 return Unauthorized();
-            return await Run(() => _owner.GetAllCentersForOwner(ownerId), res => Ok(res));
+            return await Run(() => _owner.GetAllCentersForOwner(ownerId, pagination), res => Ok(res));
         }
         [HttpPost("center")]
         [ProducesResponseType(StatusCodes.Status201Created)]
@@ -106,10 +107,10 @@ namespace GamersPlatAPI.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetAllCenterInvoices(int centerId)
+        public async Task<IActionResult> GetAllCenterInvoices(int centerId, [FromQuery] PaginationParameters pagination)
         {
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.GetAllCenterInvoices(centerId,ownerId), res => Ok(res));
+            return await Run(() => _owner.GetAllCenterInvoices(centerId, ownerId, pagination), res => Ok(res));
         }
         // Center Resources
         [HttpGet("centers/{centerId:int}/resources")]
@@ -228,10 +229,10 @@ namespace GamersPlatAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetAllBookingsForCenter(int centerId)
+        public async Task<IActionResult> GetAllBookingsForCenter(int centerId, [FromQuery] PaginationParameters pagination)
         {
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.GetAllUBookings_ByCenterId(centerId, ownerId), result => Ok(result));
+            return await Run(() => _owner.GetAllBookings_ByCenterId(centerId, ownerId, pagination), result => Ok(result));
         }
         // Center Workspace
 
@@ -242,10 +243,10 @@ namespace GamersPlatAPI.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetAllOwnerBookings()
+        public async Task<IActionResult> GetAllOwnerBookings([FromQuery] PaginationParameters pagination)
         {
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.GetAllBookings(ownerId), result => Ok(result));
+            return await Run(() => _owner.GetAllBookings(ownerId, pagination), result => Ok(result));
         }
         [HttpPatch("bookings/{bookingId:int}/accept")]
         [ProducesResponseType(StatusCodes.Status200OK)]

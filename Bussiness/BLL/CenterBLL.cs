@@ -1,6 +1,7 @@
 using Data;
 using DataLayer;
 using Domain.DTOs.Center;
+using Domain.DTOs.Pagination;
 using System.Text.RegularExpressions;
 
 namespace Bussiness
@@ -158,6 +159,10 @@ namespace Bussiness
         public async Task<bool> Delete(int centerId) => await _centerDLL.Delete(centerId);
         public async Task<List<DTO_HomePageCentersDetails>> GetAll() => await _centerDLL.GetAll();
         public async Task<List<DTO_HomePageCentersDetails>> GetAllForAdmin() => await _centerDLL.GetAll();
+        public async Task<PaginatedResponse<DTO_HomePageCentersDetails>> GetAll(PaginationParameters pagination)
+            => await _centerDLL.GetAllPublic(pagination);
+        public async Task<PaginatedResponse<DTO_HomePageCentersDetails>> GetAllForAdmin(PaginationParameters pagination)
+            => await _centerDLL.GetAllForAdmin(pagination);
         // ================ CRUD ================
 
 
@@ -169,6 +174,8 @@ namespace Bussiness
 
             return await _centerDLL.GetByID(centerId);
         }
+        public async Task<PaginatedResponse<DTO_CentersListDetails>> GetAllCentersByOwnerId(int ownerId, PaginationParameters pagination)
+            => await _centerDLL.GetAllCentersByOwnerId(ownerId, pagination);
         public async Task<DTO_CenterDetails?> GetCenterDetailsById(int centerId)
         {
             if (centerId <= 0)

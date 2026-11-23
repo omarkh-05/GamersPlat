@@ -1,6 +1,7 @@
 ﻿using Data;
 using Domain.DTOs.Auth;
 using Domain.DTOs.User;
+using Domain.DTOs.Pagination;
 
 namespace Bussiness.Interfaces
 {
@@ -12,6 +13,7 @@ namespace Bussiness.Interfaces
 
         Task<DTO_UserInfoRequest?> GetUserInfoByID(int userId);
         Task<List<DTO_UserListResponse>> GetAll();
+        Task<PaginatedResponse<DTO_UserListResponse>> GetAll(PaginationParameters pagination);
         Task<DTO_UserInfoRequest?> GetUserInfoByPhone(string phone);
         Task<int> GetIdByPhoneOrEmail(RequestResetRequest reqResetPass);
         Task<DTO_UserInfoRequest?> GetById(int userId);

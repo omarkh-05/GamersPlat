@@ -11,6 +11,7 @@ using GamersPlatAPI.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -336,7 +337,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("GamersPlatAPIpolicy");
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        if (context.Context.Request.Path.StartsWithSegments("/uploads"))
+            context.Context.Response.Headers["Cache-Control"] = "public,max-age=31536000,immutable";
+    }
+});
 
 if (!app.Environment.IsDevelopment())
 {

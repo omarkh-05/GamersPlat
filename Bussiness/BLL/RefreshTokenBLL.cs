@@ -22,6 +22,11 @@ namespace Bussiness
         {
             return await _refreshTokenDLL.Update(token);
         }
+
+        public async Task<bool> RotateAsync(int tokenId, string tokenHash, DateTime now, RefreshToken replacement)
+        {
+            return await _refreshTokenDLL.RotateAsync(tokenId, tokenHash, now, replacement);
+        }
         // ================ CRUD ================
 
 

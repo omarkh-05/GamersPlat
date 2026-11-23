@@ -1,6 +1,7 @@
 using Bussiness;
 using Bussiness.Interfaces;
 using Domain.DTOs.User;
+using Domain.DTOs.Pagination;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -73,12 +74,12 @@ namespace GamersPlatAPI.Controllers
         [HttpGet("bookings")]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetBookings()
+        public async Task<IActionResult> GetBookings([FromQuery] PaginationParameters pagination)
         {
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(idClaim, out var userId)) return Unauthorized();
 
-            var bookings = await _booking.GetByPlayerId(userId);
+            var bookings = await _booking.GetByPlayerId(userId, pagination);
             return Ok(bookings);
         }
     }

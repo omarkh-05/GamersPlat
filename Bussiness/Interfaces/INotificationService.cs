@@ -1,4 +1,5 @@
 using Domain.DTOs.Notification;
+using Domain.DTOs.Pagination;
 
 namespace Bussiness.Interfaces
 {
@@ -9,7 +10,8 @@ namespace Bussiness.Interfaces
         Task NotifyBookingCompletedAsync(int bookingId, int invoiceNumber);
         Task NotifyCenterCreatedAsync(int centerId);
         Task NotifyCenterStatusAsync(int centerId, string status);
-        Task<IReadOnlyList<DTO_Notification>> GetForUserAsync(int userId);
+        Task<IReadOnlyList<DTO_Notification>> GetForUserAsync(int userId, PaginationParameters pagination);
+        Task<IReadOnlyList<DTO_Notification>> GetTopUnReadForUserBell(int userId);
         Task<int> GetUnreadCountAsync(int userId);
         Task<bool> MarkAsReadAsync(int userId, int notificationId);
         Task<int> MarkAllAsReadAsync(int userId);

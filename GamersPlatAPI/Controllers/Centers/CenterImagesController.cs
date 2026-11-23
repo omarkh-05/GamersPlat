@@ -10,6 +10,8 @@ namespace GamersPlatAPI.Controllers.Centers
     [Authorize(Roles = "owner")]
     public class CenterImagesController : ControllerBase
     {
+        private const long MaxUploadBytes = 8 * 1024 * 1024;
+
         private readonly ICenterService _center;
         private readonly ICenterImageService _images;
 
@@ -21,9 +23,10 @@ namespace GamersPlatAPI.Controllers.Centers
 
         [HttpPost]
         [Consumes("multipart/form-data")]
+        [RequestSizeLimit(8 * 1024 * 1024)]
         public async Task<IActionResult> Upload(int centerId, IFormFile file, [FromForm] bool isMain = false)
         {
-            if (file == null || file.Length == 0) return BadRequest();
+            if (file == null || file.Length == 0 || file.Length > MaxUploadBytes) return BadRequest();
 
             // Ownership check
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -33,31 +36,16 @@ namespace GamersPlatAPI.Controllers.Centers
             if (center == null) return NotFound();
             if (center.OwnerUserId != uid) return Forbid();
 
-            // Save file to wwwroot/uploads/centers/{centerId}/ and record URL
-            // var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", centerId.ToString()); ** to add folder for each center **
-            var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            Directory.CreateDirectory(uploads);
-            var fileName = DateTime.UtcNow.ToString("yyyyMMddHHmmss") + "_" + Path.GetFileName(file.FileName);
-            var filePath = Path.Combine(uploads, fileName);
+            using var input = file.OpenReadStream();
+            var result = await _images.Upload(centerId, input, isMain);
 
-            using (var stream = System.IO.File.Create(filePath))
+            return result.Status switch
             {
-                await file.CopyToAsync(stream);
-            }
-
-            var url = $"/uploads/{fileName}";
-
-            var img = new Data.CenterImage
-            {
-                CenterId = centerId,
-                ImageUrl = url,
-                IsMain = isMain,
-                CreatedAt = DateTime.Now
+                ImageUploadStatus.Success => CreatedAtAction(
+                    nameof(GetById), new { centerId = centerId, id = _images.LastId }, result.Image),
+                ImageUploadStatus.InvalidImage => BadRequest(),
+                _ => StatusCode(500)
             };
-
-            if (!await _images.Add(img)) return StatusCode(500);
-
-            return CreatedAtAction(nameof(GetById), new { centerId = centerId, id = _images.LastId }, img);
         }
 
         [HttpGet]
@@ -91,18 +79,12 @@ namespace GamersPlatAPI.Controllers.Centers
             if (!int.TryParse(idClaim, out var uid)) return Unauthorized();
 
             var img = await _images.GetByID(imageId);
-            if (img == null) return NotFound();
+            if (img == null || img.CenterId != centerId) return NotFound();
+
             var center = await _center.GetByID(centerId);
             if (center == null || center.OwnerUserId != uid) return Forbid();
-            if (!await _images.Delete(imageId)) return StatusCode(500);
 
-            // attempt to delete file from disk (best-effort)
-            try
-            {
-                var physicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", img.ImageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                if (System.IO.File.Exists(physicalPath)) System.IO.File.Delete(physicalPath);
-            }
-            catch { }
+            if (!await _images.DeleteWithFiles(img)) return StatusCode(500);
 
             return NoContent();
         }

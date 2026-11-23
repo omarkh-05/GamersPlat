@@ -4,6 +4,8 @@ using Data.EF;
 using Domain.DTOs.Booking;
 using Domain.DTOs.Invoice;
 using Domain.DTOs.Player;
+using Domain.DTOs.Pagination;
+using Data.Pagination;
 using Microsoft.EntityFrameworkCore;
 using System.Net.NetworkInformation;
 
@@ -19,6 +21,12 @@ namespace DataLayer
             cancelled ,
             completed
         }
+        private static readonly string[] ResourceOccupyingStatuses = {
+            nameof(BookingStatus.pending),
+            "updated",
+            nameof(BookingStatus.accepted),
+            "running"
+        };
         public enum AddBookingStatus
         {
             Success,
@@ -27,16 +35,23 @@ namespace DataLayer
             LimitReached,
             Error
         }
+        private readonly record struct BookingInterval(DateOnly BookingDate, TimeOnly StartTime, TimeOnly EndTime, int Quantity);
+        private readonly record struct TimeInterval(long StartTicks, long EndTicks);
+        private readonly record struct OccupiedInterval(TimeInterval Interval, int Quantity);
+        private readonly record struct CapacitySegment(long StartTicks, long EndTicks, long Quantity);
+        private readonly record struct BookingCapacitySnapshot(DateOnly BookingDate, TimeOnly StartTime, TimeOnly EndTime, int Quantity, int Capacity);
+        public readonly record struct AddBookingResult(AddBookingStatus Status, int BookingId = 0)
+        {
+            public bool IsSuccess => Status == AddBookingStatus.Success;
+        }
+
 
         private readonly GamersPlatDbContext _db;
         public BookingDLL(GamersPlatDbContext db)
         {
             _db = db;
         }
-        public readonly record struct AddBookingResult(AddBookingStatus Status, int BookingId = 0)
-        {
-            public bool IsSuccess => Status == AddBookingStatus.Success;
-        }
+
 
         // ================ CRUD ================
         public async Task<AddBookingResult> AddIfAvailable(Booking booking, int totalQuantity, bool isStaffOrAdmin)
@@ -92,7 +107,7 @@ namespace DataLayer
                     await tx.DisposeAsync();
             }
         }
-        public async Task<bool> UpdateIfAvailable(Booking existing,int totalQuantity)
+        public async Task<bool> UpdateIfAvailable(Booking existing, int totalQuantity, string expectedStatus)
         {
             var tx = _db.Database.CurrentTransaction;
             var ownsTransaction = tx == null;
@@ -114,7 +129,26 @@ namespace DataLayer
                     return false;
                 }
 
-                await _db.SaveChangesAsync();
+                var updated = await _db.Bookings
+                    .Where(b => b.BookingId == existing.BookingId
+                        && b.UserId == existing.UserId
+                        && b.Status == expectedStatus)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.BookingDate, existing.BookingDate)
+                        .SetProperty(b => b.StartTime, existing.StartTime)
+                        .SetProperty(b => b.EndTime, existing.EndTime)
+                        .SetProperty(b => b.UnitPrice, existing.UnitPrice)
+                        .SetProperty(b => b.Subtotal, existing.Subtotal)
+                        .SetProperty(b => b.TotalPrice, existing.TotalPrice)
+                        .SetProperty(b => b.Status, "updated"));
+
+                if (updated == 0)
+                {
+                    if (ownsTransaction)
+                        await tx!.RollbackAsync();
+
+                    return false;
+                }
 
                 if (ownsTransaction)
                     await tx!.CommitAsync();
@@ -133,6 +167,8 @@ namespace DataLayer
             {
                 if (ownsTransaction && tx != null)
                     await tx.DisposeAsync();
+
+                _db.Entry(existing).State = EntityState.Detached;
             }
         }
         public async Task<bool> Delete(int bookingId)
@@ -155,16 +191,53 @@ namespace DataLayer
                 return false;
             }
         }
-        public async Task<bool> Cancel()
+        public async Task<bool> Cancel(int bookingId, string expectedStatus, string cancellationReason)
         {
             try
             {
-                return await _db.SaveChangesAsync() > 0;
+                return await _db.Bookings
+                    .Where(b => b.BookingId == bookingId
+                        && b.Status == expectedStatus
+                        && (b.Status == nameof(BookingStatus.pending)
+                            || b.Status == nameof(BookingStatus.accepted)))
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.Status, nameof(BookingStatus.cancelled))
+                        .SetProperty(b => b.CancellationReason, cancellationReason)) > 0;
             }
             catch (Exception ex)
             {
                 EventLog_Helper.WriteEventLog("Cancel Booking Error", ex);
                 return false;
+            }
+        }
+        public async Task<PaginatedResponse<DTO_BookingDetails>> GetAll(PaginationParameters pagination)
+        {
+            try
+            {
+                return await _db.Bookings
+                    .AsNoTracking()
+                    .OrderByDescending(b => b.BookingDate)
+                    .Select(b => new DTO_BookingDetails
+                    {
+                        BookingId = b.BookingId,
+                        CenterName = b.Center.CenterName,
+                        CustomerName = b.CustomerName,
+                        PhoneNumber = b.PhoneNumber,
+                        ResourcesType = b.CenterResource.ResourcesType.ResourceName + " - " + b.CenterResource.RoomType,
+                        BookingDate = b.BookingDate,
+                        StartTime = b.StartTime,
+                        EndTime = b.EndTime,
+                        Duration = FormatBookingDuration(b.StartTime, b.EndTime),
+                        TotalPrice = b.TotalPrice,
+                        Status = b.Status
+                    })
+                    .ToPaginatedResponseAsync(pagination);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get All Bookings Error", ex);
+                var normalized = pagination.Normalize();
+                return PaginatedResponse<DTO_BookingDetails>.Create(Array.Empty<DTO_BookingDetails>(), normalized.PageNumber, normalized.PageSize, 0);
             }
         }
         public async Task<List<DTO_BookingDetails>> GetAll()
@@ -183,7 +256,7 @@ namespace DataLayer
                         BookingDate = b.BookingDate,
                         StartTime = b.StartTime,
                         EndTime = b.EndTime,
-                        Duration = b.EndTime < b.StartTime ? (b.EndTime - b.StartTime).ToString() : (b.StartTime - b.EndTime).ToString(),
+                        Duration = FormatBookingDuration(b.StartTime, b.EndTime),
                         TotalPrice = b.TotalPrice,
                         Status = b.Status
                     })
@@ -210,6 +283,38 @@ namespace DataLayer
             {
                 EventLog_Helper.WriteEventLog("Get Booking By ID Error", ex);
                 return null;
+            }
+        }
+        public async Task<PaginatedResponse<DTO_PlayerBookingsInfo>> GetByUserId(int userId, PaginationParameters pagination)
+        {
+            try
+            {
+                return await _db.Bookings
+                    .Where(b => b.UserId == userId)
+                    .AsNoTracking()
+                    .OrderByDescending(b => b.BookingDate)
+                    .Select(b => new DTO_PlayerBookingsInfo
+                    {
+                        BookingId = b.BookingId,
+                        CenterName = b.Center.CenterName,
+                        Resource = b.CenterResource.ResourcesType.ResourceName,
+                        StartTime = b.StartTime,
+                        EndTime = b.EndTime,
+                        OfferId = b.OfferId,
+                        Quantity = b.Quantity,
+                        TotalPrice = b.TotalPrice,
+                        EarnedPoints = b.EarnedPoints,
+                        Status = b.Status,
+                        BookingDate = b.BookingDate
+                    })
+                    .ToPaginatedResponseAsync(pagination);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Bookings By UserID Error", ex);
+                var normalized = pagination.Normalize();
+                return PaginatedResponse<DTO_PlayerBookingsInfo>.Create(
+                    Array.Empty<DTO_PlayerBookingsInfo>(), normalized.PageNumber, normalized.PageSize, 0);
             }
         }
         public async Task<bool> FindBookingById(int bookingId)
@@ -257,76 +362,82 @@ namespace DataLayer
         }
         public async Task<List<DTO_StartEndTime>> GetFullBookedHours(int centerId, int centerResourceId, DateOnly date)
         {
-                var activeStatuses = new[]
-                {
-                    nameof(BookingStatus.pending),// "pending"
-                    nameof(BookingStatus.accepted)
-                };
-            var fullyBooked = await _db.Bookings
-                .Where(b =>
-                    b.CenterResourceId == centerResourceId &&
-                    b.CenterId == centerId &&
-                    b.BookingDate == date &&
-                    activeStatuses.Contains(b.Status))
-                .GroupBy(b => new
-                {
+            var bookings = await GetOccupiedBookingQuery(date, includeNextDay: false)
+                .Where(b => b.CenterId == centerId && b.CenterResourceId == centerResourceId)
+                .Select(b => new BookingCapacitySnapshot(
+                    b.BookingDate,
                     b.StartTime,
                     b.EndTime,
-                    b.CenterResourceId,
-                    b.BookingDate,
-                    b.CenterResource.TotalQuantity
-                })
-                .Where(g => g.Count() >= g.Key.TotalQuantity)
-                .Select(g => new DTO_StartEndTime
-                {
-                    StartTime = g.Key.StartTime,
-                    EndTime = g.Key.EndTime
-                })
+                    b.Quantity,
+                    b.CenterResource.TotalQuantity))
                 .ToListAsync();
 
-            return fullyBooked;
+            if (bookings.Count == 0 || bookings[0].Capacity <= 0)
+                return new List<DTO_StartEndTime>();
+
+            var intervals = bookings
+                .Select(b => new BookingInterval(b.BookingDate, b.StartTime, b.EndTime, b.Quantity))
+                .ToArray();
+            var capacitySegments = GetCapacitySegments(intervals, date, 0, TimeSpan.TicksPerDay);
+            var fullyBookedIntervals = new List<TimeInterval>();
+
+            foreach (var segment in capacitySegments.Where(segment => segment.Quantity >= bookings[0].Capacity))
+            {
+                if (fullyBookedIntervals.Count > 0 && fullyBookedIntervals[^1].EndTicks == segment.StartTicks)
+                {
+                    fullyBookedIntervals[^1] = fullyBookedIntervals[^1] with { EndTicks = segment.EndTicks };
+                }
+                else
+                {
+                    fullyBookedIntervals.Add(new TimeInterval(segment.StartTicks, segment.EndTicks));
+                }
+            }
+
+            var result = new List<DTO_StartEndTime>();
+            foreach (var interval in fullyBookedIntervals)
+            {
+                if (interval.StartTicks == 0 && interval.EndTicks == TimeSpan.TicksPerDay)
+                {
+                    var midday = TimeOnly.FromTimeSpan(TimeSpan.FromHours(12));
+                    result.Add(new DTO_StartEndTime { StartTime = TimeOnly.MinValue, EndTime = midday });
+                    result.Add(new DTO_StartEndTime { StartTime = midday, EndTime = TimeOnly.MinValue });
+                    continue;
+                }
+
+                result.Add(new DTO_StartEndTime
+                {
+                    StartTime = new TimeOnly(interval.StartTicks),
+                    EndTime = interval.EndTicks == TimeSpan.TicksPerDay
+                        ? TimeOnly.MinValue
+                        : new TimeOnly(interval.EndTicks)
+                });
+            }
+
+            return result;
         }
         public async Task<int> GetBookedQuantityForTimeSlot(int resourcesTypeId, DateOnly date, TimeOnly startTime, TimeOnly? endTime)
         {
             // No try/catch here on purpose: a DB failure must not become a fake result (false/0/-1).
             // The caller (AddIfAvailable) handles it: rollback, log, return Error.
-            var activeStatuses = new[]
-                {
-                    nameof(BookingStatus.pending),
-                    nameof(BookingStatus.accepted)
-                };
-           
-                var end = endTime ?? startTime.AddHours(1);
-                return await _db.Bookings
-                    .Where(b =>
-                        b.CenterResourceId == resourcesTypeId &&
-                        b.BookingDate == date &&
-                        activeStatuses.Contains(b.Status) &&
-                        (b.StartTime < end &&
-                        (b.EndTime) > startTime))
-                    .SumAsync(b => (int?)b.Quantity) ?? 0;
+            var end = endTime ?? startTime.AddHours(1);
+            var requestedEnd = GetIntervalEndTicks(startTime, end);
+            var bookings = await GetOccupiedBookingQuery(date, includeNextDay: true)
+                .Where(b => b.CenterResourceId == resourcesTypeId)
+                .Select(b => new BookingInterval(b.BookingDate, b.StartTime, b.EndTime, b.Quantity))
+                .ToListAsync();
+
+            return GetPeakBookedQuantity(bookings, date, startTime.Ticks, requestedEnd);
         }
         public async Task<int> GetBookedQuantityForTimeSlotExcludingBooking(int resourcesTypeId, DateOnly date, TimeOnly startTime, TimeOnly? endTime, int excludeBookingId)
         {
-            try
-            {
-                var reqEnd = endTime ?? startTime.AddHours(1);
+            var reqEnd = endTime ?? startTime.AddHours(1);
+            var requestedEnd = GetIntervalEndTicks(startTime, reqEnd);
+            var bookings = await GetOccupiedBookingQuery(date, includeNextDay: true)
+                .Where(b => b.CenterResourceId == resourcesTypeId && b.BookingId != excludeBookingId)
+                .Select(b => new BookingInterval(b.BookingDate, b.StartTime, b.EndTime, b.Quantity))
+                .ToListAsync();
 
-                return await _db.Bookings
-                    .Where(b =>
-                        b.CenterResourceId == resourcesTypeId &&
-                        b.BookingDate == date &&
-                        b.Status != nameof(BookingStatus.accepted) &&
-                        b.BookingId != excludeBookingId &&
-                        (b.StartTime < reqEnd &&
-                         (b.EndTime) > startTime))
-                    .SumAsync(b => (int?)b.Quantity) ?? 0;
-            }
-            catch (Exception ex)
-            {
-                EventLog_Helper.WriteEventLog( "Get Booked Quantity For Time Slot Excluding Booking Error", ex);
-                return 0;
-            }
+            return GetPeakBookedQuantity(bookings, date, startTime.Ticks, requestedEnd);
         }
         // ================ Read By ================
 
@@ -336,22 +447,15 @@ namespace DataLayer
         {
             try
             {
-                var booking = await _db.Bookings
-                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
-                if (booking == null)
-                    return false;
-
-                if (booking.Status == "pending" || booking.Status == "updated")
-                {
-                    booking.Status = "accepted";
-                    booking.IsApproved = true;
-                    booking.AcceptedBy = userId;
-                    booking.UpdatedAt = DateTime.Now;
-                }
-                else
-                    return false;
-
-                return await _db.SaveChangesAsync() > 0;
+                var now = DateTime.Now;
+                return await _db.Bookings
+                    .Where(b => b.BookingId == bookingId
+                        && (b.Status == nameof(BookingStatus.pending) || b.Status == "updated"))
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.Status, nameof(BookingStatus.accepted))
+                        .SetProperty(b => b.IsApproved, true)
+                        .SetProperty(b => b.AcceptedBy, userId)
+                        .SetProperty(b => b.UpdatedAt, now)) > 0;
             }
             catch (Exception ex)
             {
@@ -363,21 +467,15 @@ namespace DataLayer
         {
             try
             {
-                var booking = await _db.Bookings
-                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
-                if (booking == null)
-                    return false;
-                if (booking.Status == "pending" || booking.Status == "updated")
-                {
-                    booking.Status = "rejected";
-                    booking.IsApproved = false;
-                    booking.RejectedBy = userId;
-                    booking.UpdatedAt = DateTime.Now;
-                }
-                else
-                    return false;
-
-                return await _db.SaveChangesAsync() > 0;
+                var now = DateTime.Now;
+                return await _db.Bookings
+                    .Where(b => b.BookingId == bookingId
+                        && (b.Status == nameof(BookingStatus.pending) || b.Status == "updated"))
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.Status, nameof(BookingStatus.rejected))
+                        .SetProperty(b => b.IsApproved, false)
+                        .SetProperty(b => b.RejectedBy, userId)
+                        .SetProperty(b => b.UpdatedAt, now)) > 0;
             }
             catch (Exception ex)
             {
@@ -389,23 +487,14 @@ namespace DataLayer
         {
             try
             {
-                var booking = await _db.Bookings
-                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
-
-                if (booking == null)
-                    return false;
-
-                if (booking.Status == "accepted")
-                {
-                    booking.Status = "running";
-                    booking.StartedBy = userId;
-                    booking.StartedAt = DateTime.Now;
-                    booking.UpdatedAt = DateTime.Now;
-                }
-                else
-                    return false;
-
-                return await _db.SaveChangesAsync() > 0;
+                var now = DateTime.Now;
+                return await _db.Bookings
+                    .Where(b => b.BookingId == bookingId && b.Status == nameof(BookingStatus.accepted))
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.Status, "running")
+                        .SetProperty(b => b.StartedBy, userId)
+                        .SetProperty(b => b.StartedAt, now)
+                        .SetProperty(b => b.UpdatedAt, now)) > 0;
             }
             catch (Exception ex)
             {
@@ -433,7 +522,7 @@ namespace DataLayer
                             b.CenterResource.RoomType,
                         StartTime = b.StartTime,
                         EndTime = b.EndTime,
-                        Duration =$"{(b.EndTime - b.StartTime).TotalMinutes} Minutes",
+                        Duration = FormatBookingDurationInMinutes(b.StartTime, b.EndTime),
                         BookingDate = b.BookingDate,
                         TotalPrice = b.TotalPrice,
                         Status = b.Status,
@@ -444,6 +533,39 @@ namespace DataLayer
             {
                 EventLog_Helper.WriteEventLog("Get Bookings By Owner Error",ex);
                 return new List<DTO_BookingDetails>();
+            }
+        }
+        public async Task<PaginatedResponse<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId, PaginationParameters pagination)
+        {
+            try
+            {
+                return await _db.Bookings
+                    .Where(b => b.Center.OwnerUserId == ownerId)
+                    .AsNoTracking()
+                    .OrderByDescending(b => b.BookingDate)
+                    .ThenBy(b => b.BookingId)
+                    .Select(b => new DTO_BookingDetails
+                    {
+                        BookingId = b.BookingId,
+                        CustomerName = b.CustomerName,
+                        PhoneNumber = b.PhoneNumber,
+                        CenterName = b.Center.CenterName,
+                        ResourcesType = b.CenterResource.ResourcesType.ResourceName + " - " + b.CenterResource.RoomType,
+                        StartTime = b.StartTime,
+                        EndTime = b.EndTime,
+                        Duration = FormatBookingDurationInMinutes(b.StartTime, b.EndTime),
+                        BookingDate = b.BookingDate,
+                        TotalPrice = b.TotalPrice,
+                        Status = b.Status
+                    })
+                    .ToPaginatedResponseAsync(pagination);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Bookings By Owner Error", ex);
+                var normalized = pagination.Normalize();
+                return PaginatedResponse<DTO_BookingDetails>.Create(
+                    Array.Empty<DTO_BookingDetails>(), normalized.PageNumber, normalized.PageSize, 0);
             }
         }
         public async Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId)
@@ -466,7 +588,7 @@ namespace DataLayer
                             b.CenterResource.RoomType,
                         StartTime = b.StartTime,
                         EndTime = b.EndTime,
-                        Duration =  $"{(b.EndTime - b.StartTime).TotalMinutes} Minutes",
+                        Duration = FormatBookingDurationInMinutes(b.StartTime, b.EndTime),
                         BookingDate = b.BookingDate,
                         TotalPrice = b.TotalPrice,
                         Status = b.Status,
@@ -479,6 +601,39 @@ namespace DataLayer
                 return new List<DTO_BookingDetails>();
             }
         }
+        public async Task<PaginatedResponse<DTO_BookingDetails>> GetBookingsByCenterId(int centerId, PaginationParameters pagination)
+        {
+            try
+            {
+                return await _db.Bookings
+                    .Where(b => b.CenterId == centerId)
+                    .AsNoTracking()
+                    .OrderByDescending(b => b.BookingDate)
+                    .ThenBy(b => b.BookingId)
+                    .Select(b => new DTO_BookingDetails
+                    {
+                        BookingId = b.BookingId,
+                        CustomerName = b.CustomerName,
+                        PhoneNumber = b.PhoneNumber,
+                        CenterName = b.Center.CenterName,
+                        ResourcesType = b.CenterResource.ResourcesType.ResourceName + " - " + b.CenterResource.RoomType,
+                        StartTime = b.StartTime,
+                        EndTime = b.EndTime,
+                        Duration = FormatBookingDurationInMinutes(b.StartTime, b.EndTime),
+                        BookingDate = b.BookingDate,
+                        TotalPrice = b.TotalPrice,
+                        Status = b.Status
+                    })
+                    .ToPaginatedResponseAsync(pagination);
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Bookings By Center Error", ex);
+                var normalized = pagination.Normalize();
+                return PaginatedResponse<DTO_BookingDetails>.Create(
+                    Array.Empty<DTO_BookingDetails>(), normalized.PageNumber, normalized.PageSize, 0);
+            }
+        }
         // ================ Owner Booking Management ================
 
 
@@ -488,23 +643,97 @@ namespace DataLayer
         // The caller (AddIfAvailable) handles it: rollback, log, return Error.
         private async Task<bool> HasDuplicateBookingInternal(Booking booking)
         {
-            var activeStatuses = new[]{nameof(BookingStatus.pending), nameof(BookingStatus.accepted) };
-            var start = booking.StartTime;
-            var end = booking.EndTime;
-            return await _db.Bookings.AnyAsync(b =>
-                b.UserId == booking.UserId &&
-                b.BookingDate == booking.BookingDate &&
-                activeStatuses.Contains(b.Status) &&
-                b.StartTime < end && b.EndTime > start);
+            var existingBookings = await GetOccupiedBookingQuery(booking.BookingDate, includeNextDay: true)
+                .Where(b => b.UserId == booking.UserId)
+                .Select(b => new BookingInterval(b.BookingDate, b.StartTime, b.EndTime, b.Quantity))
+                .ToListAsync();
+
+            var requestedInterval = CreateInterval(booking.BookingDate, booking.StartTime, booking.EndTime, booking.BookingDate);
+            return existingBookings.Any(existing =>
+            {
+                var existingInterval = CreateInterval(existing.BookingDate, existing.StartTime, existing.EndTime, booking.BookingDate);
+                return existingInterval.StartTicks < requestedInterval.EndTicks
+                    && existingInterval.EndTicks > requestedInterval.StartTicks;
+            });
         }
+        private IQueryable<Booking> GetOccupiedBookingQuery(DateOnly date, bool includeNextDay)
+        {
+            var firstDate = date == DateOnly.MinValue ? date : date.AddDays(-1);
+            var lastDate = includeNextDay && date < DateOnly.MaxValue ? date.AddDays(1) : date;
+
+            return _db.Bookings
+                .AsNoTracking()
+                .Where(b => b.BookingDate >= firstDate
+                    && b.BookingDate <= lastDate
+                    && ResourceOccupyingStatuses.Contains(b.Status));
+        }
+        private static int GetPeakBookedQuantity(IReadOnlyCollection<BookingInterval> bookings, DateOnly referenceDate, long requestedStartTicks, long requestedEndTicks)
+        {
+            var segments = GetCapacitySegments(bookings, referenceDate, requestedStartTicks, requestedEndTicks);
+            return segments.Count == 0 ? 0 : (int)Math.Min(segments.Max(segment => segment.Quantity), int.MaxValue);
+        }
+        private static List<CapacitySegment> GetCapacitySegments( IReadOnlyCollection<BookingInterval> bookings, DateOnly referenceDate, long rangeStartTicks, long rangeEndTicks)
+        {
+            var intervals = bookings
+                .Select(booking => new OccupiedInterval(
+                    CreateInterval(booking.BookingDate, booking.StartTime, booking.EndTime, referenceDate),
+                    booking.Quantity))
+                .Where(occupied => occupied.Interval.StartTicks < rangeEndTicks
+                    && occupied.Interval.EndTicks > rangeStartTicks)
+                .ToArray();
+
+            var boundaries = new SortedSet<long> { rangeStartTicks, rangeEndTicks };
+            foreach (var occupied in intervals)
+            {
+                boundaries.Add(Math.Max(occupied.Interval.StartTicks, rangeStartTicks));
+                boundaries.Add(Math.Min(occupied.Interval.EndTicks, rangeEndTicks));
+            }
+
+            var points = boundaries.ToArray();
+            var segments = new List<CapacitySegment>(Math.Max(0, points.Length - 1));
+            for (var i = 0; i < points.Length - 1; i++)
+            {
+                var segmentStart = points[i];
+                var segmentEnd = points[i + 1];
+                if (segmentStart == segmentEnd)
+                    continue;
+
+                var occupiedQuantity = intervals
+                    .Where(occupied => occupied.Interval.StartTicks < segmentEnd
+                        && occupied.Interval.EndTicks > segmentStart)
+                    .Sum(occupied => (long)occupied.Quantity);
+                segments.Add(new CapacitySegment(segmentStart, segmentEnd, occupiedQuantity));
+            }
+
+            return segments;
+        }
+        private static long GetIntervalEndTicks(TimeOnly startTime, TimeOnly endTime)
+            => endTime.Ticks + (endTime < startTime ? TimeSpan.TicksPerDay : 0);
+        private static TimeInterval CreateInterval(DateOnly intervalDate, TimeOnly startTime, TimeOnly endTime, DateOnly referenceDate)
+        {
+            var startTicks = (long)(intervalDate.DayNumber - referenceDate.DayNumber) * TimeSpan.TicksPerDay + startTime.Ticks;
+            var endTicks = (long)(intervalDate.DayNumber - referenceDate.DayNumber) * TimeSpan.TicksPerDay + endTime.Ticks;
+            if (endTime < startTime)
+                endTicks += TimeSpan.TicksPerDay;
+
+            return new TimeInterval(startTicks, endTicks);
+        }
+        private static TimeSpan GetBookingDuration(TimeOnly startTime, TimeOnly endTime)
+        {
+            var duration = endTime - startTime;
+            return duration < TimeSpan.Zero ? duration + TimeSpan.FromDays(1) : duration;
+        }
+        private static string FormatBookingDuration(TimeOnly startTime, TimeOnly endTime)
+            => GetBookingDuration(startTime, endTime).ToString();
+        private static string FormatBookingDurationInMinutes(TimeOnly startTime, TimeOnly endTime)
+            => $"{GetBookingDuration(startTime, endTime).TotalMinutes} Minutes";
         private async Task<int> CountActiveBookings(int? userId)
         {
-            var activeStatuses = new[] { nameof(BookingStatus.pending), nameof(BookingStatus.accepted) };
-                return await _db.Bookings
-                    .Where(b =>
-                        b.UserId == userId &&
-                        activeStatuses.Contains(b.Status))
-                    .CountAsync();
+            return await _db.Bookings
+                .Where(b =>
+                    b.UserId == userId &&
+                    ResourceOccupyingStatuses.Contains(b.Status))
+                .CountAsync();
         }
     }
 }

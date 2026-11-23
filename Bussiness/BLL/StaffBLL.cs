@@ -10,6 +10,7 @@ using Domain.DTOs.Invoice;
 using Domain.DTOs.Resource;
 using Domain.DTOs.Service;
 using Domain.DTOs.Staff;
+using Domain.DTOs.Pagination;
 
 namespace Bussiness.BLL
 {
@@ -332,6 +333,13 @@ namespace Bussiness.BLL
             await GetAuthorizedStaff(staffId, centerId, Permissions.View);
 
             return await _booking.GetBookingsByCenterId(centerId);
+        }
+        public async Task<PaginatedResponse<DTO_BookingDetails>> GetAllBookings_ByCenterId(int centerId, int staffId, PaginationParameters pagination)
+        {
+            if (centerId <= 0)
+                throw new ArgumentException("Invalid center ID.");
+            await GetAuthorizedStaff(staffId, centerId, Permissions.View);
+            return await _booking.GetBookingsByCenterId(centerId, pagination);
         }
         public async Task<bool> AddBooking(DTO_BookingBase booking, int staffId)
         {
