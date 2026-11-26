@@ -8,6 +8,7 @@ using Domain.DTOs.Pagination;
 using Data.Pagination;
 using Microsoft.EntityFrameworkCore;
 using System.Net.NetworkInformation;
+using System.Data;
 
 namespace DataLayer
 {
@@ -40,11 +41,12 @@ namespace DataLayer
         private readonly record struct OccupiedInterval(TimeInterval Interval, int Quantity);
         private readonly record struct CapacitySegment(long StartTicks, long EndTicks, long Quantity);
         private readonly record struct BookingCapacitySnapshot(DateOnly BookingDate, TimeOnly StartTime, TimeOnly EndTime, int Quantity, int Capacity);
+        private readonly record struct BookingInvoiceSnapshot(int BookingId, DateTime? StartedAt, decimal UnitPrice, decimal TotalPrice, string ResourceName);
+        private readonly record struct InvoicePricing(decimal Subtotal, string? DiscountType, decimal? DiscountValue, decimal TotalPrice);
         public readonly record struct AddBookingResult(AddBookingStatus Status, int BookingId = 0)
         {
             public bool IsSuccess => Status == AddBookingStatus.Success;
         }
-
 
         private readonly GamersPlatDbContext _db;
         public BookingDLL(GamersPlatDbContext db)
@@ -268,6 +270,41 @@ namespace DataLayer
                 return new List<DTO_BookingDetails>();
             }
         }
+        public async Task<List<int>?> GetExpiredRunningBookingIds()
+        {
+            var now = DateTime.Now;
+            try
+            {
+                var bookings = await _db.Bookings
+                .Where(b => b.Status == "running" && b.StartedAt != null && b.TimeExpiredNotifiedAt == null)
+                .Select(b => new
+                {
+                    b.BookingId,
+                    b.StartedAt,
+                    b.StartTime,
+                    b.EndTime
+                })
+                .ToListAsync();
+
+                return bookings.Where(b =>
+                    {
+                        var duration = b.EndTime - b.StartTime;
+
+                        if (duration < TimeSpan.Zero)
+                            duration = duration.Add(TimeSpan.FromDays(1));
+
+                        var expectedEndAt = b.StartedAt!.Value.Add(duration);
+
+                        return expectedEndAt <= now;
+                    })
+                    .Select(b => b.BookingId)
+                    .ToList();
+            }catch(Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Expired Running Booking Ids Error: ", ex);
+                return null;
+            }
+        }
         // ================ CRUD ================
 
 
@@ -439,6 +476,40 @@ namespace DataLayer
 
             return GetPeakBookedQuantity(bookings, date, startTime.Ticks, requestedEnd);
         }
+        public async Task<List<int>> GetBookingsReadyForAutoCancellation()
+        {
+            try
+            {
+                var now = DateTime.Now;
+                var cutoffTime = now.AddMinutes(-15);
+
+                var bookings = await _db.Bookings
+                    .Where(b => b.Status == "accepted" && b.StartedAt == null)
+                    .Select(b => new
+                    {
+                        b.BookingId,
+                        b.BookingDate,
+                        b.StartTime
+                    })
+                    .ToListAsync();
+
+                return bookings
+                    .Where(b =>
+                    {
+                        var scheduledStart = b.BookingDate.ToDateTime(b.StartTime);
+                        return scheduledStart <= cutoffTime;
+                    })
+                    .Select(b => b.BookingId)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Get Bookings Ready For Auto Cancellation Error: ", ex);
+
+                return new List<int>();
+            }
+        }
+
         // ================ Read By ================
 
 
@@ -494,12 +565,108 @@ namespace DataLayer
                         .SetProperty(b => b.Status, "running")
                         .SetProperty(b => b.StartedBy, userId)
                         .SetProperty(b => b.StartedAt, now)
+                        .SetProperty(b => b.TimeExpiredNotifiedAt, (DateTime?)null)
                         .SetProperty(b => b.UpdatedAt, now)) > 0;
             }
             catch (Exception ex)
             {
                 EventLog_Helper.WriteEventLog("Accept Booking Status Error", ex);
                 return false;
+            }
+        }
+        public async Task<DTO_Invoice?> CloseBooking(int bookingId, int userId, DTO_EndBookingInvoice endBooking)
+        {
+            await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            try
+            {
+                var claimed = await _db.Bookings
+                    .Where(b => b.BookingId == bookingId && b.Status == "running" && b.StartedAt != null)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.Status, "completed")
+                        .SetProperty(b => b.StoppedBy, userId));
+
+                if (claimed == 0)
+                {
+                    var state = await _db.Bookings
+                        .AsNoTracking()
+                        .Where(b => b.BookingId == bookingId)
+                        .Select(b => new { b.Status, b.StartedAt })
+                        .FirstOrDefaultAsync();
+
+                    if (state == null)
+                        return null;
+
+                    if (state.Status != "running")
+                        throw new InvalidOperationException("Only running bookings can be stopped.");
+                    throw new InvalidOperationException("The running booking has no start time.");
+                }
+
+                var booking = await _db.Bookings
+                    .AsNoTracking()
+                    .Where(b => b.BookingId == bookingId)
+                    .Select(b => new BookingInvoiceSnapshot(b.BookingId, b.StartedAt, b.UnitPrice, b.TotalPrice, b.CenterResource.ResourcesType.ResourceName))
+                    .FirstOrDefaultAsync();
+
+                if (booking == null)
+                    throw new InvalidOperationException("The booking could not be loaded after stopping.");
+
+                if (booking.StartedAt == null)
+                    throw new InvalidOperationException("The running booking has no start time.");
+
+                if (await _db.Invoices.AnyAsync(i => i.BookingId == bookingId))
+                    throw new InvalidOperationException("An invoice already exists for this booking.");
+
+                var endedAt = DateTime.Now;
+                var pricing = CalculateInvoicePricing( booking.StartedAt, booking.UnitPrice, booking.TotalPrice, endBooking, endedAt);
+
+                var invoice = new Invoice
+                {
+                    BookingId = booking.BookingId,
+                    StartedAt = booking.StartedAt.Value,
+                    EndedAt = endedAt,
+                    UnitPrice = booking.UnitPrice,
+                    Subtotal = pricing.Subtotal,
+                    DiscountType = pricing.DiscountType,
+                    DiscountValue = pricing.DiscountValue,
+                    TotalPrice = pricing.TotalPrice,
+                    CreatedAt = endedAt
+                };
+
+                var finalized = await _db.Bookings
+                    .Where(b => b.BookingId == bookingId && b.Status == "completed" && b.StoppedBy == userId && b.EndedAt == null)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.EndedAt, endedAt)
+                        .SetProperty(b => b.UpdatedAt, endedAt));
+
+                if (finalized == 0)
+                    throw new InvalidOperationException("The booking has already been stopped.");
+
+                _db.Invoices.Add(invoice);
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                await transaction.DisposeAsync();
+
+                return new DTO_Invoice
+                {
+                    InvoiceNumber = invoice.InvoiceId,
+                    BookingNumber = booking.BookingId,
+                    ResourceBooked = booking.ResourceName,
+                    StartedAt = invoice.StartedAt,
+                    EndedAt = invoice.EndedAt,
+                    UnitPrice = invoice.UnitPrice,
+                    Subtotal = invoice.Subtotal,
+                    DiscountValue = invoice.DiscountValue,
+                    DiscountType = invoice.DiscountType,
+                    TotalPrice = invoice.TotalPrice
+                };
+            }
+            catch (Exception ex)
+            {
+                try { await transaction.RollbackAsync(); } catch { }
+                EventLog_Helper.WriteEventLog("Stop Booking Error", ex);
+                throw;
             }
         }
         public async Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId)
@@ -554,6 +721,8 @@ namespace DataLayer
                         StartTime = b.StartTime,
                         EndTime = b.EndTime,
                         Duration = FormatBookingDurationInMinutes(b.StartTime, b.EndTime),
+                        StartedAt = b.StartedAt,
+                        DurationMinutes = (int)GetBookingDuration(b.StartTime, b.EndTime).TotalMinutes,
                         BookingDate = b.BookingDate,
                         TotalPrice = b.TotalPrice,
                         Status = b.Status
@@ -601,7 +770,7 @@ namespace DataLayer
                 return new List<DTO_BookingDetails>();
             }
         }
-        public async Task<PaginatedResponse<DTO_BookingDetails>> GetBookingsByCenterId(int centerId, PaginationParameters pagination)
+        public async Task<PaginatedResponse<DTO_BookingDetails>> GetBookingsByCenterId(int centerId, PaginationParameters pagination)   
         {
             try
             {
@@ -620,6 +789,8 @@ namespace DataLayer
                         StartTime = b.StartTime,
                         EndTime = b.EndTime,
                         Duration = FormatBookingDurationInMinutes(b.StartTime, b.EndTime),
+                        StartedAt = b.StartedAt,
+                        DurationMinutes = (int)GetBookingDuration(b.StartTime, b.EndTime).TotalMinutes,
                         BookingDate = b.BookingDate,
                         TotalPrice = b.TotalPrice,
                         Status = b.Status
@@ -734,6 +905,103 @@ namespace DataLayer
                     b.UserId == userId &&
                     ResourceOccupyingStatuses.Contains(b.Status))
                 .CountAsync();
+        }
+
+
+        // Helpers
+        public decimal CalculateActualPlayingTimePrice(Booking booking, DateTime endedAt)
+        {
+            return CalculateActualPlayingTimePrice(booking.StartedAt, booking.UnitPrice, endedAt);
+        }
+        private static decimal CalculateActualPlayingTimePrice(DateTime? startedAt, decimal unitPrice, DateTime endedAt)
+        {
+            if (startedAt == null || endedAt < startedAt.Value)
+                throw new InvalidOperationException("The booking start time is invalid.");
+
+            var durationHours = (decimal)(endedAt - startedAt.Value).TotalHours;
+            return Math.Round(durationHours * unitPrice, 2);
+        }
+        private static InvoicePricing CalculateInvoicePricing(DateTime? startedAt, decimal unitPrice, decimal originalPrice, DTO_EndBookingInvoice request, DateTime endedAt)
+        {
+            var subtotal = request.UseOriginalPrice
+                ? originalPrice
+                : CalculateActualPlayingTimePrice(startedAt, unitPrice, endedAt);
+
+            var discountType = string.IsNullOrWhiteSpace(request.DiscountType)
+                ? null
+                : request.DiscountType.Trim().ToUpperInvariant();
+            var discountValue = request.DiscountValue;
+
+            if (discountType == null && discountValue == null)
+                return new InvoicePricing(subtotal, null, null, subtotal);
+
+            if (discountType == null || discountValue == null || discountValue < 0)
+                throw new ArgumentException("A valid discount type and non-negative discount value are required.");
+
+            discountValue = Math.Round(discountValue.Value, 2);
+
+            decimal discountAmount;
+            if (discountType == "%")
+            {
+                if (discountValue > 100)
+                    throw new ArgumentException("Percentage discounts cannot exceed 100%.");
+
+                discountAmount = Math.Round(subtotal * discountValue.Value / 100m, 2);
+            }
+            else if (discountType == "JD")
+            {
+                discountAmount = discountValue.Value;
+            }
+            else
+            {
+                throw new ArgumentException("Discount type must be '%' or 'JD'.");
+            }
+
+            if (discountAmount > subtotal)
+                throw new ArgumentException("Discount cannot exceed the subtotal.");
+
+            return new InvoicePricing(subtotal, discountType, discountValue, Math.Round(subtotal - discountAmount, 2));
+        }
+        public async Task<bool> TryMarkTimeExpiredNotified(int bookingId)
+        {
+            var now = DateTime.Now;
+
+            try {
+            var affectedRows = await _db.Bookings
+                .Where(b => b.BookingId == bookingId && b.Status == "running" && b.TimeExpiredNotifiedAt == null)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(b => b.TimeExpiredNotifiedAt, now));
+
+            return affectedRows > 0;
+            }catch(Exception ex)
+            {
+                EventLog_Helper.WriteEventLog("Try Mark Time Expired Notified Error: ", ex);
+                throw;
+            }
+        }
+        public async Task<bool> CancelUnstartedBooking(int bookingId)
+        {
+            try
+            {
+                var now = DateTime.Now;
+
+                var affectedRows = await _db.Bookings
+                    .Where(b =>  b.BookingId == bookingId &&  b.Status == "accepted" &&  b.StartedAt == null)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.Status, "cancelled")
+                        .SetProperty(b => b.CancelledAt, now)
+                        .SetProperty(b => b.CancellationReason, "Automatically cancelled because the booking was not started within 15 minutes.")
+                        .SetProperty(b => b.UpdatedAt, now));
+
+                return affectedRows > 0;
+            }
+            catch (Exception ex)
+            {
+                EventLog_Helper.WriteEventLog(
+                    "Cancel Unstarted Booking Error: ", ex);
+
+                return false;
+            }
         }
     }
 }

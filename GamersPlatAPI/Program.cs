@@ -6,12 +6,12 @@ using Data.DLL;
 using Data.EF;
 using DataLayer;
 using GamersPlatAPI.Authorization;
+using GamersPlatAPI.BackgroundServices;
 using GamersPlatAPI.Hubs;
 using GamersPlatAPI.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -25,6 +25,7 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<GamersPlatDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("GamersPlat")));
+builder.Services.AddHostedService<BookingBackgroundService>();
 
 // Interface -> implementation registrations
 builder.Services.AddScoped<ICenterService, CenterBLL>();

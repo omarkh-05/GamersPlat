@@ -70,6 +70,9 @@ public partial class Booking
     public string? CancellationReason { get; set; }
 
     [Column(TypeName = "datetime")]
+    public DateTime? TimeExpiredNotifiedAt { get; set; }
+
+    [Column(TypeName = "datetime")]
     public DateTime? UpdatedAt { get; set; }
 
     [Column(TypeName = "datetime")]

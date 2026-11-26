@@ -298,19 +298,19 @@ namespace GamersPlatAPI.Controllers
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
             return await Run(() => _owner.GetInvoicePreview(bookingId, ownerId), result => Ok(result));
         }
-        [HttpPatch("bookings/{bookingId:int}/stop")]
+        [HttpPatch("bookings/{bookingId:int}/close")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> StopBooking(int bookingId, [FromBody] DTO_EndBookingInvoice request)
+        public async Task<IActionResult> CloseBooking(int bookingId, [FromBody] DTO_EndBookingInvoice request)
         {
             if (bookingId <= 0) return BadRequest();
             if (request == null) return BadRequest();
             if (!TryGetOwnerId(out var ownerId)) return Unauthorized();
-            return await Run(() => _owner.StopBooking(bookingId, ownerId, request), result => Ok(result));
+            return await Run(() => _owner.CloseBooking(bookingId, ownerId, request), result => Ok(result));
         }
         // Bookings Management
 

@@ -7,7 +7,9 @@ namespace Bussiness.Interfaces
     {
         Task NotifyBookingManagersAsync(int bookingId, string action);
         Task NotifyBookingDecisionAsync(int bookingId, int actorUserId, bool accepted);
+        Task NotifyBookingTimeExpiredAsync(int bookingId);
         Task NotifyBookingCompletedAsync(int bookingId, int invoiceNumber);
+        Task NotifyBookingAutoCancelledAsync(int bookingId);
         Task NotifyCenterCreatedAsync(int centerId);
         Task NotifyCenterStatusAsync(int centerId, string status);
         Task<IReadOnlyList<DTO_Notification>> GetForUserAsync(int userId, PaginationParameters pagination);

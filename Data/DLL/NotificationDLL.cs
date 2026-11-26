@@ -104,9 +104,7 @@ namespace DataLayer
                     var references = notifications.Select(n => n.ReferenceType).Distinct().ToList();
 
                     var existing = await _db.Notifications
-                        .Where(n => recipientIds.Contains(n.UserId)
-                            && eventTypes.Contains(n.Type)
-                            && references.Contains(n.ReferenceType))
+                        .Where(n => recipientIds.Contains(n.UserId) && eventTypes.Contains(n.Type) && references.Contains(n.ReferenceType))
                         .Select(n => new { n.UserId, n.Type, n.ReferenceType })
                         .ToListAsync();
 
@@ -283,8 +281,7 @@ namespace DataLayer
             try
             {
                 return await _db.Staff
-                    .Where(s => s.CenterId == centerId && s.IsActive && s.Status.ToLower() == "active"
-                        && (s.Permissions & permission) == permission && s.User.IsActive)
+                    .Where(s => s.CenterId == centerId && s.IsActive && s.Status.ToLower() == "active" && (s.Permissions & permission) == permission && s.User.IsActive)
                     .Select(s => s.UserId)
                     .ToListAsync();
             }

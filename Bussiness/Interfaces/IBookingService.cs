@@ -28,6 +28,8 @@ namespace Bussiness.Interfaces
         Task<bool> Cancel(DTO_CancelBooking cancelBooking, int userId);
         Task<List<DTO_BookingDetails>> GetAll();
         Task<PaginatedResponse<DTO_BookingDetails>> GetAll(PaginationParameters pagination);
+        Task<List<int>?> GetExpiredRunningBookingIds();
+        Task<List<int>> GetBookingsReadyForAutoCancellation();
         Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId);
         Task<PaginatedResponse<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId, PaginationParameters pagination);
         Task<Booking?> GetByID(int bookingID);
@@ -35,12 +37,14 @@ namespace Bussiness.Interfaces
         Task<bool> RejectBooking(int bookingId, int userId);
         Task<bool> StartBooking(int bookingId, int userId);
         Task<DTO_InvoicePreview?> GetInvoicePreview(int bookingId);
-        Task<DTO_Invoice?> StopBooking(int bookingId, int userId, DTO_EndBookingInvoice endBooking);
+        Task<DTO_Invoice?> CloseBooking(int bookingId, int userId, DTO_EndBookingInvoice endBooking);
         Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId);
         Task<PaginatedResponse<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId, PaginationParameters pagination);
         Task<List<DTO_BookingDetails>> GetBookingsByCenterId(int centerId);
         Task<PaginatedResponse<DTO_BookingDetails>> GetBookingsByCenterId(int centerId, PaginationParameters pagination);
         Task<List<DTO_StartEndTime>?> GetFullBookedHours(int centerId, int centerResourceId, DateOnly date);
+        Task<bool> TryMarkTimeExpiredNotified(int bookingId);
+        Task<bool> CancelUnstartedBooking(int bookingId);
         // helper to compute booked quantity for availability check // no-op
         string? LastError { get; }
         // other booking operations can be added as needed

@@ -26,9 +26,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Add PasswordResetToken Error",
-                    ex);
+                EventLog_Helper.WriteEventLog("Add PasswordResetToken Error", ex);
 
                 return 0;
             }
@@ -50,9 +48,7 @@ namespace DataLayer
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Delete PasswordResetToken Error",
-                    ex);
+                EventLog_Helper.WriteEventLog("Delete PasswordResetToken Error", ex);
 
                 return false;
             }
@@ -69,14 +65,11 @@ namespace DataLayer
                     return null;
 
                 return await _db.PasswordResetTokens
-                    .AsNoTracking()
                     .FirstOrDefaultAsync(t => t.TokenHash == token);
             }
             catch (Exception ex)
             {
-                EventLog_Helper.WriteEventLog(
-                    "Get PasswordResetToken By Token Error",
-                    ex);
+                EventLog_Helper.WriteEventLog("Get PasswordResetToken By Token Error",ex);
 
                 return null;
             }

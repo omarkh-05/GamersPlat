@@ -45,7 +45,7 @@ namespace Bussiness.Interfaces
         Task<bool> RejectBooking(int bookingId, int ownerUserId);
         Task<bool> StartBooking(int bookingId, int ownerUserId);
         Task<DTO_InvoicePreview> GetInvoicePreview(int bookingId, int ownerUserId);
-        Task<DTO_Invoice> StopBooking(int bookingId, int ownerUserId, DTO_EndBookingInvoice endBooking);
+        Task<DTO_Invoice> CloseBooking(int bookingId, int ownerUserId, DTO_EndBookingInvoice endBooking);
         Task<DTO_BookingDetails> ViewBookingDetails(int bookingId, int ownerUserId);
         Task<List<DTO_BookingDetails>> GetAllBookings(int ownerUserId);
         Task<PaginatedResponse<DTO_BookingDetails>> GetAllBookings(int ownerUserId, PaginationParameters pagination);

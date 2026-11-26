@@ -270,7 +270,7 @@ public partial class GamersPlatDbContext : DbContext
         modelBuilder.Entity<PasswordResetToken>(entity =>
         {
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())", "DF_PasswordResetTokens_CreatedAt");
-            entity.Property(e => e.UserAt).HasDefaultValueSql("(NULL)", "DF_PasswordResetTokens_UserAt");
+            entity.Property(e => e.UsedAt).HasDefaultValueSql("(NULL)", "DF_PasswordResetTokens_UserAt");
 
             entity.HasOne(d => d.User).WithMany(p => p.PasswordResetTokens)
                 .OnDelete(DeleteBehavior.ClientSetNull)

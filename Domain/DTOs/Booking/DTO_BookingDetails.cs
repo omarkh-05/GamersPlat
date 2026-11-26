@@ -15,6 +15,8 @@ namespace Domain.DTOs.Booking
         public TimeOnly StartTime { get; set; }
         public TimeOnly EndTime { get; set; }
         public string? Duration { get; set; } = "";
+        public DateTime? StartedAt { get; set; }
+        public int DurationMinutes { get; set; }
         public decimal TotalPrice { get; set; }
         public string Status { get; set; } = null!;
     }

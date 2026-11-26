@@ -125,6 +125,30 @@ public class NotificationBLL : INotificationService
             EventLog_Helper.WriteEventLog("Notify Booking Decision Error", ex);
         }
     }
+    public async Task NotifyBookingTimeExpiredAsync(int bookingId)
+    {
+        var booking = await _notificationDLL.GetBookingForNotification(bookingId);
+
+        if (booking == null)
+            return;
+
+        var recipients = await _notificationDLL.GetCenterBookingManagerUserIds(booking.CenterId, (short)Permissions.AcceptRejectBooking);
+
+        // إضافة Owner
+        recipients.Add(booking.OwnerUserId);
+
+        // إزالة التكرار
+        recipients = recipients.Distinct().ToList();
+
+        await CreateAsync(
+            recipients,
+            booking.CenterId,
+            "Booking Time Expired",
+            $"The reserved time for booking #{booking.BookingId} has expired. The booking is still running.",
+            BookingType,
+            $"BookingTimeExpired:{bookingId}"
+        );
+    }
     public async Task NotifyBookingCompletedAsync(int bookingId, int invoiceNumber)
     {
         try
@@ -133,7 +157,8 @@ public class NotificationBLL : INotificationService
             if (booking == null)
                 return;
 
-            await CreateAsync(new[] { booking.OwnerUserId }, booking.CenterId,
+            await CreateAsync(
+                new[] { booking.OwnerUserId }, booking.CenterId,
                 "Booking completed",
                 $"Booking #{booking.BookingId} for player {booking.PlayerName} at {booking.CenterName} was stopped and invoice #{invoiceNumber} was generated.",
                 BookingType,
@@ -142,6 +167,29 @@ public class NotificationBLL : INotificationService
         catch (Exception ex)
         {
             EventLog_Helper.WriteEventLog("Notify Booking Completion Error", ex);
+        }
+    }
+    public async Task NotifyBookingAutoCancelledAsync(int bookingId)
+    {
+        try
+        {
+            var booking = await _notificationDLL.GetBookingForNotification(bookingId);
+
+            if (booking == null)
+                return;
+
+            await CreateAsync(
+                new[] { booking.UserId },
+                booking.CenterId,
+                "Booking Automatically Cancelled",
+                $"Your booking #{booking.BookingId} at {booking.CenterName} was automatically cancelled because it was not started within 15 minutes of its scheduled start time.",
+                BookingType,
+                $"BookingAutoCancelled:{booking.BookingId}"
+            );
+        }
+        catch (Exception ex)
+        {
+            EventLog_Helper.WriteEventLog("Notify Booking Auto Cancellation Error", ex);
         }
     }
     public async Task NotifyCenterCreatedAsync(int centerId)

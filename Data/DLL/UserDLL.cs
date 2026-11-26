@@ -218,10 +218,21 @@ namespace DataLayer
         {
             try
             {
+                if(reqResetPass.PhoneNumber != null)
+                {
                 return await _db.Users
-                   .Where(u => u.Email == reqResetPass.Email || u.PhoneNumber == reqResetPass.PhoneNumber)
+                   .Where(u => u.PhoneNumber == reqResetPass.PhoneNumber)
                     .Select(u => u.UserId)
                     .FirstOrDefaultAsync();
+                }
+                else if(reqResetPass.Email != null)
+                {
+                    return await _db.Users
+                   .Where(u => u.Email == reqResetPass.Email)
+                    .Select(u => u.UserId)
+                    .FirstOrDefaultAsync();
+                }
+                return -1;
             }
             catch (Exception ex)
             {

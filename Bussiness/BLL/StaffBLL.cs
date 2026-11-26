@@ -442,7 +442,7 @@ namespace Bussiness.BLL
             return await _booking.GetInvoicePreview(bookingId)
                 ?? throw new InvalidOperationException("Could not create invoice preview.");
         }
-        public async Task<DTO_Invoice> StopBooking(int bookingId, int staffId, DTO_EndBookingInvoice endBooking)
+        public async Task<DTO_Invoice> CloseBooking(int bookingId, int staffId, DTO_EndBookingInvoice endBooking)
         {
             if (bookingId <= 0)
                 throw new ArgumentException("Invalid booking ID.");
@@ -454,7 +454,7 @@ namespace Bussiness.BLL
 
             await GetAuthorizedStaff(staffId, booking.CenterId, Permissions.AcceptRejectBooking);
 
-            var res = await _booking.StopBooking(bookingId, staffId, endBooking);
+            var res = await _booking.CloseBooking(bookingId, staffId, endBooking);
             if (res != null)
                 return res;
             throw new ArgumentException("Error while stop booking.");

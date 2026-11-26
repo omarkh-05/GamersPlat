@@ -47,10 +47,13 @@ namespace Bussiness.BLL
                 string.IsNullOrWhiteSpace(request.Password))
                 throw new Exception("Invalid data");
 
+
+            if (!IsPasswordStrong(request.Password))
+                throw new Exception("Password must be at least 8 characters and contain letters, numbers, and special characters.");
+
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
             return RegisterWithRoleAsync(request, roleName, passwordHash);
         }
-
         public async Task<int> RegisterWithRoleAsync(UserRegisterRequest request, string roleName, string passwordHash)
         {
             if (string.IsNullOrWhiteSpace(request.FullName) ||
@@ -155,7 +158,7 @@ namespace Bussiness.BLL
             {
                 UserId = user.UserId,
                 TokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken))),
-                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                ExpiresAt = DateTime.UtcNow.AddDays(31),
                 CreatedAt = DateTime.UtcNow,
                 IsRevoked = false
             };
@@ -227,7 +230,7 @@ namespace Bussiness.BLL
             {
                 UserId = user.UserId,
                 TokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(newRefreshToken))),
-                ExpiresAt = rotationTime.AddDays(7),
+                ExpiresAt = rotationTime.AddDays(31),
                 CreatedAt = rotationTime,
                 IsRevoked = false
             };
@@ -264,6 +267,10 @@ namespace Bussiness.BLL
         {
             if (userId <= 0)
                 return new(false, "Invalid user ID.", 400);
+
+
+            if (!IsPasswordStrong(request.NewPassword))
+                throw new Exception("Password must be at least 8 characters and contain letters, numbers, and special characters.");
 
             if (request == null || string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
             {
@@ -308,8 +315,8 @@ namespace Bussiness.BLL
             {
                 UserId = userId,
                 TokenHash = Guid.NewGuid().ToString(),
-                ExpiresAt = DateTime.UtcNow.AddHours(1),
-                CreatedAt = DateTime.UtcNow
+                ExpiresAt = DateTime.Now.AddMinutes(30),
+                CreatedAt = DateTime.Now
             };
 
            if (!await _passwordResetTokenBLL.Add(token))
@@ -321,11 +328,14 @@ namespace Bussiness.BLL
         }
         public async Task<bool> ResetPassword(ResetPasswordRequest request)
         {
+            if (!IsPasswordStrong(request.NewPassword))
+                throw new Exception("Password must be at least 8 characters and contain letters, numbers, and special characters.");
+
             var token = await _passwordResetTokenBLL.GetByToken(request.Token);
             if (token == null)
                 throw new Exception("Invalid token");
 
-            if (token.ExpiresAt < DateTime.UtcNow)
+            if (token.ExpiresAt < DateTime.Now)
                 throw new Exception("Token expired");
 
             var user = await _authDLL.GetUserAuth(userId: token.UserId);
@@ -349,6 +359,16 @@ namespace Bussiness.BLL
         {
             var value = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(value, out var userId) && userId > 0 ? userId : null;
+        }
+        private static bool IsPasswordStrong(string password)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+                return false;
+
+            return password.Length >= 8 &&
+                   password.Any(char.IsLetter) &&
+                   password.Any(char.IsDigit) &&
+                   password.Any(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
         }
         // ================ Password Management ================
         /*

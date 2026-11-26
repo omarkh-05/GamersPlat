@@ -29,6 +29,7 @@ namespace Bussiness
         private readonly INotificationService _notificationService;
         private readonly GamersPlatDbContext _db;
 
+
         public BookingBLL(IResourcesTypeService resourcesTypeBLL, OfferDLL offerDLL, BookingDLL bookingDLL, IUser userBLL, IAuthService authService, INotificationService notificationService, GamersPlatDbContext db)
         {
             _centerResourcesBLL = resourcesTypeBLL;
@@ -44,7 +45,6 @@ namespace Bussiness
         // ================ CRUD ================
         public Task<bool> Add(DTO_BookingBase dto, int userId, string? customerName, string? phone)
             => AddInternal(dto, userId, customerName, phone, true);
-
         private async Task<bool> AddInternal(DTO_BookingBase dto, int userId, string? customerName, string? phone, bool notify)
         {
             try
@@ -340,9 +340,15 @@ namespace Bussiness
         public async Task<List<DTO_BookingDetails>> GetAll() => await _bookingDLL.GetAll();
         public async Task<PaginatedResponse<DTO_BookingDetails>> GetAll(PaginationParameters pagination)
             => await _bookingDLL.GetAll(pagination);
+        public async Task<List<int>?> GetExpiredRunningBookingIds()
+        {
+         return await _bookingDLL.GetExpiredRunningBookingIds();
+        }
+        public async Task<List<int>> GetBookingsReadyForAutoCancellation()
+            => await _bookingDLL.GetBookingsReadyForAutoCancellation();
         // ================ CRUD ================
-        
-        
+
+
         // ================ Read By ================
         public async Task<List<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId) => await _bookingDLL.GetByUserId(userId);
         public async Task<PaginatedResponse<DTO_PlayerBookingsInfo>> GetByPlayerId(int userId, PaginationParameters pagination)
@@ -377,7 +383,26 @@ namespace Bussiness
                 await _notificationService.NotifyBookingDecisionAsync(bookingId, userId, false);
             return rejected;
         }
-        public async Task<bool> StartBooking(int bookingId, int userId) => await _bookingDLL.StartBooking(bookingId  , userId);
+        public async Task<bool> StartBooking(int bookingId, int userId) 
+            => await _bookingDLL.StartBooking(bookingId  , userId);
+        public async Task<DTO_Invoice?> CloseBooking(int bookingId, int userId, DTO_EndBookingInvoice endBooking)
+        {
+            if (bookingId <= 0)
+                throw new ArgumentException("Invalid booking ID.");
+            if (userId <= 0)
+                throw new ArgumentException("Invalid user ID.");
+            if (endBooking == null)
+                throw new ArgumentNullException(nameof(endBooking));
+
+            var res = await _bookingDLL.CloseBooking(bookingId, userId, endBooking);
+            if (res != null)
+            {
+                await _notificationService.NotifyBookingCompletedAsync(res.BookingNumber, res.InvoiceNumber);
+                return res;
+            }
+            else
+                throw new ArgumentException("");
+        }
         public async Task<DTO_InvoicePreview?> GetInvoicePreview(int bookingId)
         {
             if (bookingId <= 0)
@@ -403,128 +428,11 @@ namespace Bussiness
                 StartedAt = booking.StartedAt.Value,
                 PreviewedAt = now,
                 UnitPrice = booking.UnitPrice,
-                ActualPlayingTimePrice = CalculateActualPlayingTimePrice(booking, now),
+                ActualPlayingTimePrice = _bookingDLL.CalculateActualPlayingTimePrice(booking, now),
                 OriginalBookingPrice = booking.TotalPrice,
                 DiscountType = booking.DiscountType,
                 DiscountValue = booking.DiscountValue
             };
-        }
-        public async Task<DTO_Invoice?> StopBooking(int bookingId, int userId, DTO_EndBookingInvoice endBooking)
-        {
-            if (bookingId <= 0)
-                throw new ArgumentException("Invalid booking ID.");
-            if (userId <= 0)
-                throw new ArgumentException("Invalid user ID.");
-            if (endBooking == null)
-                throw new ArgumentNullException(nameof(endBooking));
-
-            await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-
-            try
-            {
-                var claimed = await _db.Bookings
-                    .Where(b => b.BookingId == bookingId
-                        && b.Status == "running"
-                        && b.StartedAt != null)
-                    .ExecuteUpdateAsync(setters => setters
-                        .SetProperty(b => b.Status, "completed")
-                        .SetProperty(b => b.StoppedBy, userId));
-
-                if (claimed == 0)
-                {
-                    var state = await _db.Bookings
-                        .AsNoTracking()
-                        .Where(b => b.BookingId == bookingId)
-                        .Select(b => new { b.Status, b.StartedAt })
-                        .FirstOrDefaultAsync();
-
-                    if (state == null)
-                        return null;
-                    if (state.Status != "running")
-                        throw new InvalidOperationException("Only running bookings can be stopped.");
-                    throw new InvalidOperationException("The running booking has no start time.");
-                }
-
-                var booking = await _db.Bookings
-                    .AsNoTracking()
-                    .Where(b => b.BookingId == bookingId)
-                    .Select(b => new BookingInvoiceSnapshot(
-                        b.BookingId,
-                        b.StartedAt,
-                        b.UnitPrice,
-                        b.TotalPrice,
-                        b.CenterResource.ResourcesType.ResourceName))
-                    .FirstOrDefaultAsync();
-
-                if (booking == null)
-                    throw new InvalidOperationException("The booking could not be loaded after stopping.");
-
-                if (booking.StartedAt == null)
-                    throw new InvalidOperationException("The running booking has no start time.");
-
-                if (await _db.Invoices.AnyAsync(i => i.BookingId == bookingId))
-                    throw new InvalidOperationException("An invoice already exists for this booking.");
-
-                var endedAt = DateTime.Now;
-                var pricing = CalculateInvoicePricing(
-                    booking.StartedAt,
-                    booking.UnitPrice,
-                    booking.TotalPrice,
-                    endBooking,
-                    endedAt);
-                var invoice = new Invoice
-                {
-                    BookingId = booking.BookingId,
-                    StartedAt = booking.StartedAt.Value,
-                    EndedAt = endedAt,
-                    UnitPrice = booking.UnitPrice,
-                    Subtotal = pricing.Subtotal,
-                    DiscountType = pricing.DiscountType,
-                    DiscountValue = pricing.DiscountValue,
-                    TotalPrice = pricing.TotalPrice,
-                    CreatedAt = endedAt
-                };
-
-                var finalized = await _db.Bookings
-                    .Where(b => b.BookingId == bookingId
-                        && b.Status == "completed"
-                        && b.StoppedBy == userId
-                        && b.EndedAt == null)
-                    .ExecuteUpdateAsync(setters => setters
-                        .SetProperty(b => b.EndedAt, endedAt)
-                        .SetProperty(b => b.UpdatedAt, endedAt));
-
-                if (finalized == 0)
-                    throw new InvalidOperationException("The booking has already been stopped.");
-
-                _db.Invoices.Add(invoice);
-
-                await _db.SaveChangesAsync();
-                await transaction.CommitAsync();
-                await transaction.DisposeAsync();
-
-                await _notificationService.NotifyBookingCompletedAsync(booking.BookingId, invoice.InvoiceId);
-
-                return new DTO_Invoice
-                {
-                    InvoiceNumber = invoice.InvoiceId,
-                    BookingNumber = booking.BookingId,
-                    ResourceBooked = booking.ResourceName,
-                    StartedAt = invoice.StartedAt,
-                    EndedAt = invoice.EndedAt,
-                    UnitPrice = invoice.UnitPrice,
-                    Subtotal = invoice.Subtotal,
-                    DiscountValue = invoice.DiscountValue,
-                    DiscountType = invoice.DiscountType,
-                    TotalPrice = invoice.TotalPrice
-                };
-            }
-            catch (Exception ex)
-            {
-                try { await transaction.RollbackAsync(); } catch { }
-                EventLog_Helper.WriteEventLog("Stop Booking Error", ex);
-                throw;
-            }
         }
         public async Task<List<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId) => await _bookingDLL.GetBookingsByOwnerId(ownerId);
         public async Task<PaginatedResponse<DTO_BookingDetails>> GetBookingsByOwnerId(int ownerId, PaginationParameters pagination)
@@ -536,72 +444,6 @@ namespace Bussiness
 
 
         // ================ Helpers ================
-        private static decimal CalculateActualPlayingTimePrice(Booking booking, DateTime endedAt)
-        {
-            return CalculateActualPlayingTimePrice(booking.StartedAt, booking.UnitPrice, endedAt);
-        }
-
-        private static decimal CalculateActualPlayingTimePrice(DateTime? startedAt, decimal unitPrice, DateTime endedAt)
-        {
-            if (startedAt == null || endedAt < startedAt.Value)
-                throw new InvalidOperationException("The booking start time is invalid.");
-
-            var durationHours = (decimal)(endedAt - startedAt.Value).TotalHours;
-            return Math.Round(durationHours * unitPrice, 2);
-        }
-        private static InvoicePricing CalculateInvoicePricing(
-            DateTime? startedAt,
-            decimal unitPrice,
-            decimal originalPrice,
-            DTO_EndBookingInvoice request,
-            DateTime endedAt)
-        {
-            var subtotal = request.UseOriginalPrice
-                ? originalPrice
-                : CalculateActualPlayingTimePrice(startedAt, unitPrice, endedAt);
-
-            var discountType = string.IsNullOrWhiteSpace(request.DiscountType)
-                ? null
-                : request.DiscountType.Trim().ToUpperInvariant();
-            var discountValue = request.DiscountValue;
-
-            if (discountType == null && discountValue == null)
-                return new InvoicePricing(subtotal, null, null, subtotal);
-
-            if (discountType == null || discountValue == null || discountValue < 0)
-                throw new ArgumentException("A valid discount type and non-negative discount value are required.");
-
-            discountValue = Math.Round(discountValue.Value, 2);
-
-            decimal discountAmount;
-            if (discountType == "%")
-            {
-                if (discountValue > 100)
-                    throw new ArgumentException("Percentage discounts cannot exceed 100%.");
-
-                discountAmount = Math.Round(subtotal * discountValue.Value / 100m, 2);
-            }
-            else if (discountType == "JD")
-            {
-                discountAmount = discountValue.Value;
-            }
-            else
-            {
-                throw new ArgumentException("Discount type must be '%' or 'JD'.");
-            }
-
-            if (discountAmount > subtotal)
-                throw new ArgumentException("Discount cannot exceed the subtotal.");
-
-            return new InvoicePricing(subtotal, discountType, discountValue, Math.Round(subtotal - discountAmount, 2));
-        }
-        private readonly record struct BookingInvoiceSnapshot(
-            int BookingId,
-            DateTime? StartedAt,
-            decimal UnitPrice,
-            decimal TotalPrice,
-            string ResourceName);
-        private readonly record struct InvoicePricing(decimal Subtotal, string? DiscountType, decimal? DiscountValue, decimal TotalPrice);
         private async Task<DTO_ResourceInfo?> GetValidResourceType(int resourcesTypeId,int centerId)
         {
             var rt = await _centerResourcesBLL.GetResourceInfo(resourcesTypeId);
@@ -659,6 +501,10 @@ namespace Bussiness
 
             return true;
         }
+        public async Task<bool> TryMarkTimeExpiredNotified(int bookingId)
+        => await _bookingDLL.TryMarkTimeExpiredNotified(bookingId);
+        public async Task<bool> CancelUnstartedBooking(int bookingId)
+            => await _bookingDLL.CancelUnstartedBooking(bookingId);
         private bool IsStaffOrAdmin(IEnumerable<string>? roles)
         {
             return roles?.Any(r => r != null && (r.Equals("admin", StringComparison.OrdinalIgnoreCase) || r.Equals("staff", StringComparison.OrdinalIgnoreCase))) ?? false;

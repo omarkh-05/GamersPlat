@@ -18,7 +18,7 @@ public partial class PasswordResetToken
 
     public DateTime ExpiresAt { get; set; }
 
-    public DateTime? UserAt { get; set; }
+    public DateTime? UsedAt { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime CreatedAt { get; set; }
